@@ -190,7 +190,10 @@ export default function EventDetailScreen() {
             </Text>
             <Pressable
               onPress={() => {
-                alert('Private messaging routing active in upcoming NGO connectivity task.');
+                router.push({
+                  pathname: '/message/compose',
+                  params: { eventId: event.id },
+                });
               }}
               style={[styles.ngoActionBtn, { backgroundColor: colors.brandPrimary }]}
               accessibilityRole="button"

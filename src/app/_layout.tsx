@@ -22,6 +22,7 @@ function RootLayoutContent() {
         }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="event/[id]" />
+        <Stack.Screen name="message/compose" />
         <Stack.Screen name="settings" />
       </Stack>
     </>
