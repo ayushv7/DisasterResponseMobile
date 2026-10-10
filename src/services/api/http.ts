@@ -24,6 +24,8 @@ export const httpApi: ApiClient = {
   resetWorkerPassword: notImplemented('resetWorkerPassword'),
   requestOtp: notImplemented('requestOtp'),
   verifyOtp: notImplemented('verifyOtp'),
+  getNgoNeeds: notImplemented('getNgoNeeds'),
+  offerHelp: notImplemented('offerHelp'),
   getOpsSummary: notImplemented('getOpsSummary'),
   getActionQueue: notImplemented('getActionQueue'),
   getIncidents: notImplemented('getIncidents'),

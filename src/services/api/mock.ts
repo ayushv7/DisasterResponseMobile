@@ -4,6 +4,7 @@
  * error states get exercised. Every result is tagged `source: 'sample'`.
  */
 import * as accounts from '@/services/accounts-api';
+import * as offers from '@/services/offers-api';
 import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
 import { fetchNgoInbox, publishContribution } from '@/services/ngo-api';
@@ -128,6 +129,8 @@ export const mockApi: ApiClient = {
   resetWorkerPassword: (id) => simulate(() => accounts.resetWorkerPassword(id)),
   requestOtp: (contact) => simulate(() => accounts.requestOtp(contact)),
   verifyOtp: (challengeId, code) => simulate(() => accounts.verifyOtp(challengeId, code)),
+  getNgoNeeds: () => simulate(offers.fetchNgoNeeds),
+  offerHelp: (input) => simulate(() => offers.offerHelp(input)),
 
   getOpsSummary: () => simulate(ops.fetchOperationalStats),
   getActionQueue: () =>

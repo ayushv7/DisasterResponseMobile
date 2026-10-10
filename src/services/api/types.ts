@@ -20,6 +20,7 @@ import {
   WorkerLoginResult,
 } from '@/types/accounts';
 import { SentMessage } from '@/types/message-thread';
+import { HelpOffer, NgoNeed, OfferHelpInput } from '@/types/offers';
 import { MessageDraft, MessageReceipt, VerifiedNgo } from '@/types/messaging';
 import { NgoContributionItem, NgoInboxFilter, NgoInboxMessage } from '@/types/ngo-workspace';
 import {
@@ -86,6 +87,10 @@ export interface ApiClient {
   // Citizen (optional public account, PROPOSED). The backend sends the OTP.
   requestOtp(contact: string): Promise<ApiResult<OtpChallenge>>;
   verifyOtp(challengeId: string, code: string): Promise<ApiResult<Citizen>>;
+  /** Needs published by verified NGOs, to respond to. */
+  getNgoNeeds(): Promise<ApiResult<NgoNeed[]>>;
+  /** Signed-in citizen only. Matching is done by the backend. */
+  offerHelp(input: OfferHelpInput): Promise<ApiResult<HelpOffer>>;
 
   // Operations
   getOpsSummary(): Promise<ApiResult<OperationalOverviewStats>>;

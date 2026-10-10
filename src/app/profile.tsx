@@ -37,6 +37,12 @@ export default function ProfileScreen() {
       onPress: () => router.push('/settings'),
     },
     {
+      label: 'Offer help',
+      desc: 'Food, money, equipment or volunteering',
+      icon: 'heart',
+      onPress: () => router.push('/offer-help'),
+    },
+    {
       label: 'My Messages',
       desc: 'View sent private messages',
       icon: 'message-square',

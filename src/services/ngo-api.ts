@@ -251,6 +251,12 @@ export async function fetchNgoContributions(): Promise<NgoContributionItem[]> {
   return JSON.parse(JSON.stringify(inMemoryContributions));
 }
 
+/** Public view: published contributions only (GET /incidents/{id}/updates). No NGO session needed. */
+export async function fetchPublishedContributions(): Promise<NgoContributionItem[]> {
+  await new Promise((res) => setTimeout(res, 150));
+  return JSON.parse(JSON.stringify(inMemoryContributions.filter((c) => c.status === 'PUBLISHED')));
+}
+
 export async function fetchContributionById(
   id: string
 ): Promise<NgoContributionItem | null> {
