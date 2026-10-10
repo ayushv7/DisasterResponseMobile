@@ -2,5 +2,6 @@
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   },
+  "includeCoAuthoredBy": false,
   "attribution": { "commit": "", "pr": "" }
 }
