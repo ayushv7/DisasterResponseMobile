@@ -29,6 +29,7 @@ import {
   fetchNgoSession,
   IS_STUB_NGO_API,
 } from '@/services/ngo-api';
+import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -41,6 +42,7 @@ import {
 
 export default function NgoInboxScreen() {
   const { colors } = useTheme();
+  useConfirmExitAtRoot();
 
   const [session, setSession] = useState<NgoSession | null>(null);
   const [activeFilter, setActiveFilter] = useState<NgoInboxFilter>('ALL');

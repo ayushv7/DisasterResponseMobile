@@ -18,7 +18,7 @@ import { useTheme } from '@/theme';
 import { spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
-export type OpsTabKey = 'operations' | 'incidents' | 'tasks' | 'replanning';
+export type OpsTabKey = 'operations' | 'incidents' | 'tasks' | 'replanning' | 'more';
 
 interface OpsTabDef {
   key: OpsTabKey;
@@ -56,6 +56,13 @@ const OPS_TABS: OpsTabDef[] = [
     icon: 'refresh-cw',
     route: '/ops/replanning',
     accessibilityLabel: 'Verification and alternative allocation replanning',
+  },
+  {
+    key: 'more',
+    label: 'More',
+    icon: 'menu',
+    route: '/ops/more',
+    accessibilityLabel: 'Settings and sign out',
   },
 ];
 

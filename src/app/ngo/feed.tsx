@@ -26,6 +26,7 @@ import { NgoBottomNavBar } from '@/components/NgoBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
 import { fetchNgoSession } from '@/services/ngo-api';
+import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
 import { radii, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -34,6 +35,7 @@ import { NgoSession } from '@/types/ngo-workspace';
 
 export default function NgoEventFeedScreen() {
   const { colors } = useTheme();
+  useConfirmExitAtRoot();
 
   const [session, setSession] = useState<NgoSession | null>(null);
   const [events, setEvents] = useState<FloodEvent[]>([]);

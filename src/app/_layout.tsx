@@ -30,18 +30,10 @@ function RootLayoutContent() {
         <Stack.Screen name="event/[id]" />
         <Stack.Screen name="message/compose" />
         <Stack.Screen name="settings" />
-        <Stack.Screen name="ngo/feed" options={{ animation: 'fade' }} />
-        <Stack.Screen name="ngo/inbox" options={{ animation: 'fade' }} />
-        <Stack.Screen name="ngo/contributions" options={{ animation: 'fade' }} />
-        <Stack.Screen name="ngo/contributions/compose" />
-        <Stack.Screen name="ngo/organization" options={{ animation: 'fade' }} />
-        <Stack.Screen name="ngo/review/[id]" />
         <Stack.Screen name="orchestration/[id]" />
-        <Stack.Screen name="ops/home" options={{ animation: 'fade' }} />
-        <Stack.Screen name="ops/incidents" options={{ animation: 'fade' }} />
-        <Stack.Screen name="ops/tasks" options={{ animation: 'fade' }} />
-        <Stack.Screen name="ops/replanning" options={{ animation: 'fade' }} />
-        <Stack.Screen name="ops/incident/[id]" />
+        {/* Role areas: no swipe-back out of them into public screens */}
+        <Stack.Screen name="ops" options={{ animation: 'fade', gestureEnabled: false }} />
+        <Stack.Screen name="ngo" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="dev/index" />
       </Stack>
     </>

@@ -31,6 +31,7 @@ import {
   fetchNgoContributions,
   fetchNgoSession,
 } from '@/services/ngo-api';
+import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
 import { radii, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -44,6 +45,7 @@ type FilterTab = 'ALL' | 'PUBLISHED' | 'DRAFT' | 'REJECTED_OR_CLOSED';
 
 export default function NgoContributionsScreen() {
   const { colors } = useTheme();
+  useConfirmExitAtRoot();
 
   const [session, setSession] = useState<NgoSession | null>(null);
   const [activeFilter, setActiveFilter] = useState<FilterTab>('ALL');

@@ -31,6 +31,7 @@ import {
   fetchInterventions,
   fetchOperationalStats,
 } from '@/services/operations-api';
+import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
 import { radii, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -45,6 +46,7 @@ type QueueFilter = 'ALL' | 'IMMEDIATE' | 'AWAITING_ASSIGNMENT' | 'AWAITING_ACK' 
 
 export default function OperationsHomeScreen() {
   const { colors } = useTheme();
+  useConfirmExitAtRoot();
 
   const [stats, setStats] = useState<OperationalOverviewStats | null>(null);
   const [interventions, setInterventions] = useState<InterventionRecord[]>([]);
@@ -134,7 +136,7 @@ export default function OperationsHomeScreen() {
 
         {/* Profile / Role Exit */}
         <Pressable
-          onPress={() => router.replace('/profile')}
+          onPress={() => router.navigate('/ops/more')}
           style={[styles.roleChip, { backgroundColor: colors.surfaceMuted }]}
           accessibilityRole="button"
           accessibilityLabel="Coordinator identity">

@@ -18,16 +18,35 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Redirect } from 'expo-router';
 
+import { getMockFailureRate, setMockFailureRate } from '@/services/api/mock';
 import { fetchNgoSession, setMockOrgStatus } from '@/services/ngo-api';
+import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { NgoOrgStatus, NgoSession } from '@/types/ngo-workspace';
+import { ROLE_LABELS, Role } from '@/types/roles';
 
-export default function DevHarnessScreen() {
+const ROLE_LAUNCHERS: { role: Role; icon: keyof typeof Feather.glyphMap; tabs: string }[] = [
+  { role: 'public', icon: 'user', tabs: 'Alerts · Message NGO · Profile' },
+  { role: 'coordinator', icon: 'activity', tabs: 'Ops · Incidents · Tasks · Replan · More' },
+  { role: 'field_worker', icon: 'tool', tabs: 'Tasks · Profile' },
+  { role: 'ngo', icon: 'shield', tabs: 'Inbox · Publish · Evidence · Organization' },
+  { role: 'admin', icon: 'key', tabs: 'NGO approval (NGO workspace for now)' },
+];
+
+/** Development builds only; production builds redirect away. */
+export default function DevHarnessRoute() {
+  if (!__DEV__) return <Redirect href="/" />;
+  return <DevHarnessScreen />;
+}
+
+function DevHarnessScreen() {
   const { colors } = useTheme();
+  const { role, signInAs, signOut } = useSession();
+  const [failureRate, setFailureRate] = useState(getMockFailureRate());
   const [session, setSession] = useState<NgoSession | null>(null);
 
   useEffect(() => {
@@ -70,43 +89,66 @@ export default function DevHarnessScreen() {
             TARGET WORKSPACES
           </Text>
 
-          {/* Launcher 1: Public Experience */}
-          <Pressable
-            onPress={() => router.replace('/')}
-            style={[styles.launchCard, { backgroundColor: colors.surface }]}
-            android_ripple={{ color: colors.surfaceMuted }}>
-            <View style={[styles.iconBox, { backgroundColor: colors.surfaceMuted }]}>
-              <Feather name="user" size={20} color={colors.textPrimary} />
-            </View>
-            <View style={styles.launchInfo}>
-              <Text style={[styles.launchTitle, { color: colors.textPrimary }]}>
-                Public User Experience
-              </Text>
-              <Text style={[styles.launchDesc, { color: colors.textTertiary }]}>
-                Feed · Map · Messages · Profile (Strict civilian access)
-              </Text>
-            </View>
-            <Feather name="arrow-right" size={18} color={colors.textTertiary} />
-          </Pressable>
+          {ROLE_LAUNCHERS.map((launcher) => (
+            <Pressable
+              key={launcher.role}
+              onPress={() =>
+                launcher.role === 'public' ? signOut() : signInAs(launcher.role)
+              }
+              style={[styles.launchCard, { backgroundColor: colors.surface }]}
+              android_ripple={{ color: colors.surfaceMuted }}
+              accessibilityRole="button"
+              accessibilityLabel={`Open as ${ROLE_LABELS[launcher.role]}`}>
+              <View style={[styles.iconBox, { backgroundColor: colors.surfaceMuted }]}>
+                <Feather name={launcher.icon} size={20} color={colors.textPrimary} />
+              </View>
+              <View style={styles.launchInfo}>
+                <Text style={[styles.launchTitle, { color: colors.textPrimary }]}>
+                  {ROLE_LABELS[launcher.role]}
+                  {role === launcher.role ? ' (current)' : ''}
+                </Text>
+                <Text style={[styles.launchDesc, { color: colors.textTertiary }]}>
+                  {launcher.tabs}
+                </Text>
+              </View>
+              <Feather name="arrow-right" size={18} color={colors.textTertiary} />
+            </Pressable>
+          ))}
+        </View>
 
-          {/* Launcher 2: NGO Workspace */}
-          <Pressable
-            onPress={() => router.replace('/ngo/feed')}
-            style={[styles.launchCard, { backgroundColor: colors.surface }]}
-            android_ripple={{ color: colors.surfaceMuted }}>
-            <View style={[styles.iconBox, { backgroundColor: colors.surfaceMuted }]}>
-              <Feather name="shield" size={20} color={colors.brandPrimary} />
-            </View>
-            <View style={styles.launchInfo}>
-              <Text style={[styles.launchTitle, { color: colors.textPrimary }]}>
-                Verified NGO Workspace
-              </Text>
-              <Text style={[styles.launchDesc, { color: colors.textTertiary }]}>
-                Event Feed · Inbox · Contributions · Organization
-              </Text>
-            </View>
-            <Feather name="arrow-right" size={18} color={colors.textTertiary} />
-          </Pressable>
+        {/* SIMULATED FAILURE RATE */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
+            SIMULATED NETWORK FAILURE RATE (MOCK API)
+          </Text>
+          <View style={styles.toggleRow}>
+            {[0, 0.05, 0.3].map((rate) => {
+              const selected = failureRate === rate;
+              return (
+                <Pressable
+                  key={rate}
+                  onPress={() => {
+                    setMockFailureRate(rate);
+                    setFailureRate(rate);
+                  }}
+                  style={[
+                    styles.launchCard,
+                    styles.rateOption,
+                    { backgroundColor: selected ? colors.chipActiveBg : colors.surface },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}>
+                  <Text
+                    style={[
+                      styles.launchTitle,
+                      { color: selected ? colors.chipActiveText : colors.textPrimary },
+                    ]}>
+                    {Math.round(rate * 100)}%
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         {/* SECURITY GATE TESTING */}
@@ -249,6 +291,10 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontSize: 12,
     lineHeight: 16,
+  },
+  rateOption: {
+    flex: 1,
+    justifyContent: 'center',
   },
   toggleRow: {
     flexDirection: 'row',

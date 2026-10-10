@@ -11,6 +11,7 @@
 
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -19,11 +20,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
 
 import { NgoBottomNavBar } from '@/components/NgoBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
-import { fetchNgoSession, logoutNgo } from '@/services/ngo-api';
+import { fetchNgoSession } from '@/services/ngo-api';
+import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
+import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -31,6 +33,8 @@ import { NgoSession } from '@/types/ngo-workspace';
 
 export default function NgoOrganizationScreen() {
   const { colors } = useTheme();
+  useConfirmExitAtRoot();
+  const { signOut } = useSession();
 
   const [session, setSession] = useState<NgoSession | null>(null);
   const [loading, setLoading] = useState(true);
@@ -243,10 +247,18 @@ export default function NgoOrganizationScreen() {
           {/* Session Management / Sign Out */}
           <View style={styles.section}>
             <Pressable
-              onPress={async () => {
-                await logoutNgo();
-                router.replace('/');
-              }}
+              onPress={() =>
+                Alert.alert(
+                  'Switch to public view?',
+                  'You will be signed out and returned to public alerts.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+                  ]
+                )
+              }
+              accessibilityRole="button"
+              accessibilityLabel="Sign out and switch to public view"
               style={[
                 styles.signOutButton,
                 { backgroundColor: colors.surface },
@@ -258,7 +270,7 @@ export default function NgoOrganizationScreen() {
                   styles.signOutText,
                   { color: colors.statusActive },
                 ]}>
-                Sign Out of NGO Workspace
+                Switch to public view
               </Text>
             </Pressable>
           </View>

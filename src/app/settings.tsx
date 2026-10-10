@@ -2,14 +2,18 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { BottomNavBar } from '@/components/BottomNavBar';
+import { useSession } from '@/session/session-context';
 import { ThemeMode, useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
 export default function SettingsScreen() {
   const { colors, mode, setMode } = useTheme();
+  const { role } = useSession();
+  const isPublic = role === 'public';
 
   const themeOptions: { key: ThemeMode; label: string; desc: string; icon: keyof typeof Feather.glyphMap }[] = [
     {
@@ -38,6 +42,16 @@ export default function SettingsScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* 1. Header */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
+        {!isPublic && (
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backButton}
+            hitSlop={spacing.sm}
+            accessibilityRole="button"
+            accessibilityLabel="Back">
+            <Feather name="arrow-left" size={20} color={colors.textPrimary} />
+          </Pressable>
+        )}
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Settings</Text>
       </View>
 
@@ -143,7 +157,8 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {/* 4. Bottom Navigation Bar */}
-      <BottomNavBar activeTab="profile" />
+      {/* Public tabs only for public users; signed-in roles return via Back */}
+      {isPublic && <BottomNavBar activeTab="profile" />}
     </SafeAreaView>
   );
 }
@@ -153,9 +168,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
     paddingHorizontal: spacing.screenPadding,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
+  },
+  backButton: {
+    minHeight: touchTargets.min,
+    justifyContent: 'center',
   },
   headerTitle: {
     ...typography.title,

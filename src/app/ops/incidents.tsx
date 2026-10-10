@@ -27,6 +27,7 @@ import { InfoBar } from '@/components/InfoBar';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { fetchIncidents } from '@/services/operations-api';
+import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -36,6 +37,7 @@ type IncidentFilter = 'ALL' | 'CRITICAL' | 'ACTIVE' | 'WATCH';
 
 export default function IncidentsCatalogueScreen() {
   const { colors } = useTheme();
+  useConfirmExitAtRoot();
 
   const [incidents, setIncidents] = useState<IncidentRecord[]>([]);
   const [filter, setFilter] = useState<IncidentFilter>('ALL');

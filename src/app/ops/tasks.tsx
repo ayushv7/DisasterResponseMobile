@@ -37,6 +37,7 @@ import {
   startTask,
   submitTaskCompletion,
 } from '@/services/operations-api';
+import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -46,6 +47,7 @@ type TaskFilter = 'ALL' | 'ASSIGNED' | 'ACTIVE' | 'BLOCKED';
 
 export default function FieldWorkerTasksScreen() {
   const { colors } = useTheme();
+  useConfirmExitAtRoot();
 
   const [tasks, setTasks] = useState<InterventionRecord[]>([]);
   const [filter, setFilter] = useState<TaskFilter>('ALL');

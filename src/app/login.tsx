@@ -5,7 +5,7 @@
  *
  * DEVELOPMENT ACCESS:
  * When backend authentication is pending, an explicitly labelled
- * "NGO Demo — Development Only" action is available strictly under __DEV__.
+ * Demo role access is only in the __DEV__ role switcher (/dev).
  */
 
 import React, { useState } from 'react';
@@ -25,18 +25,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-import { loginDemoSession, loginNgo } from '@/services/ngo-api';
+import { loginNgo } from '@/services/ngo-api';
+import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
 export default function LoginScreen() {
   const { colors } = useTheme();
+  const { signInAs } = useSession();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
 
   const handleSignIn = async () => {
     if (!email.trim() || !password.trim()) {
@@ -47,7 +48,7 @@ export default function LoginScreen() {
     try {
       setSubmitting(true);
       await loginNgo(email.trim(), password.trim());
-      router.replace('/ngo/feed');
+      await signInAs('ngo');
     } catch (err: any) {
       Alert.alert(
         'Authentication Unavailable',
@@ -58,18 +59,6 @@ export default function LoginScreen() {
     }
   };
 
-  const handleDemoAccess = async () => {
-    try {
-      setDemoLoading(true);
-      await loginDemoSession();
-      // Replace stack to avoid back button loops into login
-      router.replace('/ngo/feed');
-    } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to initialize demo session.');
-    } finally {
-      setDemoLoading(false);
-    }
-  };
 
   return (
     <SafeAreaView
@@ -186,87 +175,17 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {/* DEV-ONLY DEMO ACCESS */}
+          {/* DEV-ONLY: role switching lives in the developer switcher */}
           {__DEV__ && (
-            <View style={styles.devSection}>
-              <Text style={[styles.devSectionLabel, { color: colors.statusWatch }]}>
-                NGO DEMO — DEVELOPMENT ONLY
+            <Pressable
+              onPress={() => router.push('/dev')}
+              style={styles.devLink}
+              accessibilityRole="link"
+              accessibilityLabel="Open developer role switcher">
+              <Text style={[styles.devDesc, { color: colors.textTertiary }]}>
+                Development build: open role switcher
               </Text>
-
-              <View
-                style={[
-                  styles.card,
-                  { backgroundColor: colors.surface, gap: spacing.sm },
-                ]}>
-                <Text style={[styles.devDesc, { color: colors.textSecondary }]}>
-                  Explore the verified NGO workspace with a temporary mock
-                  session. Does not grant real backend permissions or publication rights.
-                </Text>
-
-                <Pressable
-                  onPress={handleDemoAccess}
-                  disabled={demoLoading}
-                  style={[
-                    styles.demoButton,
-                    {
-                      backgroundColor: colors.surfaceMuted,
-                      opacity: demoLoading ? 0.7 : 1,
-                    },
-                  ]}>
-                  {demoLoading ? (
-                    <ActivityIndicator size="small" color={colors.brandPrimary} />
-                  ) : (
-                    <>
-                      <Feather
-                        name="zap"
-                        size={16}
-                        color={colors.brandPrimary}
-                      />
-                      <Text
-                        style={[
-                          styles.demoButtonText,
-                          { color: colors.brandPrimary },
-                        ]}>
-                        Launch Demo NGO Workspace
-                      </Text>
-                    </>
-                  )}
-                </Pressable>
-              </View>
-
-              <View
-                style={[
-                  styles.card,
-                  { backgroundColor: colors.surface, gap: spacing.sm, marginTop: spacing.sm },
-                ]}>
-                <Text style={[styles.devDesc, { color: colors.textSecondary }]}>
-                  Disaster Response Coordinator Console: Access operational readiness,
-                  incident telemetry, field task tracking and supervisory replanning in simulation mode.
-                </Text>
-
-                <Pressable
-                  onPress={() => router.replace('/ops/home')}
-                  style={[
-                    styles.demoButton,
-                    {
-                      backgroundColor: colors.surfaceMuted,
-                    },
-                  ]}>
-                  <Feather
-                    name="activity"
-                    size={16}
-                    color={colors.brandTeal}
-                  />
-                  <Text
-                    style={[
-                      styles.demoButtonText,
-                      { color: colors.brandTeal },
-                    ]}>
-                    Launch Operations Console
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
+            </Pressable>
           )}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -375,6 +294,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     flex: 1,
+  },
+  devLink: {
+    minHeight: touchTargets.min,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.lg,
   },
   devSection: {
     gap: spacing.xs,
