@@ -73,6 +73,9 @@ export function RoleTabBar({
 
 const styles = StyleSheet.create({
   container: {
+    // Stay pinned to the bottom even while the content above is shorter than
+    // the screen (skeletons, empty and error states), so the bar never jumps.
+    marginTop: 'auto',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-around',
