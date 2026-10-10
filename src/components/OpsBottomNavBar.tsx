@@ -21,7 +21,7 @@ import { useTheme } from '@/theme';
 import { spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
-export type OpsTabKey = 'operations' | 'incidents' | 'tasks' | 'replanning' | 'more';
+export type OpsTabKey = 'operations' | 'incidents' | 'tasks' | 'replanning' | 'more' | 'ngo';
 
 interface OpsTabDef {
   key: OpsTabKey;
@@ -69,8 +69,22 @@ const OPS_TABS: OpsTabDef[] = [
   },
 ];
 
-/** Field workers only see their tasks and profile; coordinators see all. */
+/** Field workers only see their tasks and profile. */
 const FIELD_WORKER_TABS: OpsTabKey[] = ['tasks', 'more'];
+
+/** NGO users: scoped ops screens plus a way back to the NGO workspace. */
+const NGO_OPS_TABS: OpsTabDef[] = [
+  ...OPS_TABS.filter((tab) => tab.key !== 'more').map((tab) =>
+    tab.key === 'replanning' ? { ...tab, label: 'Verify' } : tab
+  ),
+  {
+    key: 'ngo',
+    label: 'NGO',
+    icon: 'shield',
+    route: '/ngo/inbox',
+    accessibilityLabel: 'Back to the NGO workspace',
+  },
+];
 
 interface OpsBottomNavBarProps {
   activeTab: OpsTabKey;
@@ -85,7 +99,9 @@ export function OpsBottomNavBar({ activeTab }: OpsBottomNavBarProps) {
       ? OPS_TABS.filter((tab) => FIELD_WORKER_TABS.includes(tab.key)).map((tab) =>
           tab.key === 'more' ? { ...tab, label: 'Profile' } : tab
         )
-      : OPS_TABS;
+      : role === 'ngo'
+        ? NGO_OPS_TABS
+        : OPS_TABS;
 
   const handleTabPress = (tab: OpsTabDef) => {
     if (tab.key === activeTab) return;

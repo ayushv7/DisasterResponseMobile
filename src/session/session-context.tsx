@@ -97,8 +97,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const resetToRoleHome = useResetToRoleHome();
 
   const signInAs = useCallback(async (role: Exclude<Role, 'public'>, options?: SignInOptions) => {
-    if (role === 'ngo' || role === 'admin') await loginDemoSession();
     let user = options?.user;
+    if (role === 'ngo') {
+      const ngo = await loginDemoSession();
+      user = user ?? { name: ngo.authorizedOfficerName, ngoName: ngo.ngoName };
+    }
     if (!user && role === 'field_worker') {
       const member = selectSampleWorker();
       user = { name: member.name, ngoName: member.ngoName, workerId: member.workerId };

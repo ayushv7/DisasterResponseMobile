@@ -10,6 +10,7 @@ import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
 import {
   fetchNgoInbox,
+  getCurrentNgoSession,
   fetchPublishedContributions,
   publishContribution,
   takedownContribution,
@@ -20,12 +21,52 @@ import * as ops from '@/services/operations-api';
 import {
   ActionQueueItem,
   ActionQueueReason,
+  IncidentRecord,
   InterventionRecord,
+  InterventionStatus,
+  OperationalOverviewStats,
   OperationalResource,
   TaskActor,
 } from '@/types/operations';
 
 import { ApiClient, ApiResult } from './types';
+
+/**
+ * Stand-in for backend scoping: an NGO only gets incidents in its service
+ * area (the backend selects nearby NGOs). Other callers get everything.
+ */
+function ngoArea(): string | null {
+  return getCurrentNgoSession()?.serviceArea ?? null;
+}
+
+async function scopedIncidents(): Promise<IncidentRecord[]> {
+  const all = await ops.fetchIncidents();
+  const area = ngoArea();
+  return area ? all.filter((i) => i.location.includes(area)) : all;
+}
+
+async function scopedWorkOrders(status?: InterventionStatus | 'ALL'): Promise<InterventionRecord[]> {
+  const all = await ops.fetchInterventions(status);
+  if (!ngoArea()) return all;
+  const ids = new Set((await scopedIncidents()).map((i) => i.id));
+  return all.filter((w) => ids.has(w.incidentId));
+}
+
+async function scopedStats(): Promise<OperationalOverviewStats> {
+  const base = await ops.fetchOperationalStats();
+  if (!ngoArea()) return base;
+  const [incidents, items] = await Promise.all([scopedIncidents(), scopedWorkOrders()]);
+  const count = (pred: (i: InterventionRecord) => boolean) => items.filter(pred).length;
+  return {
+    ...base,
+    activeIncidents: incidents.filter((i) => i.status === 'ACTIVE').length,
+    immediateInterventions: count((i) => i.priority === 'IMMEDIATE' && i.status !== 'VERIFIED_RESOLVED'),
+    pendingAcknowledgement: count((i) => i.status === 'AWAITING_ACK'),
+    inProgressTasks: count((i) => i.status === 'IN_PROGRESS' || i.status === 'EN_ROUTE'),
+    blockedOrFailedInterventions: count((i) => i.status === 'BLOCKED' || i.status === 'FAILED'),
+    awaitingVerification: count((i) => i.status === 'AWAITING_VERIFICATION'),
+  };
+}
 
 /** The signed-in sample worker; the real backend takes this from the token. */
 function workerActor(): TaskActor | undefined {
@@ -140,12 +181,12 @@ export const mockApi: ApiClient = {
   getMyOffers: () => simulate(offers.fetchMyOffers),
   setNotificationAreas: (input) => simulate(() => accounts.setNotificationAreas(input)),
 
-  getOpsSummary: () => simulate(ops.fetchOperationalStats),
+  getOpsSummary: () => simulate(scopedStats),
   getActionQueue: () =>
-    simulate(async () => deriveActionQueue(await ops.fetchInterventions(), Date.now())),
-  getIncidents: () => simulate(ops.fetchIncidents),
+    simulate(async () => deriveActionQueue(await scopedWorkOrders(), Date.now())),
+  getIncidents: () => simulate(scopedIncidents),
   getIncident: (id) => simulate(() => ops.fetchIncidentDetail(id)),
-  getWorkOrders: (status) => simulate(() => ops.fetchInterventions(status)),
+  getWorkOrders: (status) => simulate(() => scopedWorkOrders(status)),
   getWorkOrder: (id) => simulate(() => ops.fetchInterventionDetail(id)),
   getMyTasks: () => simulate(fetchMyTasks),
   getResources: () =>
@@ -162,7 +203,13 @@ export const mockApi: ApiClient = {
   submitCompletion: (id, input) =>
     simulate(() => ops.submitTaskCompletion(id, input.note, input.photoUris, workerActor())),
   verify: (id, approved) => simulate(() => ops.verifyIntervention(id, approved)),
-  getReassignments: () => simulate(ops.fetchReplanningRecords),
+  getReassignments: () =>
+    simulate(async () => {
+      const records = await ops.fetchReplanningRecords();
+      if (!ngoArea()) return records;
+      const ids = new Set((await scopedIncidents()).map((i) => i.id));
+      return records.filter((r) => ids.has(r.incidentId));
+    }),
   reassign: (id, notes) => simulate(() => ops.executeReplanningDecision(id, notes)),
 
   getVerifiedNgos: () => simulate(fetchVerifiedNgos),

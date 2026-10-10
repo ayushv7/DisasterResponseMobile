@@ -20,7 +20,7 @@ import { useTheme } from '@/theme';
 import { spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
-export type NgoTabKey = 'feed' | 'inbox' | 'contributions' | 'organization';
+export type NgoTabKey = 'ops' | 'feed' | 'inbox' | 'contributions' | 'organization';
 
 interface NgoTabDef {
   key: NgoTabKey;
@@ -31,6 +31,13 @@ interface NgoTabDef {
 }
 
 const NGO_TABS: NgoTabDef[] = [
+  {
+    key: 'ops',
+    label: 'Ops',
+    icon: 'activity',
+    route: '/ops/home',
+    accessibilityLabel: 'Incidents near your NGO, plans, tasks and verification',
+  },
   {
     key: 'inbox',
     label: 'Inbox',

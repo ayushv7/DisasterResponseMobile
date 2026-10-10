@@ -26,6 +26,8 @@ export interface NgoSession {
   authorizedOfficerName: string;
   /** Issued by the backend; field workers enter it to sign in. */
   ngoCode?: string;
+  /** Area the NGO serves. The backend scopes incidents and plans to it. */
+  serviceArea?: string;
   focusAreas: string[];
   isDemoPreview: boolean;
 }

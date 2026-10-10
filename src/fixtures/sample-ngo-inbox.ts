@@ -18,6 +18,7 @@ export const DEFAULT_MOCK_NGO_SESSION: NgoSession = {
   verificationStatus: 'VERIFIED',
   authorizedOfficerName: 'R. Sharma (Field Lead)',
   ngoCode: SAMPLE_NGO_CODE,
+  serviceArea: 'Assam',
   focusAreas: ['Flood Evacuation', 'Emergency Rations', 'Medical Aid'],
   isDemoPreview: true,
 };

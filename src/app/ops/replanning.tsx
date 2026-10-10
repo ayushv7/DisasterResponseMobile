@@ -27,6 +27,7 @@ import { router } from 'expo-router';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
+import { NgoScopeNote } from '@/components/NgoScopeNote';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { StatusChip } from '@/components/StatusChip';
@@ -322,6 +323,7 @@ export default function VerificationAndReplanningScreen() {
 
       {/* Persistent simulation banner */}
       <InfoBar customMessage="SAMPLE DATA — OPERATIONAL SIMULATION — NOT LIVE OPERATIONS" />
+      <NgoScopeNote />
 
       {/* Tab Switcher */}
       <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>

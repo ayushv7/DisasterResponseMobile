@@ -117,6 +117,11 @@ export async function loginDemoSession(): Promise<NgoSession> {
   return { ...currentSession };
 }
 
+/** Mock scoping only: the signed-in NGO, read synchronously. */
+export function getCurrentNgoSession(): NgoSession | null {
+  return currentSession ? { ...currentSession } : null;
+}
+
 export async function logoutNgo(): Promise<void> {
   await new Promise((res) => setTimeout(res, 150));
   currentSession = null;
