@@ -10,6 +10,7 @@
 
 import React, { useEffect, useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,24 +19,36 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { Redirect } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 
+import { SAMPLE_OTP_CODE } from '@/fixtures/sample-accounts';
+import { api } from '@/services/api';
 import { getMockFailureRate, setMockFailureRate } from '@/services/api/mock';
+import { resetStore } from '@/services/mock/store';
 import { fetchNgoSession, setMockOrgStatus } from '@/services/ngo-api';
 import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { NgoOrgStatus, NgoSession } from '@/types/ngo-workspace';
-import { ROLE_LABELS, Role } from '@/types/roles';
+import { Role } from '@/types/roles';
 
-const ROLE_LAUNCHERS: { role: Role; icon: keyof typeof Feather.glyphMap; tabs: string }[] = [
-  { role: 'public', icon: 'user', tabs: 'Alerts · Message NGO · Profile' },
-  { role: 'coordinator', icon: 'activity', tabs: 'Authority: NGOs · Add NGO · Takedown · More' },
-  { role: 'field_worker', icon: 'tool', tabs: 'Tasks · Profile' },
-  { role: 'ngo', icon: 'shield', tabs: 'Inbox · Publish · Evidence · Organization' },
-  { role: 'admin', icon: 'key', tabs: 'Same authority console as coordinator' },
-  { role: 'contributor', icon: 'package', tabs: 'My resources · Account' },
+/** `role: 'citizen'` = public role plus the sample citizen account. */
+type LauncherRole = Role | 'citizen';
+
+const ROLE_LAUNCHERS: {
+  role: LauncherRole;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+  tabs: string;
+}[] = [
+  { role: 'public', label: 'Visitor', icon: 'user', tabs: 'Alerts · Message NGO · Profile (no sign-in)' },
+  { role: 'citizen', label: 'Citizen', icon: 'user-check', tabs: 'Visitor + offer help, volunteer, contribute, alert areas' },
+  { role: 'ngo', label: 'NGO', icon: 'shield', tabs: 'Ops · Inbox · Publish · Evidence · Organization' },
+  { role: 'field_worker', label: 'Field worker', icon: 'tool', tabs: 'Tasks · Profile' },
+  { role: 'contributor', label: 'Contributor', icon: 'package', tabs: 'My resources · Account' },
+  { role: 'admin', label: 'Authority (admin)', icon: 'key', tabs: 'NGOs · Add NGO · Takedown · More' },
+  { role: 'coordinator', label: 'Authority (coordinator)', icon: 'activity', tabs: 'Same authority console as admin' },
 ];
 
 /** Development builds only; production builds redirect away. */
@@ -46,7 +59,56 @@ export default function DevHarnessRoute() {
 
 function DevHarnessScreen() {
   const { colors } = useTheme();
-  const { role, signInAs, signOut } = useSession();
+  const { role, citizen, signInAs, signOut, setCitizen, signOutCitizen } = useSession();
+  const [busy, setBusy] = useState(false);
+
+  /** Switches role. Sign-in/out reset navigation to the role's home (replace, no back to old role). */
+  const launch = async (target: LauncherRole) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      if (target === 'public' || target === 'citizen') {
+        await signOut();
+        signOutCitizen();
+        if (target === 'citizen') {
+          // Sample citizen through the normal OTP calls (mock accepts the sample code)
+          const challenge = await api.requestOtp('+91 00000 00000');
+          setCitizen((await api.verifyOtp(challenge.data.challengeId, SAMPLE_OTP_CODE)).data);
+          router.replace('/profile');
+        }
+      } else {
+        signOutCitizen();
+        await signInAs(target);
+      }
+    } catch (err) {
+      Alert.alert('Could not switch', err instanceof Error ? err.message : 'Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const isCurrent = (target: LauncherRole) =>
+    target === 'citizen'
+      ? role === 'public' && !!citizen
+      : target === role && !(role === 'public' && citizen);
+
+  const confirmReset = () =>
+    Alert.alert(
+      'Reset sample data?',
+      'Restores every sample record (plans, tasks, resources, applications, messages) and signs you out.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reset',
+          style: 'destructive',
+          onPress: async () => {
+            resetStore();
+            signOutCitizen();
+            await signOut();
+          },
+        },
+      ]
+    );
   const [failureRate, setFailureRate] = useState(getMockFailureRate());
   const [session, setSession] = useState<NgoSession | null>(null);
 
@@ -93,20 +155,19 @@ function DevHarnessScreen() {
           {ROLE_LAUNCHERS.map((launcher) => (
             <Pressable
               key={launcher.role}
-              onPress={() =>
-                launcher.role === 'public' ? signOut() : signInAs(launcher.role)
-              }
+              onPress={() => launch(launcher.role)}
+              disabled={busy}
               style={[styles.launchCard, { backgroundColor: colors.surface }]}
               android_ripple={{ color: colors.surfaceMuted }}
               accessibilityRole="button"
-              accessibilityLabel={`Open as ${ROLE_LABELS[launcher.role]}`}>
+              accessibilityLabel={`Open as ${launcher.label}`}>
               <View style={[styles.iconBox, { backgroundColor: colors.surfaceMuted }]}>
                 <Feather name={launcher.icon} size={20} color={colors.textPrimary} />
               </View>
               <View style={styles.launchInfo}>
                 <Text style={[styles.launchTitle, { color: colors.textPrimary }]}>
-                  {ROLE_LABELS[launcher.role]}
-                  {role === launcher.role ? ' (current)' : ''}
+                  {launcher.label}
+                  {isCurrent(launcher.role) ? ' (current)' : ''}
                 </Text>
                 <Text style={[styles.launchDesc, { color: colors.textTertiary }]}>
                   {launcher.tabs}
@@ -115,6 +176,27 @@ function DevHarnessScreen() {
               <Feather name="arrow-right" size={18} color={colors.textTertiary} />
             </Pressable>
           ))}
+        </View>
+
+        {/* RESET */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>SAMPLE DATA</Text>
+          <Pressable
+            onPress={confirmReset}
+            style={[styles.launchCard, { backgroundColor: colors.surface }]}
+            android_ripple={{ color: colors.surfaceMuted }}
+            accessibilityRole="button"
+            accessibilityLabel="Reset sample data">
+            <View style={[styles.iconBox, { backgroundColor: colors.surfaceMuted }]}>
+              <Feather name="rotate-ccw" size={20} color={colors.textPrimary} />
+            </View>
+            <View style={styles.launchInfo}>
+              <Text style={[styles.launchTitle, { color: colors.textPrimary }]}>Reset sample data</Text>
+              <Text style={[styles.launchDesc, { color: colors.textTertiary }]}>
+                Restore the seeded mock store and sign out
+              </Text>
+            </View>
+          </Pressable>
         </View>
 
         {/* SIMULATED FAILURE RATE */}

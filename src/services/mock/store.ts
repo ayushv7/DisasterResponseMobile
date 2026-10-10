@@ -81,39 +81,52 @@ export function incidentForEvent(eventId?: string): string | undefined {
   return eventId ? EVENT_INCIDENT_LINKS[eventId] : undefined;
 }
 
-export const store = {
-  ngos: [
-    {
-      id: 'ngo-drn-india',
-      name: 'Disaster Relief Network India',
-      code: SAMPLE_NGO_CODE,
-      serviceArea: 'Assam',
-      status: 'ACTIVE',
-      focusAreas: ['Flood Evacuation', 'Emergency Rations', 'Medical Aid'],
-    },
-  ] as StoreNgo[],
-  incidents: copy(SAMPLE_INCIDENTS) as IncidentRecord[],
-  tasks: copy(SAMPLE_INTERVENTIONS) as InterventionRecord[],
-  crews: copy(SAMPLE_CREWS) as OperationalResource[],
-  reassignments: copy(SAMPLE_REPLANNING_RECORDS) as ReplanningRecord[],
-  plans: [{ ...copy(SAMPLE_PLAN), generatedAt: new Date().toISOString() }] as ResourcePlan[],
-  /** Previous plan versions (audit). */
-  planHistory: [] as ResourcePlan[],
-  workers: copy(SAMPLE_FIELD_TEAM) as NgoMember[],
-  contributorApplications: copy(SAMPLE_CONTRIBUTOR_APPLICATIONS) as ContributorApplication[],
-  contributors: SAMPLE_CONTRIBUTOR_ACCOUNTS.map((a) => ({ ...a, ngoId: 'ngo-drn-india' })) as StoreContributor[],
-  resources: seedResources(),
-  instructions: [] as ContributorInstruction[],
-  evidence: [] as EvidenceRecord[],
-  volunteerApplications: copy(SAMPLE_VOLUNTEER_APPLICATIONS) as VolunteerApplication[],
-  /** Authority queue: NGO registrations (Ngo is created/activated on approval). */
-  ngoApplications: copy(SAMPLE_NGO_APPLICATIONS) as NgoApplication[],
-  ngoMessages: copy(SAMPLE_NGO_INBOX_MESSAGES) as NgoInboxMessage[],
-  ngoUpdates: copy(SAMPLE_NGO_CONTRIBUTIONS).map((u) => ({
-    ...u,
-    incidentId: u.incidentId ?? incidentForEvent(u.eventId),
-  })) as NgoContributionItem[],
-};
+/** Fresh copy of the seeded sample data. */
+function seed() {
+  return {
+    ngos: [
+      {
+        id: 'ngo-drn-india',
+        name: 'Disaster Relief Network India',
+        code: SAMPLE_NGO_CODE,
+        serviceArea: 'Assam',
+        status: 'ACTIVE',
+        focusAreas: ['Flood Evacuation', 'Emergency Rations', 'Medical Aid'],
+      },
+    ] as StoreNgo[],
+    incidents: copy(SAMPLE_INCIDENTS) as IncidentRecord[],
+    tasks: copy(SAMPLE_INTERVENTIONS) as InterventionRecord[],
+    crews: copy(SAMPLE_CREWS) as OperationalResource[],
+    reassignments: copy(SAMPLE_REPLANNING_RECORDS) as ReplanningRecord[],
+    plans: [{ ...copy(SAMPLE_PLAN), generatedAt: new Date().toISOString() }] as ResourcePlan[],
+    /** Previous plan versions (audit). */
+    planHistory: [] as ResourcePlan[],
+    workers: copy(SAMPLE_FIELD_TEAM) as NgoMember[],
+    contributorApplications: copy(SAMPLE_CONTRIBUTOR_APPLICATIONS) as ContributorApplication[],
+    contributors: SAMPLE_CONTRIBUTOR_ACCOUNTS.map((a) => ({ ...a, ngoId: 'ngo-drn-india' })) as StoreContributor[],
+    resources: seedResources(),
+    instructions: [] as ContributorInstruction[],
+    evidence: [] as EvidenceRecord[],
+    volunteerApplications: copy(SAMPLE_VOLUNTEER_APPLICATIONS) as VolunteerApplication[],
+    /** Authority queue: NGO registrations (Ngo is created/activated on approval). */
+    ngoApplications: copy(SAMPLE_NGO_APPLICATIONS) as NgoApplication[],
+    ngoMessages: copy(SAMPLE_NGO_INBOX_MESSAGES) as NgoInboxMessage[],
+    ngoUpdates: copy(SAMPLE_NGO_CONTRIBUTIONS).map((u) => ({
+      ...u,
+      incidentId: u.incidentId ?? incidentForEvent(u.eventId),
+    })) as NgoContributionItem[],
+  };
+}
+
+export const store = seed();
+
+/**
+ * Dev tool: restore the seeded sample data in place (same object, so every
+ * mock adapter sees the reset). Mock mode only.
+ */
+export function resetStore() {
+  Object.assign(store, seed());
+}
 
 export function ngoById(id: string): StoreNgo | undefined {
   return store.ngos.find((n) => n.id === id);
