@@ -5,6 +5,7 @@
  */
 import { InterventionRecord } from '@/types/operations';
 import { ContributorApplication, PlanActor, ResourcePlan } from '@/types/contributors';
+import { NgoApplication } from '@/types/ngo-workspace';
 import { VolunteerApplication } from '@/types/volunteers';
 
 import { ngoById, store } from './store';
@@ -157,5 +158,59 @@ export function revokeContributorAccess(applicationId: string) {
     r.eligibleForAllocation = false;
     r.statusReason = 'Simulated: contributor access revoked by the NGO.';
     onResourceChanged(r.id);
+  }
+}
+
+// ── NGO approval ────────────────────────────────────────────────────────────
+
+/**
+ * NGO approved (or created by the authority): it becomes an ACTIVE NGO and
+ * gets an empty plan for each incident in its area, so it can receive plans.
+ */
+export function activateNgo(app: NgoApplication, code?: string) {
+  const area = app.area ?? '';
+  let ngo = ngoById(app.id);
+  if (ngo) {
+    ngo.status = 'ACTIVE';
+  } else {
+    ngo = {
+      id: app.id,
+      name: app.name,
+      code: code ?? `SAMPLE-NGO-${store.ngos.length + 1}`,
+      serviceArea: area,
+      status: 'ACTIVE',
+      focusAreas: app.focusAreas,
+      approvedAt: now(),
+    };
+    store.ngos = [...store.ngos, ngo];
+  }
+  if (!area) return ngo;
+  for (const incident of store.incidents.filter((i) => i.location.includes(area))) {
+    if (store.plans.some((p) => p.ngoId === ngo.id && p.incidentId === incident.id)) continue;
+    store.plans = [
+      ...store.plans,
+      {
+        id: `plan-${ngo.id}-${incident.id}`,
+        ngoId: ngo.id,
+        incidentId: incident.id,
+        incidentTitle: incident.title,
+        status: 'PROPOSED',
+        version: 1,
+        generatedAt: now(),
+        lastChangedBy: { name: 'Allocation service (Simulated)', kind: 'SYSTEM' },
+        allocations: [],
+        notes: ['Simulated: created for a newly approved NGO. Request a replan to fill it.'],
+      },
+    ];
+  }
+  return ngo;
+}
+
+/** NGO rejected or suspended: it stops receiving plans and leaves the public list. */
+export function suspendNgo(ngoId: string) {
+  const ngo = ngoById(ngoId);
+  if (ngo) ngo.status = 'SUSPENDED';
+  for (const plan of store.plans.filter((p) => p.ngoId === ngoId)) {
+    flagPlan(plan, 'Simulated: this NGO was suspended by the authority.');
   }
 }

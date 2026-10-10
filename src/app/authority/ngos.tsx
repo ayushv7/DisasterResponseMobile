@@ -66,6 +66,7 @@ export default function ApproveNgosScreen() {
               setBusyId(app.id);
               const result = await api.approveNgo(app.id, approved);
               setApplications((prev) => prev.map((a) => (a.id === app.id ? result.data : a)));
+              load();
               const done = `${app.name}: ${verb.toLowerCase()} saved.`;
               setFeedback(result.source === 'sample' ? `Simulated: ${done}` : done);
             } catch (err: any) {

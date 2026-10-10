@@ -13,7 +13,8 @@
 import { SAMPLE_FIELD_TEAM, SAMPLE_NGO_CODE, SAMPLE_VOLUNTEER_APPLICATIONS } from '@/fixtures/sample-accounts';
 import { VolunteerApplication } from '@/types/volunteers';
 import { SAMPLE_NGO_CONTRIBUTIONS, SAMPLE_NGO_INBOX_MESSAGES } from '@/fixtures/sample-ngo-inbox';
-import { NgoContributionItem, NgoInboxMessage } from '@/types/ngo-workspace';
+import { SAMPLE_NGO_APPLICATIONS } from '@/fixtures/sample-ngos';
+import { NgoApplication, NgoContributionItem, NgoInboxMessage } from '@/types/ngo-workspace';
 import {
   SAMPLE_CONTRIBUTOR_ACCOUNTS,
   SAMPLE_CONTRIBUTOR_APPLICATIONS,
@@ -45,6 +46,10 @@ export interface StoreNgo {
   name: string;
   code: string;
   serviceArea: string;
+  /** Only ACTIVE NGOs receive plans and appear to the public. */
+  status: 'ACTIVE' | 'SUSPENDED';
+  focusAreas: string[];
+  approvedAt?: string;
 }
 
 export interface StoreContributor {
@@ -78,7 +83,14 @@ export function incidentForEvent(eventId?: string): string | undefined {
 
 export const store = {
   ngos: [
-    { id: 'ngo-drn-india', name: 'Disaster Relief Network India', code: SAMPLE_NGO_CODE, serviceArea: 'Assam' },
+    {
+      id: 'ngo-drn-india',
+      name: 'Disaster Relief Network India',
+      code: SAMPLE_NGO_CODE,
+      serviceArea: 'Assam',
+      status: 'ACTIVE',
+      focusAreas: ['Flood Evacuation', 'Emergency Rations', 'Medical Aid'],
+    },
   ] as StoreNgo[],
   incidents: copy(SAMPLE_INCIDENTS) as IncidentRecord[],
   tasks: copy(SAMPLE_INTERVENTIONS) as InterventionRecord[],
@@ -94,6 +106,8 @@ export const store = {
   instructions: [] as ContributorInstruction[],
   evidence: [] as EvidenceRecord[],
   volunteerApplications: copy(SAMPLE_VOLUNTEER_APPLICATIONS) as VolunteerApplication[],
+  /** Authority queue: NGO registrations (Ngo is created/activated on approval). */
+  ngoApplications: copy(SAMPLE_NGO_APPLICATIONS) as NgoApplication[],
   ngoMessages: copy(SAMPLE_NGO_INBOX_MESSAGES) as NgoInboxMessage[],
   ngoUpdates: copy(SAMPLE_NGO_CONTRIBUTIONS).map((u) => ({
     ...u,

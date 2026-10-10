@@ -42,6 +42,7 @@
  */
 
 import { IS_SAMPLE_NGOS, SAMPLE_VERIFIED_NGOS } from '@/fixtures/sample-ngos';
+import { store } from '@/services/mock/store';
 import { MessageDraft, MessageReceipt, VerifiedNgo } from '@/types/messaging';
 
 export const IS_STUB_API = true;
@@ -66,7 +67,12 @@ function wait(ms: number) {
 export async function fetchVerifiedNgos(): Promise<VerifiedNgo[]> {
   if (IS_SAMPLE_NGOS || !API_BASE) {
     await wait(STUB_DELAY_MS);
-    return SAMPLE_VERIFIED_NGOS;
+    // Mock: NGOs approved by the authority join the list; suspended ones leave it
+    const approved: VerifiedNgo[] = store.ngos
+      .filter((n) => n.status === 'ACTIVE' && n.approvedAt && !SAMPLE_VERIFIED_NGOS.some((v) => v.id === n.id))
+      .map((n) => ({ id: n.id, name: n.name, focusAreas: n.focusAreas, isVerified: true, verifiedAt: n.approvedAt! }));
+    const suspended = new Set(store.ngos.filter((n) => n.status === 'SUSPENDED').map((n) => n.id));
+    return [...SAMPLE_VERIFIED_NGOS.filter((v) => !suspended.has(v.id)), ...approved];
   }
 
   // TODO: Replace stub below with real implementation once backend is ready.

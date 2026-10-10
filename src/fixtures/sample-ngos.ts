@@ -58,6 +58,7 @@ export const SAMPLE_NGO_APPLICATIONS: NgoApplication[] = [
     focusAreas: ['Boat Rescue', 'Food Distribution'],
     registeredAt: '2026-10-09T06:30:00Z',
     registrationRef: 'SAMPLE-REG-0101',
+    area: 'Assam',
   },
   {
     id: 'ngo-app-102',
