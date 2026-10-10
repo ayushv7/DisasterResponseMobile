@@ -254,6 +254,68 @@ Staff (ngo, coordinator, admin) keep using `POST /auth/session` with email + pas
 `GET /work-orders?assignee=me` (above) returns only the signed-in worker's tasks, with the NGO
 name of the assigned team.
 
+## Public accounts (PROPOSED)
+
+All items in this section are **PROPOSED** and not implemented.
+
+- **Visitor** (no sign-in): reads alerts and sends a message to an NGO. Emergency messaging is
+  never gated behind sign-in.
+- **Registered citizen** (optional): phone or email OTP sign-in. Unlocks offering help, choosing
+  alert areas, and "My messages / My offers" with status.
+
+The backend sends and checks OTPs, issues tokens, and matches offers to verified NGO needs. The
+app only calls these and shows the result. In mock mode the app accepts a fixed sample code and
+labels everything "Simulated". Push notifications are a saved preference only until the backend
+delivers them; the app does not claim push works.
+
+```ts
+interface Citizen {            // PROPOSED; role stays 'public'
+  id: string;
+  contact: string;             // phone or email the OTP was sent to
+  contactKind: 'phone' | 'email';
+  notificationAreas: string[];
+  pushEnabled: boolean;        // preference only
+}
+
+interface OtpChallenge {       // PROPOSED; the code is never returned to the app
+  challengeId: string;
+  sentTo: string;              // masked destination
+  expiresAt: string;
+}
+
+interface HelpOffer {          // PROPOSED
+  id: string;
+  kind: 'FOOD' | 'MONEY' | 'EQUIPMENT' | 'VOLUNTEERING';
+  details: string;
+  area: string;
+  needId?: string;             // the NGO need being answered, if any
+  status: 'SUBMITTED' | 'MATCHED' | 'ACCEPTED' | 'DECLINED' | 'CLOSED';
+  matchedNgoName?: string;     // set by backend matching
+  createdAt: string;
+}
+```
+
+No payments are taken in the app. A money offer only records intent; a matched NGO contacts
+the citizen directly.
+
+| Method | Path | Who | Purpose | Status |
+|---|---|---|---|---|
+| POST | `/auth/otp/request` | public | `requestOtp`: `{ contact }` → `OtpChallenge` (rate-limited) | PROPOSED |
+| POST | `/auth/otp/verify` | public | `verifyOtp`: `{ challengeId, code }` → token + `Citizen` | PROPOSED |
+| POST | `/offers` | citizen | `offerHelp`: `{ kind, details, area, needId? }` → `HelpOffer` | PROPOSED |
+| GET | `/offers?owner=me` | citizen | My offers with status | PROPOSED |
+| PUT | `/me/notification-areas` | citizen | `setNotificationAreas`: `{ areas, pushEnabled }` → `Citizen` | PROPOSED |
+
+The list of NGO needs is currently read from published NGO updates (`GET /incidents/{id}/updates`).
+"My messages" uses the existing message endpoints, filtered to the signed-in citizen.
+
+## Staff roles
+
+`coordinator` and `admin` stay **separate roles** in this contract. The app shows both the same
+staff console for now (Ops console + "Approve NGOs"). The backend must still enforce that only
+`admin` can call `POST /admin/ngos/{id}/approve` and only `coordinator` performs dispatch actions
+unless the backend decides otherwise. Listing registrations uses `GET /ngos?status=PENDING`.
+
 ## Open questions for the backend
 
 1. Auth mechanism and token lifetime; how roles are assigned.
@@ -263,3 +325,6 @@ name of the assigned team.
 5. Rate-limit policy for public messages.
 6. Whether resource `distanceKm` is computed server-side per incident.
 7. Worker credentials: temporary password policy, expiry, and lockout after failed sign-ins.
+8. OTP: code length, expiry, resend limits, and which SMS/email provider.
+9. Offer matching: how and when offers are matched, and how the citizen is told.
+10. Push notifications: provider (Expo push?) and how device tokens are registered.
