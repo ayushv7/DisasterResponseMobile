@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useStrings } from '@/i18n/language-context';
 import { useTheme } from '@/theme';
 import { radii, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -21,6 +22,7 @@ export function AssignmentSummary({
   ngoName?: string;
 }) {
   const { colors } = useTheme();
+  const { t } = useStrings();
   const row = (label: string, value: string, lines?: number) => (
     <View style={styles.row}>
       <Text style={[styles.label, { color: colors.textTertiary }]}>{label}</Text>
@@ -31,15 +33,15 @@ export function AssignmentSummary({
   );
   return (
     <View style={[styles.box, { backgroundColor: colors.surfaceMuted }]} accessibilityLabel="Your assignment">
-      {row('Where', where)}
-      {row('What', what, whatLines)}
+      {row(t('assignment.where'), where)}
+      {row(t('assignment.what'), what, whatLines)}
       {row(
-        'By',
+        t('assignment.by'),
         deadline
           ? new Date(deadline).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })
-          : 'No deadline set'
+          : t('assignment.noDeadline')
       )}
-      {ngoName && row('NGO', ngoName)}
+      {ngoName && row(t('assignment.ngo'), ngoName)}
     </View>
   );
 }
@@ -47,6 +49,6 @@ export function AssignmentSummary({
 const styles = StyleSheet.create({
   box: { borderRadius: radii.sm, padding: spacing.sm, gap: 2 },
   row: { flexDirection: 'row', gap: spacing.sm },
-  label: { ...typography.caption, fontSize: 12, width: 48, fontWeight: '600' },
+  label: { ...typography.caption, fontSize: 12, minWidth: 48, fontWeight: '600' },
   value: { ...typography.caption, fontSize: 12, lineHeight: 17, flex: 1 },
 });

@@ -10,19 +10,23 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { Href, Redirect, router } from 'expo-router';
 
+import { LanguageToggle } from '@/components/LanguageToggle';
+import { useStrings } from '@/i18n/language-context';
+import { StringKey } from '@/i18n/strings';
 import { homeRouteFor, useSession } from '@/session/session-context';
 import { radii, spacing, textScale, touchTargets, typography, useTheme } from '@/theme';
 
-const SIGN_INS: { label: string; desc: string; icon: keyof typeof Feather.glyphMap; href: Href }[] = [
-  { label: 'NGO', desc: 'Organization staff', icon: 'shield', href: '/login' },
-  { label: 'Field worker', desc: 'NGO code and worker ID', icon: 'tool', href: '/worker-login' },
-  { label: 'Contributor', desc: 'Contributor ID and code', icon: 'package', href: '/contributor-login' },
-  { label: 'Authority', desc: 'Coordinator or admin', icon: 'key', href: '/login' },
+const SIGN_INS: { label: StringKey; desc: StringKey; icon: keyof typeof Feather.glyphMap; href: Href }[] = [
+  { label: 'role.ngo', desc: 'role.ngo.desc', icon: 'shield', href: '/login' },
+  { label: 'role.fieldWorker', desc: 'role.fieldWorker.desc', icon: 'tool', href: '/worker-login' },
+  { label: 'role.contributor', desc: 'role.contributor.desc', icon: 'package', href: '/contributor-login' },
+  { label: 'role.authority', desc: 'role.authority.desc', icon: 'key', href: '/login' },
 ];
 
 export default function WelcomeScreen() {
   const { colors } = useTheme();
   const { role, setWelcomeSeen } = useSession();
+  const { t } = useStrings();
 
   const browse = () => {
     setWelcomeSeen(true);
@@ -46,13 +50,14 @@ export default function WelcomeScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right', 'bottom']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
+        <LanguageToggle />
         <View style={styles.hero}>
           <View style={[styles.logo, { backgroundColor: colors.surfaceMuted }]}>
             <Feather name="droplet" size={28} color={colors.brandPrimary} />
           </View>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Flood response</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('welcome.title')}</Text>
           <Text style={[styles.body, styles.center, { color: colors.textSecondary }]}>
-            Read flood alerts and reach verified NGOs. No account needed.
+            {t('welcome.tagline')}
           </Text>
         </View>
 
@@ -64,37 +69,37 @@ export default function WelcomeScreen() {
           ]}
           accessibilityRole="button">
           <Feather name="bell" size={18} color={colors.onActionPrimary} />
-          <Text style={[styles.buttonText, { color: colors.onActionPrimary }]}>Browse alerts</Text>
+          <Text style={[styles.buttonText, { color: colors.onActionPrimary }]}>{t('welcome.browse')}</Text>
         </Pressable>
         <Pressable
           onPress={messageNgo}
           style={[styles.primary, { backgroundColor: colors.surfaceMuted }]}
           accessibilityRole="button">
           <Feather name="send" size={18} color={colors.textPrimary} />
-          <Text style={[styles.buttonText, { color: colors.textPrimary }]}>Message an NGO</Text>
+          <Text style={[styles.buttonText, { color: colors.textPrimary }]}>{t('welcome.message')}</Text>
         </Pressable>
 
-        <Text style={[styles.overline, { color: colors.textTertiary }]}>SIGN IN</Text>
+        <Text style={[styles.overline, { color: colors.textTertiary }]}>{t('welcome.signIn')}</Text>
         <View style={[styles.list, { backgroundColor: colors.surface }]}>
           {SIGN_INS.map((item) => (
             <Pressable
-              key={item.label}
+              key={item.href.toString() + item.label}
               onPress={() => signIn(item.href)}
               style={styles.row}
               android_ripple={{ color: colors.surfaceMuted }}
               accessibilityRole="button"
-              accessibilityLabel={`${item.label} sign in`}>
+              accessibilityLabel={`${t(item.label)} sign in`}>
               <Feather name={item.icon} size={18} color={colors.textSecondary} />
               <View style={styles.flex}>
-                <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>{item.label}</Text>
-                <Text style={[styles.caption, { color: colors.textTertiary }]}>{item.desc}</Text>
+                <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>{t(item.label)}</Text>
+                <Text style={[styles.caption, { color: colors.textTertiary }]}>{t(item.desc)}</Text>
               </View>
               <Feather name="chevron-right" size={18} color={colors.textTertiary} />
             </Pressable>
           ))}
         </View>
         <Text style={[styles.caption, styles.center, { color: colors.textTertiary }]}>
-          Citizens can optionally sign in later from Profile to offer help or volunteer.
+          {t('welcome.citizenNote')}
         </Text>
       </ScrollView>
     </SafeAreaView>

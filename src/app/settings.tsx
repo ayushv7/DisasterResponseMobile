@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { BottomNavBar } from '@/components/BottomNavBar';
+import { LanguageToggle } from '@/components/LanguageToggle';
 import { useSession } from '@/session/session-context';
 import { useGoBack } from '@/navigation/use-go-back';
 import { ThemeMode, useTheme } from '@/theme';
@@ -58,6 +59,11 @@ export default function SettingsScreen() {
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 2. Appearance Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>LANGUAGE · भाषा</Text>
+          <LanguageToggle />
+        </View>
+
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>APPEARANCE</Text>
 

@@ -18,6 +18,7 @@ import { StateView } from '@/components/StateView';
 import { ChipTone, StatusChip } from '@/components/StatusChip';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useToast } from '@/components/Toast';
+import { useStrings } from '@/i18n/language-context';
 import { useGoBack } from '@/navigation/use-go-back';
 import { api, ApiError } from '@/services/api';
 import { useTheme } from '@/theme';
@@ -41,6 +42,7 @@ const formatTime = (iso: string) =>
 export default function ResourcePlanScreen() {
   const goBack = useGoBack();
   const { colors } = useTheme();
+  const { t } = useStrings();
   const { incidentId } = useLocalSearchParams<{ incidentId?: string }>();
   const query = useApiQuery(() => api.getResourcePlan(incidentId), [incidentId], () => false);
   const plan = query.data;
@@ -177,7 +179,7 @@ export default function ResourcePlanScreen() {
         <Pressable onPress={goBack} style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Go back">
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
-        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>Resource plan</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('plan.title')}</Text>
         <SampleDataBadge source={query.source ?? undefined} />
       </View>
 
@@ -234,7 +236,7 @@ export default function ResourcePlanScreen() {
             {/* Actions */}
             {plan.status === 'PROPOSED' && (
               <PrimaryButton
-                label="Approve and publish"
+                label={t('plan.approve')}
                 onPress={() =>
                   confirmAction({
                     title: `Approve version ${plan.version}?`,
@@ -258,7 +260,7 @@ export default function ResourcePlanScreen() {
               ) : (
                 <View style={styles.row}>
                   <Feather name="refresh-cw" size={16} color={colors.textPrimary} />
-                  <Text style={[styles.buttonText, { color: colors.textPrimary }]}>Replan</Text>
+                  <Text style={[styles.buttonText, { color: colors.textPrimary }]}>{t('plan.replan')}</Text>
                 </View>
               )}
             </Pressable>
@@ -271,10 +273,8 @@ export default function ResourcePlanScreen() {
               accessibilityRole="button"
               accessibilityState={{ expanded: showManual }}>
               <View style={styles.flex}>
-                <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>Allocate manually</Text>
-                <Text style={[styles.caption, { color: colors.textSecondary }]}>
-                  Override the plan for one resource, with a reason
-                </Text>
+                <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>{t('plan.allocate')}</Text>
+                <Text style={[styles.caption, { color: colors.textSecondary }]}>{t('plan.allocateHint')}</Text>
               </View>
               <Feather name={showManual ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
             </Pressable>

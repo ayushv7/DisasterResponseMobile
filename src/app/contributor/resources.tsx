@@ -19,6 +19,7 @@ import { ChipTone, StatusChip } from '@/components/StatusChip';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { api, IS_MOCK_API } from '@/services/api';
+import { useStrings } from '@/i18n/language-context';
 import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -39,6 +40,7 @@ const formatTime = (iso: string) =>
 export default function MyResourcesScreen() {
   const { colors } = useTheme();
   const { session } = useSession();
+  const { t } = useStrings();
   useConfirmExitAtRoot();
   const query = useApiQuery(() => api.getMyResources(), []);
   // Instructions from NGO-approved plans: where to bring which resource, by when
@@ -107,7 +109,7 @@ export default function MyResourcesScreen() {
           style={[styles.button, { backgroundColor: colors.actionPrimary }]}
           accessibilityRole="button"
           accessibilityLabel={`Check in ${r.typeLabel}`}>
-          <Text style={[styles.buttonText, { color: colors.onActionPrimary }]}>Check in</Text>
+          <Text style={[styles.buttonText, { color: colors.onActionPrimary }]}>{t('resources.checkIn')}</Text>
         </Pressable>
       </View>
     );
@@ -117,7 +119,7 @@ export default function MyResourcesScreen() {
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
         <View style={styles.flex}>
-          <Text style={[styles.title, { color: colors.textPrimary }]}>My resources</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('resources.title')}</Text>
           {session?.user?.ngoName && (
             <Text style={[styles.caption, { color: colors.textSecondary }]}>{session.user.ngoName}</Text>
           )}
@@ -151,7 +153,8 @@ export default function MyResourcesScreen() {
           {(instructions.data ?? []).length > 0 && (
             <>
               <Text style={[styles.overline, { color: colors.textTertiary }]}>
-                YOUR ASSIGNMENTS{instructions.source === 'sample' ? ' · SIMULATED' : ''}
+                {t('resources.assignments')}
+                {instructions.source === 'sample' ? ' · SIMULATED' : ''}
               </Text>
               {(instructions.data ?? []).map((ins) => (
                 <View key={ins.id} style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -163,7 +166,7 @@ export default function MyResourcesScreen() {
                   </Text>
                 </View>
               ))}
-              <Text style={[styles.overline, { color: colors.textTertiary }]}>RESOURCES</Text>
+              <Text style={[styles.overline, { color: colors.textTertiary }]}>{t('resources.list')}</Text>
             </>
           )}
           {resources.map(renderResource)}

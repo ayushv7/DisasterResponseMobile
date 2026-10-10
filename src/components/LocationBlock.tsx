@@ -11,6 +11,7 @@ import React from 'react';
 import { Alert, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
+import { useStrings } from '@/i18n/language-context';
 import { radii, spacing, textScale, touchTargets, typography, useTheme } from '@/theme';
 import { GpsReading } from '@/types/contributors';
 
@@ -56,6 +57,7 @@ export function LocationBlock({
   compact?: boolean;
 }) {
   const { colors } = useTheme();
+  const { t } = useStrings();
   return (
     <View style={[styles.wrap, !compact && { backgroundColor: colors.surfaceMuted }, !compact && styles.padded]}>
       <Feather name="map-pin" size={16} color={colors.textSecondary} />
@@ -77,7 +79,7 @@ export function LocationBlock({
         accessibilityRole="link"
         accessibilityLabel={`${coords ? 'Open' : 'Search'} ${place} in Maps`}>
         <Text style={[styles.caption, styles.bold, { color: colors.brandPrimary }]}>
-          {coords ? 'Open in Maps' : 'Search in Maps'}
+          {coords ? t('maps.open') : t('maps.search')}
         </Text>
       </Pressable>
     </View>

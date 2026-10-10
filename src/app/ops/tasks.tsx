@@ -40,6 +40,7 @@ import { ChipTone, StatusChip } from '@/components/StatusChip';
 import { useToast } from '@/components/Toast';
 import { api, ApiResult } from '@/services/api';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
+import { useStrings } from '@/i18n/language-context';
 import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -80,6 +81,7 @@ const PROBLEM_KINDS: { key: ReplanningReason; label: string }[] = [
 export default function FieldWorkerTasksScreen() {
   const { colors } = useTheme();
   const { role, session } = useSession();
+  const { t } = useStrings();
   useConfirmExitAtRoot();
 
   const [tasks, setTasks] = useState<InterventionRecord[]>([]);
@@ -232,7 +234,7 @@ export default function FieldWorkerTasksScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>Tasks</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>{t('tasks.title')}</Text>
         {role === 'field_worker' && session?.user && (
           <Text style={[styles.crewText, { color: colors.textSecondary }]}>
             {session.user.name}
@@ -254,10 +256,10 @@ export default function FieldWorkerTasksScreen() {
       <View style={styles.filterRow}>
         {(
           [
-            { key: 'ALL', label: 'All Orders' },
-            { key: 'ASSIGNED', label: 'Needs Ack' },
-            { key: 'ACTIVE', label: 'In Progress' },
-            { key: 'BLOCKED', label: 'Blocked / Failed' },
+            { key: 'ALL', label: t('tasks.filter.all') },
+            { key: 'ASSIGNED', label: t('tasks.filter.ack') },
+            { key: 'ACTIVE', label: t('tasks.filter.active') },
+            { key: 'BLOCKED', label: t('tasks.filter.blocked') },
           ] as { key: TaskFilter; label: string }[]
         ).map((f) => {
           const isSelected = filter === f.key;
@@ -368,12 +370,12 @@ export default function FieldWorkerTasksScreen() {
                 {(() => {
                   const primary =
                     item.status === 'AWAITING_ACK'
-                      ? { label: 'Acknowledge', onPress: () => handleAcknowledge(item) }
+                      ? { label: t('tasks.acknowledge'), onPress: () => handleAcknowledge(item) }
                       : item.status === 'EN_ROUTE'
-                        ? { label: 'Start work', onPress: () => handleStartWork(item) }
+                        ? { label: t('tasks.start'), onPress: () => handleStartWork(item) }
                         : item.status === 'IN_PROGRESS'
                           ? {
-                              label: 'Submit completion',
+                              label: t('tasks.complete'),
                               onPress: () => {
                                 setCompleteTarget(item);
                                 setCompletionEvidence('');
@@ -436,7 +438,7 @@ export default function FieldWorkerTasksScreen() {
                           accessibilityState={{ disabled: busy }}
                           accessibilityLabel={`Report a problem: ${item.id}`}>
                           <Text style={[styles.secondaryActionText, { color: colors.statusActive }]}>
-                            Report problem
+                            {t('tasks.report')}
                           </Text>
                         </Pressable>
                       )}
@@ -457,7 +459,7 @@ export default function FieldWorkerTasksScreen() {
                   accessibilityState={{ expanded }}
                   accessibilityLabel={`${expanded ? 'Hide' : 'Show'} details for ${item.id}`}>
                   <Text style={[styles.crewText, { color: colors.textSecondary }]}>
-                    {expanded ? 'Less' : 'More details'}
+                    {expanded ? t('tasks.less') : t('tasks.more')}
                   </Text>
                   <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
                 </Pressable>

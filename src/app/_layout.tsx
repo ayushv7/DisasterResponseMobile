@@ -8,6 +8,7 @@ import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BackendBanner } from '@/components/BackendBanner';
 import { IS_MOCK_API } from '@/services/api';
 import { ToastProvider } from '@/components/Toast';
+import { LanguageProvider } from '@/i18n/language-context';
 import { SessionProvider } from '@/session/session-context';
 import { ThemeProvider, useTheme } from '@/theme';
 
@@ -60,11 +61,13 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <SessionProvider>
-        <ToastProvider>
-          <RootLayoutContent />
-        </ToastProvider>
-      </SessionProvider>
+      <LanguageProvider>
+        <SessionProvider>
+          <ToastProvider>
+            <RootLayoutContent />
+          </ToastProvider>
+        </SessionProvider>
+      </LanguageProvider>
     </ThemeProvider>
   );
 }
