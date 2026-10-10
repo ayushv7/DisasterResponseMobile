@@ -38,7 +38,7 @@ export function PickerSheet({
   const { colors } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={[styles.backdrop, { backgroundColor: colors.scrim }]} onPress={onClose} accessibilityLabel="Close" />
+      <Pressable accessibilityRole="button" style={[styles.backdrop, { backgroundColor: colors.scrim }]} onPress={onClose} accessibilityLabel="Close" />
       <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
         {note && <Text style={[styles.caption, { color: colors.textSecondary }]}>{note}</Text>}

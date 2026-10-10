@@ -123,7 +123,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    height: 36,
     borderRadius: radii.sm,
     minHeight: 36,
   },

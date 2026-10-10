@@ -333,6 +333,7 @@ export default function VerificationAndReplanningScreen() {
       {/* Tab Switcher */}
       <View style={[styles.tabBar, { borderBottomColor: colors.border }]}>
         <Pressable
+          accessibilityRole="button"
           onPress={() => setActiveTab('VERIFICATION')}
           style={[
             styles.tabItem,
@@ -354,6 +355,8 @@ export default function VerificationAndReplanningScreen() {
         </Pressable>
 
         <Pressable
+
+          accessibilityRole="button"
           onPress={() => setActiveTab('REPLANNING')}
           style={[
             styles.tabItem,
@@ -471,6 +474,7 @@ export default function VerificationAndReplanningScreen() {
                 Verify completion
               </Text>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setSelectedVerification(null)}
                 style={styles.modalCloseButton}>
                 <Feather name="x" size={20} color={colors.textSecondary} />
@@ -513,6 +517,7 @@ export default function VerificationAndReplanningScreen() {
 
             <View style={styles.modalActions}>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => handleSignOff(false)}
                 disabled={actionLoading}
                 style={[styles.modalRejectButton, { borderColor: colors.border }]}>
@@ -521,6 +526,7 @@ export default function VerificationAndReplanningScreen() {
                 </Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => handleSignOff(true)}
                 disabled={actionLoading}
                 style={[styles.modalApproveButton, { backgroundColor: colors.actionPrimary }]}>
@@ -546,6 +552,7 @@ export default function VerificationAndReplanningScreen() {
                 Reassign
               </Text>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setSelectedReplanning(null)}
                 style={styles.modalCloseButton}>
                 <Feather name="x" size={20} color={colors.textSecondary} />
@@ -587,6 +594,7 @@ export default function VerificationAndReplanningScreen() {
 
             <View style={styles.modalActions}>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setSelectedReplanning(null)}
                 style={[styles.modalRejectButton, { borderColor: colors.border }]}>
                 <Text style={[styles.modalRejectText, { color: colors.textSecondary }]}>
@@ -594,6 +602,7 @@ export default function VerificationAndReplanningScreen() {
                 </Text>
               </Pressable>
               <Pressable
+                accessibilityRole="button"
                 onPress={handleExecuteReplanning}
                 disabled={actionLoading}
                 style={[styles.modalApproveButton, { backgroundColor: colors.actionPrimary }]}>
@@ -773,7 +782,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 40,
+    minHeight: 40,
     borderRadius: radii.button,
   },
   primaryButtonText: {
@@ -783,7 +792,7 @@ const styles = StyleSheet.create({
   },
   outlineButton: {
     paddingHorizontal: spacing.md,
-    height: 40,
+    minHeight: 40,
     borderRadius: radii.button,
     borderWidth: 1,
     alignItems: 'center',
@@ -883,7 +892,7 @@ const styles = StyleSheet.create({
   },
   modalRejectButton: {
     flex: 1,
-    height: 42,
+    minHeight: 42,
     borderRadius: radii.button,
     borderWidth: 1,
     alignItems: 'center',
@@ -896,7 +905,7 @@ const styles = StyleSheet.create({
   },
   modalApproveButton: {
     flex: 2,
-    height: 42,
+    minHeight: 42,
     borderRadius: radii.button,
     alignItems: 'center',
     justifyContent: 'center',

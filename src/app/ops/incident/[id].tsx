@@ -227,7 +227,7 @@ export default function IncidentWorkspaceScreen() {
         edges={['top', 'left', 'right']}
         style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <Pressable onPress={goBack} style={styles.backButton}>
+          <Pressable accessibilityRole="button" onPress={goBack} style={styles.backButton}>
             <Feather name="arrow-left" size={22} color={colors.textPrimary} />
           </Pressable>
           <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>
@@ -325,6 +325,7 @@ export default function IncidentWorkspaceScreen() {
             const isSelected = selectedIntervention?.id === item.id;
             return (
               <Pressable
+                accessibilityRole="button"
                 key={item.id}
                 onPress={() => handleSelectIntervention(item)}
                 style={[
@@ -669,6 +670,7 @@ export default function IncidentWorkspaceScreen() {
                 const isSelected = selectedTeamId === crew.id;
                 return (
                   <Pressable
+                    accessibilityRole="button"
                     key={crew.id}
                     onPress={() => setSelectedTeamId(crew.id)}
                     style={[
@@ -711,6 +713,7 @@ export default function IncidentWorkspaceScreen() {
 
             <View style={styles.modalActions}>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setShowAssignModal(false)}
                 style={[styles.modalCancel, { backgroundColor: colors.surfaceMuted }]}>
                 <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>
@@ -719,6 +722,8 @@ export default function IncidentWorkspaceScreen() {
               </Pressable>
 
               <Pressable
+
+                accessibilityRole="button"
                 onPress={() => handleExecuteAssignment()}
                 disabled={assigning || !canConfirmAssignment}
                 style={[
@@ -1036,7 +1041,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.button,
     marginTop: spacing.xs,
   },
@@ -1178,7 +1183,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.sm,
   },
   modalCancelText: {
@@ -1189,7 +1194,7 @@ const styles = StyleSheet.create({
     flex: 1.2,
     alignItems: 'center',
     justifyContent: 'center',
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.sm,
   },
   modalConfirmText: {

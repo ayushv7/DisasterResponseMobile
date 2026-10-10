@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     maxWidth: 290,
   },
   retryButton: {
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     paddingHorizontal: spacing.xl,
     borderRadius: radii.button,
     alignItems: 'center',

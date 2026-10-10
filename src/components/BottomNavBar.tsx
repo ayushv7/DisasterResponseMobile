@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   tabButton: {
     flex: 1,
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,

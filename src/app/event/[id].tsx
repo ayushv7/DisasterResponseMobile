@@ -109,6 +109,7 @@ export default function EventDetailScreen() {
             Unable to locate event record with ID: {id}
           </Text>
           <Pressable
+            accessibilityRole="button"
             onPress={goBack}
             style={[styles.primaryBtn, { backgroundColor: colors.brandPrimary }]}>
             <Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>Return to Feed</Text>
@@ -474,7 +475,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     paddingHorizontal: spacing.xs,
   },
   backText: {
@@ -771,7 +772,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   primaryBtn: {
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     paddingHorizontal: spacing.xl,
     borderRadius: radii.button,
     alignItems: 'center',

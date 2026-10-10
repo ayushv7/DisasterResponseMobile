@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   modalAction: {
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.button,
     alignItems: 'center',
     justifyContent: 'center',

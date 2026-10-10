@@ -246,6 +246,8 @@ export default function OperationsHomeScreen() {
               const isSelected = activeFilter === f.key;
               return (
                     <Pressable
+                      accessibilityRole="button"
+                      accessibilityState={{ selected: isSelected }}
                       key={f.key}
                       onPress={() => setActiveFilter(f.key)}
                       style={[

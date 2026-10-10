@@ -94,7 +94,7 @@ const styles = StyleSheet.create({
     minHeight: touchTargets.min,
   },
   button: {
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.button,
     alignItems: 'center',
     justifyContent: 'center',

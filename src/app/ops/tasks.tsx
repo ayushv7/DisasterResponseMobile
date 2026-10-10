@@ -265,6 +265,8 @@ export default function FieldWorkerTasksScreen() {
           const isSelected = filter === f.key;
           return (
             <Pressable
+              accessibilityRole="button"
+              accessibilityState={{ selected: isSelected }}
               key={f.key}
               onPress={() => setFilter(f.key)}
               style={[
@@ -560,6 +562,8 @@ export default function FieldWorkerTasksScreen() {
             />
 
             <Pressable
+
+              accessibilityRole="button"
               onPress={() => setIsCriticalBlocker(!isCriticalBlocker)}
               style={{
                 flexDirection: 'row',
@@ -579,6 +583,7 @@ export default function FieldWorkerTasksScreen() {
 
             <View style={styles.modalActions}>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setBlockerTarget(null)}
                 style={[styles.modalCancel, { backgroundColor: colors.surfaceMuted }]}>
                 <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>
@@ -587,6 +592,8 @@ export default function FieldWorkerTasksScreen() {
               </Pressable>
 
               <Pressable
+
+                accessibilityRole="button"
                 onPress={handleReportBlockerSubmit}
                 disabled={submittingBlocker}
                 style={[styles.modalConfirm, { backgroundColor: colors.statusActive }]}>
@@ -642,6 +649,7 @@ export default function FieldWorkerTasksScreen() {
 
             <View style={styles.modalActions}>
               <Pressable
+                accessibilityRole="button"
                 onPress={() => setCompleteTarget(null)}
                 style={[styles.modalCancel, { backgroundColor: colors.surfaceMuted }]}>
                 <Text style={[styles.modalCancelText, { color: colors.textSecondary }]}>
@@ -650,6 +658,8 @@ export default function FieldWorkerTasksScreen() {
               </Pressable>
 
               <Pressable
+
+                accessibilityRole="button"
                 onPress={handleCompleteSubmit}
                 disabled={submittingComplete}
                 style={[styles.modalConfirm, { backgroundColor: colors.actionPrimary }]}>
@@ -847,7 +857,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.sm,
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.button,
   },
   actionBtnPrimaryText: {
@@ -865,7 +875,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.button,
   },
   actionBtnDangerText: {
@@ -879,7 +889,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.button,
   },
   actionBtnSuccessText: {
@@ -927,7 +937,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.sm,
   },
   modalCancelText: {
@@ -938,7 +948,7 @@ const styles = StyleSheet.create({
     flex: 1.2,
     alignItems: 'center',
     justifyContent: 'center',
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.sm,
   },
   modalConfirmText: {

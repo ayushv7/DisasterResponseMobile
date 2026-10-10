@@ -71,7 +71,7 @@ export const lightColors: ThemeColors = {
   divider: 'rgba(0,0,0,0.1)',
   textPrimary: '#0F0F0F',
   textSecondary: '#606060',
-  textTertiary: '#909090',
+  textTertiary: '#6D6D6D', // 4.5:1 on surfaceMuted (WCAG AA)
   brandPrimary: '#065FD4',
   primaryPressed: '#E5E5E5',
   onPrimary: '#FFFFFF',
@@ -79,10 +79,10 @@ export const lightColors: ThemeColors = {
   statusActive: '#C62828',
   statusActiveBg: '#FDECEC',
 
-  statusWatch: '#B26A00',
+  statusWatch: '#9C5D00', // ≥4.5:1 on statusWatchBg, white and surfaceMuted (WCAG AA)
   statusWatchBg: '#FFF4E0',
 
-  statusResolved: '#2E7D32',
+  statusResolved: '#2D7B31',
   statusResolvedBg: '#E8F5E9',
 
   info: '#606060',
@@ -112,7 +112,7 @@ export const darkColors: ThemeColors = {
   divider: 'rgba(255,255,255,0.12)',
   textPrimary: '#F1F1F1', // YouTube primary white
   textSecondary: '#AAAAAA', // YouTube secondary neutral grey
-  textTertiary: '#717171', // YouTube metadata grey
+  textTertiary: '#8D8D8D', // YouTube metadata grey, lifted to 4.5:1 on surfaceMuted
   brandPrimary: '#3EA6FF', // YouTube signature action blue
   primaryPressed: '#383838',
   onPrimary: '#0F0F0F',

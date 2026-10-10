@@ -84,7 +84,7 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   actionButton: {
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     paddingHorizontal: spacing.lg,
     borderRadius: radii.button,
     alignItems: 'center',

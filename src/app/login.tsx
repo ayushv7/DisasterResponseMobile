@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     minHeight: touchTargets.min,
   },
   submitButton: {
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.button,
     alignItems: 'center',
     justifyContent: 'center',
@@ -350,7 +350,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    height: touchTargets.min,
+    minHeight: touchTargets.min,
     borderRadius: radii.button,
   },
   demoButtonText: {
