@@ -56,6 +56,12 @@ export default function ProfileScreen() {
             icon: 'gift' as const,
             onPress: () => router.push('/my-offers'),
           },
+          {
+            label: 'Alert areas',
+            desc: 'Areas to get alerts for',
+            icon: 'bell' as const,
+            onPress: () => router.push('/notification-areas'),
+          },
         ]
       : []),
   ];

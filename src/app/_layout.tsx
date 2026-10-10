@@ -36,6 +36,7 @@ function RootLayoutContent() {
         <Stack.Screen name="citizen-login" />
         <Stack.Screen name="offer-help" />
         <Stack.Screen name="my-offers" />
+        <Stack.Screen name="notification-areas" />
         <Stack.Screen name="event/[id]" />
         <Stack.Screen name="message/compose" />
         <Stack.Screen name="settings" />

@@ -27,6 +27,7 @@ export const httpApi: ApiClient = {
   getNgoNeeds: notImplemented('getNgoNeeds'),
   offerHelp: notImplemented('offerHelp'),
   getMyOffers: notImplemented('getMyOffers'),
+  setNotificationAreas: notImplemented('setNotificationAreas'),
   getOpsSummary: notImplemented('getOpsSummary'),
   getActionQueue: notImplemented('getActionQueue'),
   getIncidents: notImplemented('getIncidents'),

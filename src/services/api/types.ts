@@ -13,6 +13,7 @@ import {
   Citizen,
   CreateWorkerInput,
   NgoMember,
+  NotificationAreasInput,
   OtpChallenge,
   StaffLoginResult,
   WorkerCredentials,
@@ -93,6 +94,8 @@ export interface ApiClient {
   offerHelp(input: OfferHelpInput): Promise<ApiResult<HelpOffer>>;
   /** The signed-in citizen's offers with their current status. */
   getMyOffers(): Promise<ApiResult<HelpOffer[]>>;
+  /** Saves alert areas and the push preference. Does not mean push is delivered. */
+  setNotificationAreas(input: NotificationAreasInput): Promise<ApiResult<Citizen>>;
 
   // Operations
   getOpsSummary(): Promise<ApiResult<OperationalOverviewStats>>;

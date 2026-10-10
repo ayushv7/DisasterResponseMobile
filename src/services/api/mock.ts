@@ -132,6 +132,7 @@ export const mockApi: ApiClient = {
   getNgoNeeds: () => simulate(offers.fetchNgoNeeds),
   offerHelp: (input) => simulate(() => offers.offerHelp(input)),
   getMyOffers: () => simulate(offers.fetchMyOffers),
+  setNotificationAreas: (input) => simulate(() => accounts.setNotificationAreas(input)),
 
   getOpsSummary: () => simulate(ops.fetchOperationalStats),
   getActionQueue: () =>
