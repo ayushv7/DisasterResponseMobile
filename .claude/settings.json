@@ -1,7 +1,6 @@
 {
   "enabledPlugins": {
-    "expo@claude-plugins-official": true,
-    "includeCoAuthoredBy": false,
-    "attribution": { "commit": "", "pr": "" }
-  }
+    "expo@claude-plugins-official": true
+  },
+  "attribution": { "commit": "", "pr": "" }
 }
