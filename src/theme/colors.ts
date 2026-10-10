@@ -46,6 +46,13 @@ export interface ThemeColors {
   brandTeal: string;
   brandTealBg: string;
   brandNavy: string;
+  // Primary actions (teal): the one dominant action per screen
+  actionPrimary: string;
+  actionPrimaryPressed: string;
+  onActionPrimary: string;
+  // Global "backend not connected" bar (navy)
+  bannerBg: string;
+  bannerText: string;
 
   // Elevation / Shadow
   shadowColor: string;
@@ -81,6 +88,11 @@ export const lightColors: ThemeColors = {
   brandTeal: '#0D9488',
   brandTealBg: '#CCFBF1',
   brandNavy: '#0F172A',
+  actionPrimary: '#0F766E', // darker teal: 5.4:1 against white text
+  actionPrimaryPressed: '#115E59',
+  onActionPrimary: '#FFFFFF',
+  bannerBg: '#1E293B',
+  bannerText: '#E2E8F0',
 
   shadowColor: 'transparent',
 };
@@ -115,6 +127,11 @@ export const darkColors: ThemeColors = {
   brandTeal: '#14B8A6', // Operational teal accent
   brandTealBg: '#042F2E',
   brandNavy: '#0F172A',
+  actionPrimary: '#2DD4BF',
+  actionPrimaryPressed: '#14B8A6',
+  onActionPrimary: '#042F2E',
+  bannerBg: '#172033',
+  bannerText: '#CBD5E1',
 
   shadowColor: 'transparent',
 };
