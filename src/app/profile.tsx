@@ -67,15 +67,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Auth notice */}
-        <View style={[styles.authNotice, { backgroundColor: colors.surfaceMuted }]}>
-          <Feather name="info" size={13} color={colors.textTertiary} />
-          <Text style={[styles.authNoticeText, { color: colors.textTertiary }]}>
-            User authentication is not yet implemented. This profile view will
-            display your identity and preferences once sign-in is available.
-          </Text>
-        </View>
-
         {/* Menu items */}
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
@@ -111,33 +102,16 @@ export default function ProfileScreen() {
         </View>
 
 
-        {/* Account & Access */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
-            ACCOUNT & ACCESS
+        {/* Staff sign-in: small link; the public needs no account */}
+        <Pressable
+          onPress={() => router.push('/login')}
+          style={styles.staffLink}
+          accessibilityRole="link"
+          accessibilityLabel="NGO or staff sign in">
+          <Text style={[styles.staffLinkText, { color: colors.textSecondary }]}>
+            NGO / staff sign in
           </Text>
-          <View style={[styles.menuCard, { backgroundColor: colors.surface }]}>
-            <Pressable
-              onPress={() => router.push('/login')}
-              android_ripple={{ color: colors.surfaceMuted }}
-              accessibilityRole="button"
-              accessibilityLabel="Sign in"
-              style={styles.menuRow}>
-              <View style={[styles.menuIconBox, { backgroundColor: colors.surfaceMuted }]}>
-                <Feather name="log-in" size={16} color={colors.brandPrimary} />
-              </View>
-              <View style={styles.menuContent}>
-                <Text style={[styles.menuLabel, { color: colors.textPrimary }]}>
-                  Sign In
-                </Text>
-                <Text style={[styles.menuDesc, { color: colors.textTertiary }]}>
-                  Authorized responder and organization accounts
-                </Text>
-              </View>
-              <Feather name="chevron-right" size={16} color={colors.textTertiary} />
-            </Pressable>
-          </View>
-        </View>
+        </Pressable>
 
         {/* About section */}
         <View style={styles.section}>
@@ -179,6 +153,16 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  staffLink: {
+    minHeight: touchTargets.min,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  staffLinkText: {
+    ...typography.caption,
+    fontSize: 13,
+    textDecorationLine: 'underline',
+  },
   safeArea: {
     flex: 1,
   },
