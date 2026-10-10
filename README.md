@@ -14,6 +14,7 @@ npm install
 npx expo start        # scan the QR code with Expo Go
 npx tsc --noEmit      # typecheck
 npx expo lint         # lint
+npm test              # unit tests (jest-expo): sample store and simulated cascades
 ```
 
 - **Sample mode (default):** with `EXPO_PUBLIC_API_BASE_URL` unset, the app runs on an in-memory
@@ -80,4 +81,3 @@ due, or open **Notifications (Simulated)** from Organization / Profile.
 
 - Real authentication, push notifications, photo upload (presigned URLs) and every backend
   endpoint. See the open questions in the API proposal.
-- No unit test runner is set up yet.
