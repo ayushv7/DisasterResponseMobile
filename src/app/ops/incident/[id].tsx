@@ -18,6 +18,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -26,12 +27,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
-import {
-  assignIntervention,
-  fetchAllocationRecommendation,
-  fetchIncidentDetail,
-  fetchOperationalResources,
-} from '@/services/operations-api';
+import { FreshnessDot, freshnessOf } from '@/components/FreshnessDot';
+import { api } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -57,15 +54,20 @@ export default function IncidentWorkspaceScreen() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [selectedTeamId, setSelectedTeamId] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  // When the resource list was received; reference time for freshness.
+  const [asOf, setAsOf] = useState<string | null>(null);
+  const [overrideReason, setOverrideReason] = useState('');
+  const [showContingency, setShowContingency] = useState(false);
+  const [showAllResources, setShowAllResources] = useState(false);
 
   const loadAll = useCallback(async () => {
     if (!id) return;
     try {
       setErrorMsg(null);
-      const [detail, resList] = await Promise.all([
-        fetchIncidentDetail(id),
-        fetchOperationalResources(),
-      ]);
+      const [detailRes, resRes] = await Promise.all([api.getIncident(id), api.getResources()]);
+      const detail = detailRes.data;
+      const resList = resRes.data;
+      setAsOf(resRes.receivedAt);
 
       if (!detail) {
         setErrorMsg(`Incident ${id} could not be located.`);
@@ -79,7 +81,7 @@ export default function IncidentWorkspaceScreen() {
       if (detail.interventions.length > 0) {
         const first = detail.interventions[0];
         setSelectedIntervention(first);
-        const rec = await fetchAllocationRecommendation(first.id);
+        const rec = (await api.getRecommendation(first.id)).data;
         setRecommendation(rec);
         if (rec) setSelectedTeamId(rec.recommendedTeamId);
       }
@@ -97,26 +99,48 @@ export default function IncidentWorkspaceScreen() {
 
   const handleSelectIntervention = async (item: InterventionRecord) => {
     setSelectedIntervention(item);
-    const rec = await fetchAllocationRecommendation(item.id);
-    setRecommendation(rec);
-    if (rec) setSelectedTeamId(rec.recommendedTeamId);
+    setRecommendation(null);
+    try {
+      const rec = (await api.getRecommendation(item.id)).data;
+      setRecommendation(rec);
+      if (rec) setSelectedTeamId(rec.recommendedTeamId);
+    } catch (err: any) {
+      Alert.alert('Could not load recommendation', err?.message || 'Try again.');
+    }
   };
 
-  const handleExecuteAssignment = async () => {
-    if (!selectedIntervention || !selectedTeamId) return;
+  const isOverride = !!recommendation && selectedTeamId !== recommendation.recommendedTeamId;
+  const canConfirmAssignment = !!selectedTeamId && (!isOverride || overrideReason.trim().length >= 5);
+
+  const confirmApprove = () => {
+    if (!recommendation) return;
+    Alert.alert(
+      'Approve recommendation?',
+      `Assign ${recommendation.recommendedTeamName}, deadline ${recommendation.suggestedDeadlineMinutes} min.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Approve', onPress: () => handleExecuteAssignment(recommendation.recommendedTeamId) },
+      ]
+    );
+  };
+
+  const handleExecuteAssignment = async (teamId: string = selectedTeamId) => {
+    if (!selectedIntervention || !teamId) return;
+    const overriding = !!recommendation && teamId !== recommendation.recommendedTeamId;
 
     try {
       setAssigning(true);
-      const chosenTeam = resources.find((r) => r.id === selectedTeamId);
+      const chosenTeam = resources.find((r) => r.id === teamId);
       const equipment = recommendation ? recommendation.recommendedEquipment : [];
       const deadline = recommendation ? recommendation.suggestedDeadlineMinutes : 30;
 
-      const updated = await assignIntervention(
-        selectedIntervention.id,
-        selectedTeamId,
+      const result = await api.assign(selectedIntervention.id, {
+        teamId,
         equipment,
-        deadline
-      );
+        deadlineMinutes: deadline,
+        overrideReason: overriding ? overrideReason.trim() : undefined,
+      });
+      const updated = result.data;
 
       setInterventions((prev) =>
         prev.map((i) => (i.id === updated.id ? updated : i))
@@ -124,9 +148,11 @@ export default function IncidentWorkspaceScreen() {
       setSelectedIntervention(updated);
       setShowAssignModal(false);
 
+      setOverrideReason('');
       Alert.alert(
-        'Assignment Staged (Simulation)',
-        `Intervention ${updated.id} assigned to ${chosenTeam?.name || selectedTeamId}. Deadline: ${deadline} minutes.\n\nNotice: Live server dispatch requires POST /api/v1/ops/interventions/${updated.id}/assign.`
+        result.source === 'sample' ? 'Simulated: assignment recorded' : 'Assignment sent',
+        `${chosenTeam?.name || teamId} must acknowledge within ${deadline} min.` +
+          (result.source === 'sample' ? '\n\nSample mode: no crew was notified.' : '')
       );
     } catch (err: any) {
       Alert.alert('Assignment Error', err?.message || 'Could not complete assignment.');
@@ -396,47 +422,91 @@ export default function IncidentWorkspaceScreen() {
                   </View>
                 )}
 
-                {/* Contingency Plan */}
-                <View style={styles.contingencyBox}>
+                {/* Contingency: collapsed to one line */}
+                <Pressable
+                  onPress={() => setShowContingency((v) => !v)}
+                  style={styles.contingencyBox}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: showContingency }}>
                   <Text style={[styles.contingencyTitle, { color: colors.textTertiary }]}>
-                    CONTINGENCY PLAN:
+                    CONTINGENCY {showContingency ? '▴' : '▾'}
                   </Text>
-                  <Text style={[styles.contingencyText, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[styles.contingencyText, { color: colors.textSecondary }]}
+                    numberOfLines={showContingency ? undefined : 1}>
                     {selectedIntervention.contingencyPlan}
                   </Text>
-                </View>
+                </Pressable>
 
-                {/* Assignment Action Button */}
+                {/* Approve (primary) / Override (secondary) */}
                 {selectedIntervention.status === 'AWAITING_ASSIGNMENT' && (
-                  <Pressable
-                    onPress={() => setShowAssignModal(true)}
-                    style={[styles.assignButton, { backgroundColor: colors.brandTeal }]}
-                    accessibilityRole="button"
-                    accessibilityLabel="Authorize and assign team">
-                    <Feather name="send" size={16} color="#0B111A" />
-                    <Text style={styles.assignButtonText}>
-                      Confirm & Authorize Assignment
-                    </Text>
-                  </Pressable>
+                  <>
+                    <Pressable
+                      onPress={confirmApprove}
+                      disabled={assigning}
+                      style={({ pressed }) => [
+                        styles.assignButton,
+                        { backgroundColor: pressed ? colors.actionPrimaryPressed : colors.actionPrimary },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Approve recommendation: assign ${recommendation.recommendedTeamName}`}>
+                      {assigning ? (
+                        <ActivityIndicator size="small" color={colors.onActionPrimary} />
+                      ) : (
+                        <Text style={[styles.assignButtonText, { color: colors.onActionPrimary }]}>
+                          Approve recommendation
+                        </Text>
+                      )}
+                    </Pressable>
+                    <Pressable
+                      onPress={() => setShowAssignModal(true)}
+                      style={styles.overrideButton}
+                      accessibilityRole="button"
+                      accessibilityLabel="Override: choose a different crew">
+                      <Text style={[styles.overrideText, { color: colors.actionPrimary }]}>
+                        Override…
+                      </Text>
+                    </Pressable>
+                  </>
+                )}
+                {selectedIntervention.overrideReason && (
+                  <Text style={[styles.contingencyText, { color: colors.textSecondary }]}>
+                    Overridden: {selectedIntervention.overrideReason}
+                  </Text>
                 )}
               </View>
             ) : (
               <View style={[styles.card, { backgroundColor: colors.surface }]}>
                 <Text style={[styles.noRecText, { color: colors.textTertiary }]}>
-                  Awaiting backend resource optimizer response for this task type.
+                  No recommendation available for this work order.
                 </Text>
               </View>
             )}
           </View>
         )}
 
-        {/* 4. Available Pool of Operational Resources */}
+        {/* 4. Resource pool: summary line, expand for the full list */}
         <View style={styles.sectionWrap}>
-          <Text style={[styles.sectionOverline, { color: colors.textTertiary }]}>
-            ELIGIBLE POOL RESOURCES ({resources.length})
-          </Text>
+          <Pressable
+            onPress={() => setShowAllResources((v) => !v)}
+            style={styles.disclosureRow}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: showAllResources }}>
+            <Text style={[styles.sectionOverline, styles.disclosureText, { color: colors.textTertiary }]}>
+              RESOURCES ({resources.length}) ·{' '}
+              {resources.filter((r) => r.availabilityStatus === 'AVAILABLE').length} available
+              {asOf
+                ? ` · ${resources.filter((r) => freshnessOf(r.statusReportedAt, asOf) === 'stale').length} stale`
+                : ''}
+            </Text>
+            <Feather
+              name={showAllResources ? 'chevron-up' : 'chevron-down'}
+              size={18}
+              color={colors.textSecondary}
+            />
+          </Pressable>
 
-          {resources.map((res) => (
+          {showAllResources && resources.map((res) => (
             <View
               key={res.id}
               style={[styles.resourceCard, { backgroundColor: colors.surface }]}>
@@ -461,6 +531,7 @@ export default function IncidentWorkspaceScreen() {
               <Text style={[styles.resourceSpecs, { color: colors.textSecondary }]}>
                 {res.specifications}
               </Text>
+              {asOf && <FreshnessDot reportedAt={res.statusReportedAt} asOf={asOf} />}
 
               <View style={styles.resourceFooter}>
                 <Text style={[styles.resourceMeta, typography.tabular, { color: colors.textTertiary }]}>
@@ -495,7 +566,7 @@ export default function IncidentWorkspaceScreen() {
             <View style={styles.modalHeader}>
               <Feather name="check-square" size={20} color={colors.brandTeal} />
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                Stage Operational Assignment
+                Override recommendation
               </Text>
             </View>
 
@@ -530,12 +601,32 @@ export default function IncidentWorkspaceScreen() {
                     <Text style={[styles.teamOptionName, { color: colors.textPrimary }]}>
                       {crew.name}
                     </Text>
-                    <Text style={[styles.teamOptionDist, typography.tabular, { color: colors.textTertiary }]}>
-                      {crew.proximityKm}km
-                    </Text>
+                    <View style={styles.teamOptionMeta}>
+                      <Text style={[styles.teamOptionDist, typography.tabular, { color: colors.textTertiary }]}>
+                        {crew.proximityKm}km · {crew.availabilityStatus.toLowerCase()}
+                      </Text>
+                      {asOf && <FreshnessDot reportedAt={crew.statusReportedAt} asOf={asOf} />}
+                    </View>
                   </Pressable>
                 );
               })}
+
+            {isOverride && (
+              <>
+                <Text style={[styles.modalLabel, { color: colors.textTertiary }]}>
+                  REASON FOR OVERRIDE (REQUIRED)
+                </Text>
+                <TextInput
+                  value={overrideReason}
+                  onChangeText={setOverrideReason}
+                  placeholder="e.g. Crew A closer to the breach"
+                  placeholderTextColor={colors.textTertiary}
+                  style={[styles.reasonInput, { backgroundColor: colors.surfaceMuted, color: colors.textPrimary }]}
+                  multiline
+                  accessibilityLabel="Reason for override"
+                />
+              </>
+            )}
 
             <View style={styles.modalActions}>
               <Pressable
@@ -547,14 +638,21 @@ export default function IncidentWorkspaceScreen() {
               </Pressable>
 
               <Pressable
-                onPress={handleExecuteAssignment}
-                disabled={assigning}
-                style={[styles.modalConfirm, { backgroundColor: colors.brandTeal }]}>
+                onPress={() => handleExecuteAssignment()}
+                disabled={assigning || !canConfirmAssignment}
+                style={[
+                  styles.modalConfirm,
+                  {
+                    backgroundColor: colors.actionPrimary,
+                    opacity: canConfirmAssignment ? 1 : 0.5,
+                  },
+                ]}
+                accessibilityState={{ disabled: !canConfirmAssignment }}>
                 {assigning ? (
-                  <ActivityIndicator size="small" color="#0B111A" />
+                  <ActivityIndicator size="small" color={colors.onActionPrimary} />
                 ) : (
-                  <Text style={styles.modalConfirmText}>
-                    Stage Assignment
+                  <Text style={[styles.modalConfirmText, { color: colors.onActionPrimary }]}>
+                    Assign
                   </Text>
                 )}
               </Pressable>
@@ -839,9 +937,40 @@ const styles = StyleSheet.create({
   },
   assignButtonText: {
     ...typography.bodyMedium,
-    color: '#0B111A',
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 15,
+  },
+  overrideButton: {
+    minHeight: touchTargets.min,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  overrideText: {
+    ...typography.bodyMedium,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  disclosureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: touchTargets.min,
+  },
+  disclosureText: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  teamOptionMeta: {
+    alignItems: 'flex-end',
+    gap: 2,
+  },
+  reasonInput: {
+    ...typography.body,
+    minHeight: 64,
+    borderRadius: radii.sm,
+    padding: spacing.md,
+    textAlignVertical: 'top',
+    marginBottom: spacing.sm,
   },
   noRecText: {
     ...typography.caption,
