@@ -35,6 +35,7 @@ import {
   InterventionStatus,
   OperationalOverviewStats,
   OperationalResource,
+  ReplanningReason,
   ReplanningRecord,
   TaskEventType,
 } from '@/types/operations';
@@ -194,7 +195,8 @@ export async function startTask(
 export async function reportTaskBlocker(
   interventionId: string,
   reason: string,
-  isCritical: boolean
+  isCritical: boolean,
+  trigger: ReplanningReason = 'ROUTE_BLOCKED'
 ): Promise<InterventionRecord> {
   await new Promise((res) => setTimeout(res, 250));
   const target = inMemoryInterventions.find((i) => i.id === interventionId);
@@ -215,7 +217,7 @@ export async function reportTaskBlocker(
     incidentId: target.incidentId,
     incidentTitle: target.incidentTitle,
     targetLocality: target.targetLocality,
-    triggerReason: 'ROUTE_BLOCKED',
+    triggerReason: trigger,
     originalAssignment: `${target.assignedTeamName || 'Assigned Crew'}`,
     blockerDetails: reason,
     recommendedAlternative: target.contingencyPlan,

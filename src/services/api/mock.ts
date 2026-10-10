@@ -117,8 +117,8 @@ export const mockApi: ApiClient = {
     ),
   acknowledge: (id) => simulate(() => ops.acknowledgeTask(id)),
   start: (id) => simulate(() => ops.startTask(id)),
-  reportProblem: (id, reason, isCritical) =>
-    simulate(() => ops.reportTaskBlocker(id, reason, isCritical)),
+  reportProblem: (id, reason, isCritical, kind) =>
+    simulate(() => ops.reportTaskBlocker(id, reason, isCritical, kind)),
   submitCompletion: (id, input) =>
     simulate(() => ops.submitTaskCompletion(id, input.note, input.photoUris)),
   verify: (id, approved) => simulate(() => ops.verifyIntervention(id, approved)),

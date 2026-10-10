@@ -20,6 +20,7 @@ import {
   InterventionStatus,
   OperationalOverviewStats,
   OperationalResource,
+  ReplanningReason,
   ReplanningRecord,
 } from '@/types/operations';
 
@@ -73,7 +74,8 @@ export interface ApiClient {
   reportProblem(
     workOrderId: string,
     reason: string,
-    isCritical: boolean
+    isCritical: boolean,
+    kind?: ReplanningReason
   ): Promise<ApiResult<InterventionRecord>>;
   submitCompletion(workOrderId: string, input: CompletionInput): Promise<ApiResult<InterventionRecord>>;
   verify(workOrderId: string, approved: boolean): Promise<ApiResult<InterventionRecord>>;

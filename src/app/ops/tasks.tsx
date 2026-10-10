@@ -30,20 +30,45 @@ import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
-import {
-  acknowledgeTask,
-  fetchInterventions,
-  reportTaskBlocker,
-  startTask,
-  submitTaskCompletion,
-} from '@/services/operations-api';
+import { EvidencePhotoPicker } from '@/components/EvidencePhotoPicker';
+import { ChipTone, StatusChip } from '@/components/StatusChip';
+import { api, ApiResult } from '@/services/api';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
-import { InterventionRecord, InterventionStatus } from '@/types/operations';
+import { InterventionRecord, InterventionStatus, ReplanningReason } from '@/types/operations';
 
 type TaskFilter = 'ALL' | 'ASSIGNED' | 'ACTIVE' | 'BLOCKED';
+
+const STATE_CHIPS: Record<InterventionStatus, { label: string; tone: ChipTone }> = {
+  AWAITING_ASSIGNMENT: { label: 'Unassigned', tone: 'neutral' },
+  AWAITING_ACK: { label: 'Needs acknowledgement', tone: 'warning' },
+  EN_ROUTE: { label: 'Acknowledged', tone: 'info' },
+  IN_PROGRESS: { label: 'In progress', tone: 'info' },
+  BLOCKED: { label: 'Blocked', tone: 'critical' },
+  FAILED: { label: 'Failed', tone: 'critical' },
+  AWAITING_VERIFICATION: { label: 'Awaiting sign-off', tone: 'neutral' },
+  VERIFIED_RESOLVED: { label: 'Verified', tone: 'success' },
+};
+
+/** Tasks needing the worker's action first. */
+const ORDER: Record<InterventionStatus, number> = {
+  AWAITING_ACK: 0,
+  EN_ROUTE: 1,
+  IN_PROGRESS: 2,
+  BLOCKED: 3,
+  FAILED: 4,
+  AWAITING_VERIFICATION: 5,
+  AWAITING_ASSIGNMENT: 6,
+  VERIFIED_RESOLVED: 7,
+};
+
+const PROBLEM_KINDS: { key: ReplanningReason; label: string }[] = [
+  { key: 'ROUTE_BLOCKED', label: 'Route blocked' },
+  { key: 'EQUIPMENT_FAILURE', label: 'Equipment failure' },
+  { key: 'INTERVENTION_UNSUCCESSFUL', label: 'Work failed' },
+];
 
 export default function FieldWorkerTasksScreen() {
   const { colors } = useTheme();
@@ -63,6 +88,11 @@ export default function FieldWorkerTasksScreen() {
 
   const [completeTarget, setCompleteTarget] = useState<InterventionRecord | null>(null);
   const [completionEvidence, setCompletionEvidence] = useState('');
+  const [completionPhotos, setCompletionPhotos] = useState<string[]>([]);
+  const [problemKind, setProblemKind] = useState<ReplanningReason>('ROUTE_BLOCKED');
+  // Short confirmation shown after each action
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const [submittingComplete, setSubmittingComplete] = useState(false);
 
   const loadData = useCallback(async (isRefresh = false) => {
@@ -71,7 +101,7 @@ export default function FieldWorkerTasksScreen() {
         setRefreshing(true);
         setErrorMsg(null);
       }
-      const all = await fetchInterventions();
+      const all = (await api.getWorkOrders()).data;
       // Filter to tasks that have been assigned or are actionable
       const fieldTasks = all.filter(
         (i) => i.status !== 'AWAITING_ASSIGNMENT'
@@ -94,7 +124,13 @@ export default function FieldWorkerTasksScreen() {
     loadData(true);
   };
 
-  const filteredTasks = tasks.filter((t) => {
+  const showFeedback = (result: ApiResult<InterventionRecord>, message: string) => {
+    setTasks((prev) => prev.map((t) => (t.id === result.data.id ? result.data : t)));
+    setFeedback(result.source === 'sample' ? `Simulated: ${message}` : message);
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const filteredTasks = [...tasks].sort((a, b) => ORDER[a.status] - ORDER[b.status]).filter((t) => {
     if (filter === 'ASSIGNED') return t.status === 'AWAITING_ACK';
     if (filter === 'ACTIVE') return t.status === 'IN_PROGRESS' || t.status === 'EN_ROUTE';
     if (filter === 'BLOCKED') return t.status === 'BLOCKED' || t.status === 'FAILED';
@@ -103,105 +139,69 @@ export default function FieldWorkerTasksScreen() {
 
   const handleAcknowledge = async (item: InterventionRecord) => {
     try {
-      const updated = await acknowledgeTask(item.id);
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-      Alert.alert(
-        'Task Acknowledged',
-        `Crew en-route to ${item.targetLocality}. Live sync staged.`
-      );
+      setBusyTaskId(item.id);
+      showFeedback(await api.acknowledge(item.id), `acknowledged ${item.id}.`);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to acknowledge task.');
+      Alert.alert('Could not acknowledge', err?.message || 'Try again.');
+    } finally {
+      setBusyTaskId(null);
     }
   };
 
   const handleStartWork = async (item: InterventionRecord) => {
     try {
-      const updated = await startTask(item.id);
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
-      Alert.alert(
-        'Work Commenced',
-        `Intervention ${item.id} is now recorded as IN PROGRESS.`
-      );
+      setBusyTaskId(item.id);
+      showFeedback(await api.start(item.id), `work started on ${item.id}.`);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to start task.');
+      Alert.alert('Could not start', err?.message || 'Try again.');
+    } finally {
+      setBusyTaskId(null);
     }
   };
 
   const handleReportBlockerSubmit = async () => {
     if (!blockerTarget || !blockerReason.trim()) {
-      Alert.alert('Validation Error', 'Please describe the obstacle or equipment issue.');
+      Alert.alert('Describe the problem', 'Add a short description so the coordinator can replan.');
       return;
     }
-
     try {
       setSubmittingBlocker(true);
-      const updated = await reportTaskBlocker(
+      const result = await api.reportProblem(
         blockerTarget.id,
         blockerReason.trim(),
-        isCriticalBlocker
+        isCriticalBlocker,
+        problemKind
       );
-
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
       setBlockerTarget(null);
       setBlockerReason('');
-
-      Alert.alert(
-        'Obstacle Reported & Escalated',
-        `Task marked as BLOCKED. An alternative allocation has been routed to the Replanning console.`
-      );
+      showFeedback(result, `problem reported on ${blockerTarget.id}. Coordinator will replan.`);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to report obstacle.');
+      Alert.alert('Could not report problem', err?.message || 'Try again.');
     } finally {
       setSubmittingBlocker(false);
     }
   };
 
   const handleCompleteSubmit = async () => {
-    if (!completeTarget || !completionEvidence.trim()) {
-      Alert.alert('Validation Error', 'Please enter completion outcome evidence.');
+    if (!completeTarget) return;
+    if (!completionEvidence.trim() && completionPhotos.length === 0) {
+      Alert.alert('Add evidence', 'Add a note or at least one photo of the completed work.');
       return;
     }
-
     try {
       setSubmittingComplete(true);
-      const updated = await submitTaskCompletion(
-        completeTarget.id,
-        completionEvidence.trim()
-      );
-
-      setTasks((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
+      const result = await api.submitCompletion(completeTarget.id, {
+        note: completionEvidence.trim(),
+        photoUris: completionPhotos,
+      });
       setCompleteTarget(null);
       setCompletionEvidence('');
-
-      Alert.alert(
-        'Completion Submitted',
-        `Work order queued for coordinator verification sign-off.`
-      );
+      setCompletionPhotos([]);
+      showFeedback(result, `completion sent for sign-off on ${completeTarget.id}.`);
     } catch (err: any) {
-      Alert.alert('Error', err?.message || 'Failed to submit completion.');
+      Alert.alert('Could not submit', err?.message || 'Your evidence is kept. Try again.');
     } finally {
       setSubmittingComplete(false);
-    }
-  };
-
-  const getStatusBadge = (status: InterventionStatus) => {
-    switch (status) {
-      case 'AWAITING_ACK':
-        return { label: 'PENDING ACKNOWLEDGEMENT', color: colors.statusWatch, bg: colors.statusWatchBg };
-      case 'EN_ROUTE':
-        return { label: 'CREW EN ROUTE', color: colors.brandTeal, bg: colors.brandTealBg };
-      case 'IN_PROGRESS':
-        return { label: 'WORK IN PROGRESS', color: colors.brandTeal, bg: colors.brandTealBg };
-      case 'BLOCKED':
-        return { label: 'BLOCKED / CORRIDOR HAZARD', color: colors.statusActive, bg: colors.statusActiveBg };
-      case 'FAILED':
-        return { label: 'UNSUCCESSFUL INTERVENTION', color: colors.statusActive, bg: colors.statusActiveBg };
-      case 'AWAITING_VERIFICATION':
-        return { label: 'AWAITING SIGN-OFF', color: colors.brandPrimary, bg: colors.surfaceMuted };
-      case 'VERIFIED_RESOLVED':
-        return { label: 'VERIFIED COMPLETE', color: colors.statusResolved, bg: colors.statusResolvedBg };
-      default:
-        return { label: status, color: colors.textSecondary, bg: colors.surfaceMuted };
     }
   };
 
@@ -211,14 +211,7 @@ export default function FieldWorkerTasksScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerOverline, { color: colors.brandTeal }]}>
-            DISASTER RESPONSE NETWORK
-          </Text>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            Field Worker Tasks
-          </Text>
-        </View>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Tasks</Text>
       </View>
 
       {/* Simulation Banner */}
@@ -227,6 +220,16 @@ export default function FieldWorkerTasksScreen() {
         persistent={true}
         customMessage="SAMPLE DATA — OPERATIONAL SIMULATION — NOT LIVE OPERATIONS"
       />
+
+      {/* Feedback after each action */}
+      {feedback && (
+        <View
+          style={[styles.feedbackStrip, { backgroundColor: colors.surfaceMuted }]}
+          accessibilityLiveRegion="polite">
+          <Feather name="check" size={16} color={colors.actionPrimary} />
+          <Text style={[styles.feedbackText, { color: colors.textPrimary }]}>{feedback}</Text>
+        </View>
+      )}
 
       {/* Filter Chips */}
       <View style={styles.filterRow}>
@@ -294,7 +297,8 @@ export default function FieldWorkerTasksScreen() {
             />
           }
           renderItem={({ item }) => {
-            const badge = getStatusBadge(item.status);
+            const chip = STATE_CHIPS[item.status];
+            const busy = busyTaskId === item.id;
 
             return (
               <View
@@ -304,11 +308,7 @@ export default function FieldWorkerTasksScreen() {
                   <Text style={[styles.taskTypeTag, { color: colors.brandTeal }]}>
                     {item.type.replace(/_/g, ' ')}
                   </Text>
-                  <View style={[styles.badgePill, { backgroundColor: badge.bg }]}>
-                    <Text style={[styles.badgeText, { color: badge.color }]}>
-                      {badge.label}
-                    </Text>
-                  </View>
+                  <StatusChip label={chip.label} tone={chip.tone} />
                 </View>
 
                 {/* Target Locality & Incident */}
@@ -324,12 +324,23 @@ export default function FieldWorkerTasksScreen() {
                   <Text style={[styles.instructionLabel, { color: colors.textTertiary }]}>
                     DISPATCH ORDERS:
                   </Text>
-                  <Text style={[styles.instructionBody, { color: colors.textPrimary }]}>
+                  <Text
+                    style={[styles.instructionBody, { color: colors.textPrimary }]}
+                    numberOfLines={3}>
                     {item.instructions}
                   </Text>
                 </View>
 
                 {/* Assigned Crew & Equipment */}
+                {item.deadlineTimestamp && item.status === 'AWAITING_ACK' && (
+                  <Text style={[styles.crewText, { color: colors.statusWatch }]}>
+                    Acknowledge by{' '}
+                    {new Date(item.deadlineTimestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                )}
                 {item.assignedTeamName && (
                   <View style={styles.crewRow}>
                     <Feather name="users" size={13} color={colors.textTertiary} />
@@ -349,66 +360,78 @@ export default function FieldWorkerTasksScreen() {
                   </View>
                 )}
 
-                {/* Action Buttons */}
-                <View style={styles.actionButtonsRow}>
-                  {item.status === 'AWAITING_ACK' && (
-                    <Pressable
-                      onPress={() => handleAcknowledge(item)}
-                      style={[styles.actionBtnPrimary, { backgroundColor: colors.brandTeal }]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Accept and acknowledge task">
-                      <Feather name="check" size={14} color="#0B111A" />
-                      <Text style={styles.actionBtnPrimaryText}>
-                        Acknowledge & En Route
-                      </Text>
-                    </Pressable>
-                  )}
-
-                  {item.status === 'EN_ROUTE' && (
-                    <Pressable
-                      onPress={() => handleStartWork(item)}
-                      style={[styles.actionBtnPrimary, { backgroundColor: colors.brandTeal }]}
-                      accessibilityRole="button"
-                      accessibilityLabel="Start work on site">
-                      <Feather name="play" size={14} color="#0B111A" />
-                      <Text style={styles.actionBtnPrimaryText}>
-                        Arrived & Start Work
-                      </Text>
-                    </Pressable>
-                  )}
-
-                  {(item.status === 'IN_PROGRESS' || item.status === 'EN_ROUTE') && (
-                    <View style={styles.dualActionsRow}>
-                      <Pressable
-                        onPress={() => {
-                          setBlockerTarget(item);
-                          setBlockerReason('');
-                        }}
-                        style={[styles.actionBtnDanger, { backgroundColor: colors.surfaceMuted }]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Report problem or route blockage">
-                        <Feather name="alert-octagon" size={14} color={colors.statusActive} />
-                        <Text style={[styles.actionBtnDangerText, { color: colors.statusActive }]}>
-                          Report Problem
+                {/* One primary action per state; Report problem is secondary */}
+                {(() => {
+                  const primary =
+                    item.status === 'AWAITING_ACK'
+                      ? { label: 'Acknowledge', onPress: () => handleAcknowledge(item) }
+                      : item.status === 'EN_ROUTE'
+                        ? { label: 'Start work', onPress: () => handleStartWork(item) }
+                        : item.status === 'IN_PROGRESS'
+                          ? {
+                              label: 'Submit completion',
+                              onPress: () => {
+                                setCompleteTarget(item);
+                                setCompletionEvidence('');
+                                setCompletionPhotos([]);
+                              },
+                            }
+                          : null;
+                  const canReport = item.status === 'EN_ROUTE' || item.status === 'IN_PROGRESS';
+                  const waitingNote =
+                    item.status === 'BLOCKED' || item.status === 'FAILED'
+                      ? 'Waiting for the coordinator to replan.'
+                      : item.status === 'AWAITING_VERIFICATION'
+                        ? 'Waiting for coordinator sign-off.'
+                        : null;
+                  return (
+                    <View style={styles.actionButtonsRow}>
+                      {primary && (
+                        <Pressable
+                          onPress={primary.onPress}
+                          disabled={busy}
+                          style={({ pressed }) => [
+                            styles.actionBtnPrimary,
+                            {
+                              backgroundColor: pressed
+                                ? colors.actionPrimaryPressed
+                                : colors.actionPrimary,
+                            },
+                          ]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${primary.label}: ${item.id}`}>
+                          {busy ? (
+                            <ActivityIndicator size="small" color={colors.onActionPrimary} />
+                          ) : (
+                            <Text style={[styles.actionBtnPrimaryText, { color: colors.onActionPrimary }]}>
+                              {primary.label}
+                            </Text>
+                          )}
+                        </Pressable>
+                      )}
+                      {canReport && (
+                        <Pressable
+                          onPress={() => {
+                            setBlockerTarget(item);
+                            setBlockerReason('');
+                            setProblemKind('ROUTE_BLOCKED');
+                          }}
+                          style={styles.secondaryAction}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Report a problem: ${item.id}`}>
+                          <Text style={[styles.secondaryActionText, { color: colors.statusActive }]}>
+                            Report problem
+                          </Text>
+                        </Pressable>
+                      )}
+                      {waitingNote && (
+                        <Text style={[styles.crewText, { color: colors.textSecondary }]}>
+                          {waitingNote}
                         </Text>
-                      </Pressable>
-
-                      <Pressable
-                        onPress={() => {
-                          setCompleteTarget(item);
-                          setCompletionEvidence('');
-                        }}
-                        style={[styles.actionBtnSuccess, { backgroundColor: colors.statusResolved }]}
-                        accessibilityRole="button"
-                        accessibilityLabel="Submit completion evidence">
-                        <Feather name="check-circle" size={14} color="#FFFFFF" />
-                        <Text style={styles.actionBtnSuccessText}>
-                          Complete Work
-                        </Text>
-                      </Pressable>
+                      )}
                     </View>
-                  )}
-                </View>
+                  );
+                })()}
               </View>
             );
           }}
@@ -426,7 +449,7 @@ export default function FieldWorkerTasksScreen() {
             <View style={styles.modalHeader}>
               <Feather name="alert-octagon" size={20} color={colors.statusActive} />
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                Report Field Hazard / Blocker
+                Report a problem
               </Text>
             </View>
 
@@ -434,6 +457,30 @@ export default function FieldWorkerTasksScreen() {
               Task: {blockerTarget?.type.replace(/_/g, ' ')} at {blockerTarget?.targetLocality}
             </Text>
 
+            <View style={styles.kindRow}>
+              {PROBLEM_KINDS.map((k) => {
+                const selected = problemKind === k.key;
+                return (
+                  <Pressable
+                    key={k.key}
+                    onPress={() => setProblemKind(k.key)}
+                    style={[
+                      styles.kindChip,
+                      { backgroundColor: selected ? colors.chipActiveBg : colors.surfaceMuted },
+                    ]}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected }}>
+                    <Text
+                      style={[
+                        styles.kindChipText,
+                        { color: selected ? colors.chipActiveText : colors.textPrimary },
+                      ]}>
+                      {k.label}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
             <TextInput
               style={[
                 styles.modalTextInput,
@@ -442,7 +489,7 @@ export default function FieldWorkerTasksScreen() {
                   backgroundColor: colors.surfaceMuted,
                 },
               ]}
-              placeholder="Describe equipment malfunction, submerged transit road, or unmanageable current..."
+              placeholder="What happened? e.g. causeway submerged, pump engine seized"
               placeholderTextColor={colors.textTertiary}
               multiline
               numberOfLines={4}
@@ -465,7 +512,7 @@ export default function FieldWorkerTasksScreen() {
                 color={isCriticalBlocker ? colors.statusActive : colors.textTertiary}
               />
               <Text style={{ ...typography.caption, color: colors.textPrimary, fontSize: 12 }}>
-                Mark as Critical Impasse (Triggers immediate replanning escalation)
+                Critical: work cannot continue
               </Text>
             </Pressable>
 
@@ -486,7 +533,7 @@ export default function FieldWorkerTasksScreen() {
                   <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
                   <Text style={[styles.modalConfirmText, { color: '#FFFFFF' }]}>
-                    Submit Blocker
+                    Report
                   </Text>
                 )}
               </Pressable>
@@ -506,12 +553,12 @@ export default function FieldWorkerTasksScreen() {
             <View style={styles.modalHeader}>
               <Feather name="check-circle" size={20} color={colors.statusResolved} />
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                Submit Completion Evidence
+                Submit completion
               </Text>
             </View>
 
             <Text style={[styles.modalDesc, { color: colors.textSecondary }]}>
-              Provide completion notes, water drawdown depth, or recipient supervisor acknowledgement.
+              Add photos and/or a short note. The coordinator verifies before closing.
             </Text>
 
             <TextInput
@@ -530,6 +577,7 @@ export default function FieldWorkerTasksScreen() {
               onChangeText={setCompletionEvidence}
               textAlignVertical="top"
             />
+            <EvidencePhotoPicker photoUris={completionPhotos} onChange={setCompletionPhotos} />
 
             <View style={styles.modalActions}>
               <Pressable
@@ -543,12 +591,12 @@ export default function FieldWorkerTasksScreen() {
               <Pressable
                 onPress={handleCompleteSubmit}
                 disabled={submittingComplete}
-                style={[styles.modalConfirm, { backgroundColor: colors.statusResolved }]}>
+                style={[styles.modalConfirm, { backgroundColor: colors.actionPrimary }]}>
                 {submittingComplete ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={colors.onActionPrimary} />
                 ) : (
-                  <Text style={[styles.modalConfirmText, { color: '#FFFFFF' }]}>
-                    Submit For Sign-Off
+                  <Text style={[styles.modalConfirmText, { color: colors.onActionPrimary }]}>
+                    Submit
                   </Text>
                 )}
               </Pressable>
@@ -563,6 +611,46 @@ export default function FieldWorkerTasksScreen() {
 }
 
 const styles = StyleSheet.create({
+  feedbackStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.screenPadding,
+    marginBottom: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radii.sm,
+  },
+  feedbackText: {
+    ...typography.body,
+    fontSize: 15,
+    flex: 1,
+  },
+  secondaryAction: {
+    minHeight: touchTargets.min,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryActionText: {
+    ...typography.bodyMedium,
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  kindRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  kindChip: {
+    minHeight: touchTargets.min,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.chip,
+  },
+  kindChipText: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: '600',
+  },
   safeArea: {
     flex: 1,
   },
@@ -576,7 +664,7 @@ const styles = StyleSheet.create({
   },
   headerOverline: {
     ...typography.overline,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
@@ -598,7 +686,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     ...typography.caption,
-    fontSize: 11,
+    fontSize: 12,
   },
   skeletonWrap: {
     paddingHorizontal: spacing.screenPadding,
@@ -631,7 +719,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     ...typography.overline,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.4,
   },
@@ -642,7 +730,7 @@ const styles = StyleSheet.create({
   },
   incidentSubtitle: {
     ...typography.caption,
-    fontSize: 11,
+    fontSize: 12,
   },
   instructionBox: {
     borderRadius: radii.sm,
@@ -652,11 +740,11 @@ const styles = StyleSheet.create({
   },
   instructionLabel: {
     ...typography.overline,
-    fontSize: 9,
+    fontSize: 12,
   },
   instructionBody: {
     ...typography.body,
-    fontSize: 13,
+    fontSize: 12,
     lineHeight: 18,
   },
   crewRow: {
@@ -695,9 +783,8 @@ const styles = StyleSheet.create({
   },
   actionBtnPrimaryText: {
     ...typography.bodyMedium,
-    color: '#0B111A',
     fontWeight: '700',
-    fontSize: 13,
+    fontSize: 15,
   },
   dualActionsRow: {
     flexDirection: 'row',
@@ -714,7 +801,7 @@ const styles = StyleSheet.create({
   },
   actionBtnDangerText: {
     ...typography.bodyMedium,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   actionBtnSuccess: {
@@ -729,7 +816,7 @@ const styles = StyleSheet.create({
   actionBtnSuccessText: {
     ...typography.bodyMedium,
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
   },
   modalOverlay: {
@@ -752,18 +839,18 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     ...typography.cardTitle,
-    fontSize: 16,
+    fontSize: 15,
   },
   modalDesc: {
     ...typography.body,
-    fontSize: 13,
+    fontSize: 12,
     lineHeight: 18,
   },
   modalTextInput: {
     borderRadius: radii.sm,
     padding: spacing.sm,
     minHeight: 90,
-    fontSize: 13,
+    fontSize: 12,
     lineHeight: 18,
   },
   modalActions: {
@@ -780,7 +867,7 @@ const styles = StyleSheet.create({
   },
   modalCancelText: {
     ...typography.bodyMedium,
-    fontSize: 14,
+    fontSize: 15,
   },
   modalConfirm: {
     flex: 1.2,
@@ -792,6 +879,6 @@ const styles = StyleSheet.create({
   modalConfirmText: {
     ...typography.bodyMedium,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 15,
   },
 });
