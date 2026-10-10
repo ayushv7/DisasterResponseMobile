@@ -11,7 +11,6 @@ import { FloodEvent } from '@/types/disaster';
 interface AlertCardProps {
   event: FloodEvent;
 }
-
 export function AlertCard({ event }: AlertCardProps) {
   const { colors } = useTheme();
 
