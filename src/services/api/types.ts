@@ -228,6 +228,8 @@ export interface ApiClient {
   takedownUpdate(updateId: string, reason: string): Promise<ApiResult<NgoContributionItem>>;
   /** Public: NGO-published updates for an alert (by alert or its linked incident). */
   getUpdatesForEvent(eventId: string): Promise<ApiResult<NgoContributionItem[]>>;
+  /** The ops incident a public alert maps to, if any (staff only). */
+  getLinkedIncident(eventId: string): Promise<ApiResult<{ incidentId: string } | null>>;
 }
 
 /**

@@ -79,4 +79,5 @@ export const httpApi: ApiClient = {
   getPublishedUpdates: notImplemented('getPublishedUpdates'),
   takedownUpdate: notImplemented('takedownUpdate'),
   getUpdatesForEvent: notImplemented('getUpdatesForEvent'),
+  getLinkedIncident: notImplemented('getLinkedIncident'),
 };

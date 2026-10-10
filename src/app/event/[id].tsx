@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { InfoBar } from '@/components/InfoBar';
+import { SHOW_LEGACY_ORCHESTRATION } from '@/constants/features';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { api } from '@/services/api';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
@@ -31,6 +32,15 @@ export default function EventDetailScreen() {
   const event = SAMPLE_FLOOD_EVENTS.find((e) => e.id === id);
   // Public NGO updates for this alert, read from the service (never copied locally)
   const updates = useApiQuery(() => api.getUpdatesForEvent(id ?? ''), [id]);
+  // Staff: the ops incident this alert maps to (resolved by the service)
+  const linked = useApiQuery(
+    () =>
+      role === 'ngo'
+        ? api.getLinkedIncident(id ?? '')
+        : Promise.resolve({ data: null, source: api.mode === 'mock' ? ('sample' as const) : ('live' as const), receivedAt: '' }),
+    [id, role],
+    () => false
+  );
 
   const getSeverityDotColor = (currentEvent: FloodEvent) => {
     if (currentEvent.severityLevel === 'CRITICAL' || currentEvent.severityLevel === 'HIGH') {
@@ -216,8 +226,24 @@ export default function EventDetailScreen() {
           )}
         </View>
 
-        {/* 2b. Decision support: staff only (backend enforces access) */}
-        {role !== 'public' && (
+        {/* NGO: open the linked incident in the shared ops data */}
+        {role === 'ngo' && linked.data && (
+          <Pressable
+            onPress={() =>
+              router.push({ pathname: '/ops/incident/[id]', params: { id: linked.data!.incidentId } })
+            }
+            style={[styles.orchestrationBtn, { backgroundColor: colors.surfaceMuted, marginHorizontal: spacing.screenPadding }]}
+            accessibilityRole="button">
+            <Text style={[styles.orchestrationBtnText, { color: colors.brandPrimary }]}>
+              Open incident {linked.data.incidentId} in Ops
+            </Text>
+            <Feather name="arrow-right" size={15} color={colors.brandPrimary} />
+          </Pressable>
+        )}
+
+        {/* 2b. Legacy decision support. Hidden: it runs on its own fixtures, not the shared
+            store. Kept (not deleted); see src/constants/features.ts. */}
+        {SHOW_LEGACY_ORCHESTRATION && role !== 'public' && (
         <View style={[styles.orchestrationBanner, { backgroundColor: colors.surface }]}>
           <View style={styles.orchestrationHeader}>
             <View style={[styles.orchestrationIcon, { backgroundColor: colors.surfaceMuted }]}>

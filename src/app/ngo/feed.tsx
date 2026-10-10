@@ -19,6 +19,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import { SHOW_LEGACY_ORCHESTRATION } from '@/constants/features';
+
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
@@ -223,29 +225,31 @@ export default function NgoEventFeedScreen() {
                 </View>
               </View>
 
-              {/* Quick Orchestration Action */}
-              <Pressable
-                onPress={() =>
-                  router.push({
-                    pathname: '/orchestration/[id]',
-                    params: { id: item.id },
-                  })
-                }
-                style={[
-                  styles.orchestrationLinkBtn,
-                  { backgroundColor: colors.surfaceMuted },
-                ]}
-                android_ripple={{ color: colors.surface }}>
-                <Feather name="compass" size={13} color={colors.brandPrimary} />
-                <Text
+              {/* Quick Orchestration Action — hidden: legacy screen uses separate fixtures */}
+              {SHOW_LEGACY_ORCHESTRATION && (
+                <Pressable
+                  onPress={() =>
+                    router.push({
+                      pathname: '/orchestration/[id]',
+                      params: { id: item.id },
+                    })
+                  }
                   style={[
-                    styles.orchestrationLinkText,
-                    { color: colors.brandPrimary },
-                  ]}>
-                  Response Orchestration & Needs
-                </Text>
-                <Feather name="chevron-right" size={14} color={colors.brandPrimary} />
-              </Pressable>
+                    styles.orchestrationLinkBtn,
+                    { backgroundColor: colors.surfaceMuted },
+                  ]}
+                  android_ripple={{ color: colors.surface }}>
+                  <Feather name="compass" size={13} color={colors.brandPrimary} />
+                  <Text
+                    style={[
+                      styles.orchestrationLinkText,
+                      { color: colors.brandPrimary },
+                    ]}>
+                    Response Orchestration & Needs
+                  </Text>
+                  <Feather name="chevron-right" size={14} color={colors.brandPrimary} />
+                </Pressable>
+              )}
             </Pressable>
           )}
         />

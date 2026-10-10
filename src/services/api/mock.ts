@@ -8,6 +8,7 @@ import * as offers from '@/services/offers-api';
 import * as volunteers from '@/services/volunteers-api';
 import * as contributors from '@/services/contributors-api';
 import { onTaskChanged } from '@/services/mock/cascades';
+import { incidentForEvent } from '@/services/mock/store';
 import { createNgo, decideNgo, fetchNgoApplications } from '@/services/ngo-approval-api';
 import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
@@ -284,4 +285,9 @@ export const mockApi: ApiClient = {
   getPublishedUpdates: () => simulate(fetchPublishedContributions),
   takedownUpdate: (id, reason) => simulate(() => takedownContribution(id, reason)),
   getUpdatesForEvent: (eventId) => simulate(() => fetchPublishedUpdatesForEvent(eventId)),
+  getLinkedIncident: (eventId) =>
+    simulate(async () => {
+      const incidentId = incidentForEvent(eventId);
+      return incidentId ? { incidentId } : null;
+    }),
 };
