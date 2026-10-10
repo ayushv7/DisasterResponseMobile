@@ -209,6 +209,51 @@ interface Ngo {
 
 \* Public sees a reduced incident/observation view; backend decides the fields.
 
+## Field worker accounts (PROPOSED)
+
+All items in this section are **PROPOSED** and not implemented. Field workers belong to one NGO
+and cannot self-register. The backend issues NGO codes, worker IDs, temporary passwords and
+tokens; the app never generates them. It shows returned credentials once and never stores them.
+In mock mode the app returns fixed sample values labelled "Simulated".
+
+```ts
+interface NgoMember {          // PROPOSED
+  id: string;
+  workerId: string;            // backend-issued; used with the NGO code to sign in
+  ngoId: string;
+  ngoName: string;
+  name: string;
+  phone: string;
+  skills: string[];
+  status: 'ACTIVE' | 'DISABLED';
+  mustChangePassword: boolean; // true until the temporary password is replaced
+  teamId?: string;             // decides which work orders the worker sees
+  createdAt: string;
+}
+
+interface WorkerCredentials {  // PROPOSED; returned once, never retrievable again
+  workerId: string;
+  temporaryPassword: string;
+}
+```
+
+Staff (ngo, coordinator, admin) keep using `POST /auth/session` with email + password.
+`Ngo` gains an `ngoCode` (backend-issued) that the NGO shares with its workers.
+`TaskEvent` should carry a display name and NGO name for the actor (e.g. `actorName`,
+`actorNgoName`) so every action in the UI can show who performed it.
+
+| Method | Path | Who | Purpose | Status |
+|---|---|---|---|---|
+| POST | `/auth/worker-session` | any | `workerLogin`: `{ ngoCode, workerId, password }` → token + `NgoMember` | PROPOSED |
+| POST | `/auth/password` | field_worker | Replace temporary password on first sign-in `{ newPassword }` | PROPOSED |
+| GET | `/ngo/workers` | ngo | List own field team (`NgoMember[]`) | PROPOSED |
+| POST | `/ngo/workers` | ngo | `createWorker`: `{ name, phone, skills }` → `{ member, credentials }` | PROPOSED |
+| POST | `/ngo/workers/{id}/disable` | ngo | `disableWorker`: `{ disabled: boolean }` (false re-enables) | PROPOSED |
+| POST | `/ngo/workers/{id}/reset-password` | ngo | `resetWorkerPassword` → `WorkerCredentials` | PROPOSED |
+
+`GET /work-orders?assignee=me` (above) returns only the signed-in worker's tasks, with the NGO
+name of the assigned team.
+
 ## Open questions for the backend
 
 1. Auth mechanism and token lifetime; how roles are assigned.
@@ -217,3 +262,4 @@ interface Ngo {
 4. Who triggers reassignment (scheduler on ack timeout?) and how the app learns of it.
 5. Rate-limit policy for public messages.
 6. Whether resource `distanceKm` is computed server-side per incident.
+7. Worker credentials: temporary password policy, expiry, and lockout after failed sign-ins.
