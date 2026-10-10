@@ -8,25 +8,26 @@ import { typography } from '@/theme/typography';
 
 interface InfoBarProps {
   isSampleData?: boolean;
+  persistent?: boolean;
 }
 
-export function InfoBar({ isSampleData = true }: InfoBarProps) {
+export function InfoBar({ isSampleData = true, persistent = true }: InfoBarProps) {
   const { colors } = useTheme();
   const [isDismissed, setIsDismissed] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
-  if (!isSampleData || isDismissed) return null;
+  if (!isSampleData || (!persistent && isDismissed)) return null;
 
   return (
     <>
       <View
         style={[styles.container, { backgroundColor: colors.infoBg }]}
         accessibilityRole="summary"
-        accessibilityLabel="Notice: Sample data. Not live flood information.">
+        accessibilityLabel="Notice: SAMPLE DATA — NOT LIVE FLOOD INFORMATION.">
         <View style={styles.contentRow}>
-          <Feather name="info" size={16} color={colors.info} style={styles.icon} />
+          <Feather name="info" size={15} color={colors.info} style={styles.icon} />
           <Text style={[styles.text, { color: colors.textSecondary }]} numberOfLines={1}>
-            Sample data. Not live flood information.
+            SAMPLE DATA — NOT LIVE FLOOD INFORMATION
           </Text>
           <Pressable
             onPress={() => setIsModalVisible(true)}
@@ -37,14 +38,16 @@ export function InfoBar({ isSampleData = true }: InfoBarProps) {
           </Pressable>
         </View>
 
-        <Pressable
-          onPress={() => setIsDismissed(true)}
-          style={styles.dismissButton}
-          accessibilityRole="button"
-          accessibilityLabel="Dismiss sample data notice"
-          hitSlop={spacing.xs}>
-          <Feather name="x" size={16} color={colors.textTertiary} />
-        </Pressable>
+        {!persistent && (
+          <Pressable
+            onPress={() => setIsDismissed(true)}
+            style={styles.dismissButton}
+            accessibilityRole="button"
+            accessibilityLabel="Dismiss sample data notice"
+            hitSlop={spacing.xs}>
+            <Feather name="x" size={16} color={colors.textTertiary} />
+          </Pressable>
+        )}
       </View>
 
       {/* Explanatory Bottom Modal / Sheet */}

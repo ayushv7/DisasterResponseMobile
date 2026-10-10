@@ -36,7 +36,6 @@ import {
   NgoInboxFilter,
   NgoInboxMessage,
   NgoMessageStatus,
-  NgoOrgStatus,
   NgoSession,
 } from '@/types/ngo-workspace';
 
@@ -53,8 +52,10 @@ export default function NgoInboxScreen() {
   const loadData = useCallback(
     async (isRefresh = false) => {
       try {
-        if (!isRefresh) setLoading(true);
-        setErrorMsg(null);
+        if (isRefresh) {
+          setRefreshing(true);
+          setErrorMsg(null);
+        }
 
         const currentSess = await fetchNgoSession();
         setSession(currentSess);
@@ -77,6 +78,7 @@ export default function NgoInboxScreen() {
   );
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
 

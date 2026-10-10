@@ -21,12 +21,13 @@ import { router } from 'expo-router';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { InfoBar } from '@/components/InfoBar';
 import { NgoBottomNavBar } from '@/components/NgoBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
 import { fetchNgoSession } from '@/services/ngo-api';
 import { useTheme } from '@/theme';
-import { radii, spacing, touchTargets } from '@/theme/spacing';
+import { radii, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { FloodEvent } from '@/types/disaster';
 import { NgoSession } from '@/types/ngo-workspace';
@@ -42,8 +43,10 @@ export default function NgoEventFeedScreen() {
 
   const loadData = async (isRefresh = false) => {
     try {
-      if (!isRefresh) setLoading(true);
-      setErrorMsg(null);
+      if (isRefresh) {
+        setRefreshing(true);
+        setErrorMsg(null);
+      }
 
       const sess = await fetchNgoSession();
       setSession(sess);
@@ -64,11 +67,11 @@ export default function NgoEventFeedScreen() {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, []);
 
   const onRefresh = () => {
-    setRefreshing(true);
     loadData(true);
   };
 
@@ -89,6 +92,9 @@ export default function NgoEventFeedScreen() {
           </Text>
         </View>
       </View>
+
+      {/* Persistent Sample Data Notice */}
+      <InfoBar isSampleData={true} />
 
       {!isVerified && !loading ? (
         <View style={styles.gateBlockedContainer}>
@@ -214,6 +220,30 @@ export default function NgoEventFeedScreen() {
                   </Text>
                 </View>
               </View>
+
+              {/* Quick Orchestration Action */}
+              <Pressable
+                onPress={() =>
+                  router.push({
+                    pathname: '/orchestration/[id]',
+                    params: { id: item.id },
+                  })
+                }
+                style={[
+                  styles.orchestrationLinkBtn,
+                  { backgroundColor: colors.surfaceMuted },
+                ]}
+                android_ripple={{ color: colors.surface }}>
+                <Feather name="compass" size={13} color={colors.brandPrimary} />
+                <Text
+                  style={[
+                    styles.orchestrationLinkText,
+                    { color: colors.brandPrimary },
+                  ]}>
+                  Response Orchestration & Needs
+                </Text>
+                <Feather name="chevron-right" size={14} color={colors.brandPrimary} />
+              </Pressable>
             </Pressable>
           )}
         />
@@ -317,5 +347,20 @@ const styles = StyleSheet.create({
   footerText: {
     ...typography.caption,
     fontSize: 11,
+  },
+  orchestrationLinkBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 3,
+    borderRadius: radii.button,
+    marginTop: spacing.xs,
+  },
+  orchestrationLinkText: {
+    ...typography.bodyMedium,
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
   },
 });

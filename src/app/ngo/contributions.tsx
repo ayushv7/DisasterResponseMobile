@@ -24,6 +24,7 @@ import { router } from 'expo-router';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { InfoBar } from '@/components/InfoBar';
 import { NgoBottomNavBar } from '@/components/NgoBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import {
@@ -31,7 +32,7 @@ import {
   fetchNgoSession,
 } from '@/services/ngo-api';
 import { useTheme } from '@/theme';
-import { radii, spacing, touchTargets } from '@/theme/spacing';
+import { radii, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import {
   ContributionStatus,
@@ -39,7 +40,7 @@ import {
   NgoSession,
 } from '@/types/ngo-workspace';
 
-type FilterTab = 'ALL' | 'PUBLISHED' | 'DRAFT';
+type FilterTab = 'ALL' | 'PUBLISHED' | 'DRAFT' | 'REJECTED_OR_CLOSED';
 
 export default function NgoContributionsScreen() {
   const { colors } = useTheme();
@@ -75,6 +76,7 @@ export default function NgoContributionsScreen() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
 
@@ -91,16 +93,15 @@ export default function NgoContributionsScreen() {
   });
 
   const renderStatusDot = (status: ContributionStatus) => {
-    const isPub = status === 'PUBLISHED';
+    let dotColor = colors.statusWatch;
+    if (status === 'PUBLISHED') dotColor = colors.statusResolved;
+    if (status === 'REJECTED_OR_CLOSED') dotColor = colors.statusActive;
+
     return (
       <View
         style={[
           styles.statusDot,
-          {
-            backgroundColor: isPub
-              ? colors.statusResolved
-              : colors.statusWatch,
-          },
+          { backgroundColor: dotColor },
         ]}
       />
     );
@@ -141,6 +142,9 @@ export default function NgoContributionsScreen() {
         )}
       </View>
 
+      {/* Persistent Sample Data Notice */}
+      <InfoBar isSampleData={true} />
+
       {!isVerified && !loading ? (
         <View style={styles.gateBlockedContainer}>
           <EmptyState
@@ -158,7 +162,7 @@ export default function NgoContributionsScreen() {
         <>
           {/* Filter Chips */}
           <View style={styles.filterBar}>
-            {(['ALL', 'PUBLISHED', 'DRAFT'] as FilterTab[]).map((tab) => {
+            {(['ALL', 'PUBLISHED', 'DRAFT', 'REJECTED_OR_CLOSED'] as FilterTab[]).map((tab) => {
               const selected = activeFilter === tab;
               return (
                 <Pressable
@@ -186,7 +190,9 @@ export default function NgoContributionsScreen() {
                       ? 'All'
                       : tab === 'PUBLISHED'
                       ? 'Published'
-                      : 'Drafts'}
+                      : tab === 'DRAFT'
+                      ? 'Drafts'
+                      : 'Closed'}
                   </Text>
                 </Pressable>
               );
@@ -330,6 +336,33 @@ export default function NgoContributionsScreen() {
                       Attributed to {item.ngoName} ({item.authorOfficer})
                     </Text>
                   </View>
+
+                  {/* Continue editing action for drafts */}
+                  {item.status === 'DRAFT' && (
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: '/ngo/contributions/compose',
+                          params: { draftId: item.id, eventId: item.eventId },
+                        })
+                      }
+                      style={[
+                        styles.editDraftBtn,
+                        { backgroundColor: colors.surfaceMuted },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Continue editing draft ${item.id}`}>
+                      <Feather name="edit-2" size={13} color={colors.brandPrimary} />
+                      <Text
+                        style={[
+                          styles.editDraftText,
+                          { color: colors.brandPrimary },
+                        ]}>
+                        Continue Editing Draft
+                      </Text>
+                      <Feather name="chevron-right" size={14} color={colors.brandPrimary} />
+                    </Pressable>
+                  )}
                 </View>
               )}
             />
@@ -478,5 +511,20 @@ const styles = StyleSheet.create({
   attributionText: {
     ...typography.caption,
     fontSize: 11,
+  },
+  editDraftBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.button,
+    marginTop: spacing.xs,
+  },
+  editDraftText: {
+    ...typography.bodyMedium,
+    fontSize: 12,
+    fontWeight: '700',
+    flex: 1,
   },
 });

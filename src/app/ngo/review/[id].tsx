@@ -65,9 +65,6 @@ export default function NgoReviewScreen() {
   const loadDetail = useCallback(async () => {
     if (!id) return;
     try {
-      setLoading(true);
-      setErrorMsg(null);
-
       const sess = await fetchNgoSession();
       setSession(sess);
 
@@ -86,6 +83,7 @@ export default function NgoReviewScreen() {
   }, [id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadDetail();
   }, [loadDetail]);
 

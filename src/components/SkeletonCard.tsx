@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
 import { useTheme } from '@/theme';
@@ -6,18 +6,17 @@ import { radii, spacing } from '@/theme/spacing';
 
 export function SkeletonCard() {
   const { colors } = useTheme();
-  const opacityAnimRef = useRef(new Animated.Value(0.4));
+  const [opacityAnim] = useState(() => new Animated.Value(0.4));
 
   useEffect(() => {
-    const anim = opacityAnimRef.current;
     const pulse = Animated.loop(
       Animated.sequence([
-        Animated.timing(anim, {
+        Animated.timing(opacityAnim, {
           toValue: 0.9,
           duration: 700,
           useNativeDriver: true,
         }),
-        Animated.timing(anim, {
+        Animated.timing(opacityAnim, {
           toValue: 0.4,
           duration: 700,
           useNativeDriver: true,
@@ -26,7 +25,7 @@ export function SkeletonCard() {
     );
     pulse.start();
     return () => pulse.stop();
-  }, []);
+  }, [opacityAnim]);
 
   return (
     <View
@@ -41,13 +40,13 @@ export function SkeletonCard() {
         <Animated.View
           style={[
             styles.statusPill,
-            { backgroundColor: colors.surfaceMuted, opacity: opacityAnimRef.current },
+            { backgroundColor: colors.surfaceMuted, opacity: opacityAnim },
           ]}
         />
         <Animated.View
           style={[
             styles.timeBox,
-            { backgroundColor: colors.surfaceMuted, opacity: opacityAnimRef.current },
+            { backgroundColor: colors.surfaceMuted, opacity: opacityAnim },
           ]}
         />
       </View>
@@ -56,13 +55,13 @@ export function SkeletonCard() {
       <Animated.View
         style={[
           styles.titleLine1,
-          { backgroundColor: colors.surfaceMuted, opacity: opacityAnimRef.current },
+          { backgroundColor: colors.surfaceMuted, opacity: opacityAnim },
         ]}
       />
       <Animated.View
         style={[
           styles.titleLine2,
-          { backgroundColor: colors.surfaceMuted, opacity: opacityAnimRef.current },
+          { backgroundColor: colors.surfaceMuted, opacity: opacityAnim },
         ]}
       />
 
@@ -70,7 +69,7 @@ export function SkeletonCard() {
       <Animated.View
         style={[
           styles.locationLine,
-          { backgroundColor: colors.surfaceMuted, opacity: opacityAnimRef.current },
+          { backgroundColor: colors.surfaceMuted, opacity: opacityAnim },
         ]}
       />
 
@@ -78,7 +77,7 @@ export function SkeletonCard() {
       <Animated.View
         style={[
           styles.summaryLine,
-          { backgroundColor: colors.surfaceMuted, opacity: opacityAnimRef.current },
+          { backgroundColor: colors.surfaceMuted, opacity: opacityAnim },
         ]}
       />
 
@@ -87,7 +86,7 @@ export function SkeletonCard() {
         <Animated.View
           style={[
             styles.footerLine,
-            { backgroundColor: colors.surfaceMuted, opacity: opacityAnimRef.current },
+            { backgroundColor: colors.surfaceMuted, opacity: opacityAnim },
           ]}
         />
       </View>

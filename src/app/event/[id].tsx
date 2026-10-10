@@ -11,6 +11,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { InfoBar } from '@/components/InfoBar';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -120,6 +121,9 @@ export default function EventDetailScreen() {
         <View style={styles.headerSpacer} />
       </View>
 
+      {/* Persistent Sample Data Notice */}
+      <InfoBar isSampleData={true} />
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}>
@@ -203,6 +207,39 @@ export default function EventDetailScreen() {
               </Text>
             </Pressable>
           </View>
+        </View>
+
+        {/* 2b. Decision Support & Response Orchestration Action Card */}
+        <View style={[styles.orchestrationBanner, { backgroundColor: colors.surface }]}>
+          <View style={styles.orchestrationHeader}>
+            <View style={[styles.orchestrationIcon, { backgroundColor: colors.surfaceMuted }]}>
+              <Feather name="compass" size={20} color={colors.brandPrimary} />
+            </View>
+            <View style={styles.orchestrationInfo}>
+              <Text style={[styles.orchestrationTitle, { color: colors.textPrimary }]}>
+                Response Orchestration
+              </Text>
+              <Text style={[styles.orchestrationDesc, { color: colors.textSecondary }]}>
+                Multi-source situation assessment, prioritized needs, and evidence-traced action recommendations.
+              </Text>
+            </View>
+          </View>
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/orchestration/[id]',
+                params: { id: event.id },
+              })
+            }
+            style={[styles.orchestrationBtn, { backgroundColor: colors.surfaceMuted }]}
+            android_ripple={{ color: colors.surface }}
+            accessibilityRole="button"
+            accessibilityLabel="View Decision Support & Recommendations">
+            <Text style={[styles.orchestrationBtnText, { color: colors.brandPrimary }]}>
+              View Decision Support & Actions
+            </Text>
+            <Feather name="arrow-right" size={15} color={colors.brandPrimary} />
+          </Pressable>
         </View>
 
         {/* 3. Section: Source Observations */}
@@ -678,5 +715,51 @@ const styles = StyleSheet.create({
   primaryBtnText: {
     ...typography.bodyMedium,
     fontWeight: '600',
+  },
+  orchestrationBanner: {
+    borderRadius: radii.card,
+    padding: spacing.cardPadding,
+    marginHorizontal: spacing.screenPadding,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  orchestrationHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  orchestrationIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: radii.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  orchestrationInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  orchestrationTitle: {
+    ...typography.bodyMedium,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  orchestrationDesc: {
+    ...typography.caption,
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  orchestrationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radii.button,
+  },
+  orchestrationBtnText: {
+    ...typography.bodyMedium,
+    fontSize: 13,
+    fontWeight: '700',
   },
 });

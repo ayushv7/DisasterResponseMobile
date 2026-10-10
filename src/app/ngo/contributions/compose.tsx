@@ -23,8 +23,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 
+import { InfoBar } from '@/components/InfoBar';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
 import {
+  fetchContributionById,
   fetchNgoSession,
   publishContribution,
   saveContributionDraft,
@@ -46,14 +48,16 @@ const CONTRIBUTION_TYPES: { key: ContributionType; label: string; icon: keyof ty
 ];
 
 export default function NgoContributionComposeScreen() {
-  const { eventId: initialEventId, messageId } = useLocalSearchParams<{
+  const { eventId: initialEventId, messageId, draftId } = useLocalSearchParams<{
     eventId?: string;
     messageId?: string;
+    draftId?: string;
   }>();
 
   const { colors } = useTheme();
 
   const [session, setSession] = useState<NgoSession | null>(null);
+  const [activeDraftId, setActiveDraftId] = useState<string | undefined>(draftId);
   const [selectedEventId, setSelectedEventId] = useState(
     initialEventId || SAMPLE_FLOOD_EVENTS[0]?.id || ''
   );
@@ -72,6 +76,7 @@ export default function NgoContributionComposeScreen() {
   const [isDraftSaving, setIsDraftSaving] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [successItem, setSuccessItem] = useState<NgoContributionItem | null>(null);
 
   const isSubmittingRef = useRef(false);
@@ -85,7 +90,22 @@ export default function NgoContributionComposeScreen() {
         ]);
       }
     });
-  }, []);
+
+    if (draftId) {
+      fetchContributionById(draftId).then((draft) => {
+        if (draft) {
+          setSelectedEventId(draft.eventId);
+          setContributionType(draft.contributionType);
+          setLocality(draft.locality);
+          setSummary(draft.summary);
+          setNeeds(draft.needs || '');
+          setResources(draft.availableResources || '');
+          setEvidenceRefs(draft.evidenceReferences || '');
+          setVerificationMethod(draft.verificationMethod);
+        }
+      });
+    }
+  }, [draftId]);
 
   const selectedEvent = SAMPLE_FLOOD_EVENTS.find((e) => e.id === selectedEventId);
 
@@ -118,6 +138,7 @@ export default function NgoContributionComposeScreen() {
       setIsDraftSaving(true);
 
       const saved = await saveContributionDraft({
+        draftId: activeDraftId,
         eventId: selectedEventId,
         eventTitle: selectedEvent?.title || 'Flood Situation',
         citizenMessageRef: messageId,
@@ -130,9 +151,11 @@ export default function NgoContributionComposeScreen() {
         verificationMethod: verificationMethod.trim(),
       });
 
+      setActiveDraftId(saved.id);
+
       Alert.alert(
-        'Draft Saved',
-        `Draft ${saved.id} saved in local responder workspace.`,
+        'Draft Saved Locally',
+        `Draft ${saved.id} stored in local responder workspace.`,
         [{ text: 'View Contributions', onPress: () => router.replace('/ngo/contributions') }]
       );
     } catch (err: any) {
@@ -152,6 +175,7 @@ export default function NgoContributionComposeScreen() {
       setIsPublishing(true);
 
       const published = await publishContribution({
+        draftId: activeDraftId,
         eventId: selectedEventId,
         eventTitle: selectedEvent?.title || 'Flood Situation',
         citizenMessageRef: messageId,
@@ -166,7 +190,35 @@ export default function NgoContributionComposeScreen() {
 
       setSuccessItem(published);
     } catch (err: any) {
-      Alert.alert('Publish Error', err?.message || 'Failed to publish contribution.');
+      // Backend publication endpoint is missing or returns error.
+      // Automatically preserve work in local drafts so no officer inputs are lost.
+      try {
+        const savedDraft = await saveContributionDraft({
+          draftId: activeDraftId,
+          eventId: selectedEventId,
+          eventTitle: selectedEvent?.title || 'Flood Situation',
+          citizenMessageRef: messageId,
+          contributionType,
+          summary: summary.trim(),
+          locality: locality.trim(),
+          needs: needs.trim() || undefined,
+          availableResources: resources.trim() || undefined,
+          evidenceReferences: evidenceRefs.trim() || undefined,
+          verificationMethod: verificationMethod.trim(),
+        });
+        setActiveDraftId(savedDraft.id);
+
+        Alert.alert(
+          'Server Confirmation Required',
+          `${err?.message || 'Remote publication endpoint is unavailable.'}\n\nYour inputs have been safely preserved as Draft ${savedDraft.id} in local memory.`,
+          [
+            { text: 'View Contributions', onPress: () => router.replace('/ngo/contributions') },
+            { text: 'Keep Editing', style: 'cancel' },
+          ]
+        );
+      } catch {
+        Alert.alert('Publish Error', err?.message || 'Failed to publish contribution.');
+      }
     } finally {
       setIsPublishing(false);
       isSubmittingRef.current = false;
@@ -179,6 +231,7 @@ export default function NgoContributionComposeScreen() {
       <SafeAreaView
         edges={['top', 'left', 'right']}
         style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <InfoBar isSampleData={true} />
         <View style={styles.successContainer}>
           <View
             style={[
@@ -193,10 +246,10 @@ export default function NgoContributionComposeScreen() {
           </View>
 
           <Text style={[styles.successTitle, { color: colors.textPrimary }]}>
-            Contribution Published
+            Contribution Staged (Preview)
           </Text>
           <Text style={[styles.successSubtitle, { color: colors.textSecondary }]}>
-            Your update has been verified and attributed to {successItem.ngoName}.
+            Attributed to {successItem.ngoName} by {successItem.authorOfficer}. Saved in device memory for UI testing — remote publishing pending live FastAPI backend.
           </Text>
 
           <View style={[styles.receiptCard, { backgroundColor: colors.surface }]}>
@@ -290,16 +343,19 @@ export default function NgoContributionComposeScreen() {
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-          New Contribution
+          {activeDraftId ? 'Edit Draft' : 'New Contribution'}
         </Text>
       </View>
+
+      {/* Persistent Sample Data Notice */}
+      <InfoBar isSampleData={true} />
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Attribution & Notice Banner */}
         <View style={[styles.noticeBanner, { backgroundColor: colors.surface }]}>
           <Feather name="shield" size={14} color={colors.brandPrimary} />
           <Text style={[styles.noticeBannerText, { color: colors.textSecondary }]}>
-            Publishing as {session?.ngoName || 'Verified NGO'}. Official
+            Publishing as {session?.ngoName || 'Verified NGO'} ({session?.authorizedOfficerName || 'Authorized Officer'}). Official
             contributions are attributed publicly and decoupled from raw sensor observations.
           </Text>
         </View>
@@ -550,52 +606,70 @@ export default function NgoContributionComposeScreen() {
         </View>
 
         {/* Action Buttons */}
-        <View style={styles.actionsRow}>
+        <View style={styles.actionsColumn}>
           <Pressable
-            onPress={handleSaveDraft}
-            disabled={isDraftSaving || isPublishing}
+            onPress={() => setShowPreviewModal(true)}
             style={[
-              styles.actionButtonSecondary,
-              {
-                backgroundColor: colors.surface,
-                opacity: isDraftSaving ? 0.6 : 1,
-              },
+              styles.previewButton,
+              { backgroundColor: colors.surfaceMuted },
             ]}>
-            {isDraftSaving ? (
-              <ActivityIndicator size="small" color={colors.textPrimary} />
-            ) : (
-              <>
-                <Feather name="file-text" size={16} color={colors.textPrimary} />
-                <Text
-                  style={[
-                    styles.actionButtonSecondaryText,
-                    { color: colors.textPrimary },
-                  ]}>
-                  Save Draft
-                </Text>
-              </>
-            )}
-          </Pressable>
-
-          <Pressable
-            onPress={() => {
-              if (validateFields()) {
-                setShowConfirmModal(true);
-              }
-            }}
-            disabled={isDraftSaving || isPublishing}
-            style={[
-              styles.actionButtonPrimary,
-              {
-                backgroundColor: colors.brandPrimary,
-                opacity: isPublishing ? 0.6 : 1,
-              },
-            ]}>
-            <Feather name="send" size={16} color="#FFFFFF" />
-            <Text style={styles.actionButtonPrimaryText}>
-              Publish Contribution
+            <Feather name="eye" size={15} color={colors.textPrimary} />
+            <Text
+              style={[
+                styles.previewButtonText,
+                { color: colors.textPrimary },
+              ]}>
+              Preview Public Bulletin
             </Text>
           </Pressable>
+
+          <View style={styles.actionsRow}>
+            <Pressable
+              onPress={handleSaveDraft}
+              disabled={isDraftSaving || isPublishing}
+              style={[
+                styles.actionButtonSecondary,
+                {
+                  backgroundColor: colors.surface,
+                  opacity: isDraftSaving ? 0.6 : 1,
+                },
+              ]}>
+              {isDraftSaving ? (
+                <ActivityIndicator size="small" color={colors.textPrimary} />
+              ) : (
+                <>
+                  <Feather name="file-text" size={16} color={colors.textPrimary} />
+                  <Text
+                    style={[
+                      styles.actionButtonSecondaryText,
+                      { color: colors.textPrimary },
+                    ]}>
+                    Save Draft
+                  </Text>
+                </>
+              )}
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                if (validateFields()) {
+                  setShowConfirmModal(true);
+                }
+              }}
+              disabled={isDraftSaving || isPublishing}
+              style={[
+                styles.actionButtonPrimary,
+                {
+                  backgroundColor: colors.brandPrimary,
+                  opacity: isPublishing ? 0.6 : 1,
+                },
+              ]}>
+              <Feather name="send" size={16} color="#FFFFFF" />
+              <Text style={styles.actionButtonPrimaryText}>
+                Publish Contribution
+              </Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
 
@@ -659,6 +733,121 @@ export default function NgoContributionComposeScreen() {
                 )}
               </Pressable>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Labelled UI Preview Modal */}
+      <Modal
+        visible={showPreviewModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowPreviewModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.previewModalCard, { backgroundColor: colors.surface }]}>
+            <View style={styles.previewModalHeader}>
+              <View style={styles.previewHeaderWrap}>
+                <View style={[styles.previewBadge, { backgroundColor: colors.surfaceMuted }]}>
+                  <Text style={[styles.previewBadgeText, { color: colors.statusWatch }]}>
+                    UI PREVIEW — PENDING BACKEND INTEGRATION
+                  </Text>
+                </View>
+                <Text style={[styles.previewModalTitle, { color: colors.textPrimary }]}>
+                  Public Bulletin Preview
+                </Text>
+              </View>
+              <Pressable
+                onPress={() => setShowPreviewModal(false)}
+                hitSlop={spacing.sm}
+                accessibilityRole="button"
+                accessibilityLabel="Close preview">
+                <Feather name="x" size={20} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.previewScroll}>
+              <View style={[styles.previewAttribution, { backgroundColor: colors.surfaceMuted }]}>
+                <Feather name="shield" size={14} color={colors.brandPrimary} />
+                <Text style={[styles.previewAttributionText, { color: colors.textPrimary }]}>
+                  {session?.ngoName || 'Disaster Relief Network India'} · {session?.authorizedOfficerName || 'Authorized Officer'}
+                </Text>
+              </View>
+
+              <View style={styles.previewRow}>
+                <Text style={[styles.previewKey, { color: colors.textTertiary }]}>SITUATION:</Text>
+                <Text style={[styles.previewVal, { color: colors.textPrimary }]}>
+                  {selectedEvent?.title || 'Selected Flood Event'}
+                </Text>
+              </View>
+
+              {messageId ? (
+                <View style={styles.previewRow}>
+                  <Text style={[styles.previewKey, { color: colors.textTertiary }]}>CITIZEN REF:</Text>
+                  <Text style={[styles.previewVal, typography.tabular, { color: colors.textPrimary }]}>
+                    {messageId}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View style={styles.previewRow}>
+                <Text style={[styles.previewKey, { color: colors.textTertiary }]}>CATEGORY:</Text>
+                <Text style={[styles.previewVal, { color: colors.textPrimary }]}>
+                  {contributionType.replace(/_/g, ' ')}
+                </Text>
+              </View>
+
+              <View style={styles.previewRow}>
+                <Text style={[styles.previewKey, { color: colors.textTertiary }]}>LOCALITY:</Text>
+                <Text style={[styles.previewVal, { color: colors.textPrimary }]}>
+                  {locality || '(No locality specified)'}
+                </Text>
+              </View>
+
+              <View style={styles.previewRow}>
+                <Text style={[styles.previewKey, { color: colors.textTertiary }]}>SUMMARY:</Text>
+                <Text style={[styles.previewVal, { color: colors.textPrimary }]}>
+                  {summary || '(No summary entered)'}
+                </Text>
+              </View>
+
+              {needs.trim() ? (
+                <View style={styles.previewRow}>
+                  <Text style={[styles.previewKey, { color: colors.textTertiary }]}>URGENT NEEDS:</Text>
+                  <Text style={[styles.previewVal, { color: colors.textPrimary }]}>
+                    {needs}
+                  </Text>
+                </View>
+              ) : null}
+
+              {resources.trim() ? (
+                <View style={styles.previewRow}>
+                  <Text style={[styles.previewKey, { color: colors.textTertiary }]}>AVAILABLE RESOURCES:</Text>
+                  <Text style={[styles.previewVal, { color: colors.textPrimary }]}>
+                    {resources}
+                  </Text>
+                </View>
+              ) : null}
+
+              <View style={styles.previewRow}>
+                <Text style={[styles.previewKey, { color: colors.textTertiary }]}>VERIFICATION METHOD:</Text>
+                <Text style={[styles.previewVal, { color: colors.textPrimary }]}>
+                  {verificationMethod}
+                </Text>
+              </View>
+            </ScrollView>
+
+            <View style={styles.previewFooterNotice}>
+              <Feather name="info" size={13} color={colors.textTertiary} />
+              <Text style={[styles.previewFooterText, { color: colors.textTertiary }]}>
+                Live public publication requires confirmation from backend endpoint POST /api/v1/ngo/contributions/publish.
+              </Text>
+            </View>
+
+            <Pressable
+              onPress={() => setShowPreviewModal(false)}
+              style={[styles.closePreviewBtn, { backgroundColor: colors.brandPrimary }]}>
+              <Text style={styles.closePreviewBtnText}>Close Preview</Text>
+            </Pressable>
           </View>
         </View>
       </Modal>
@@ -805,10 +994,26 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
+  actionsColumn: {
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  previewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: touchTargets.min,
+    borderRadius: radii.button,
+  },
+  previewButtonText: {
+    ...typography.bodyMedium,
+    fontSize: 13,
+    fontWeight: '600',
+  },
   actionsRow: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.xs,
   },
   actionButtonSecondary: {
     flex: 1,
@@ -954,5 +1159,92 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
+  },
+  previewModalCard: {
+    width: '100%',
+    maxHeight: '85%',
+    borderRadius: radii.card,
+    padding: spacing.cardPadding,
+    gap: spacing.sm,
+  },
+  previewModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
+  previewHeaderWrap: {
+    flex: 1,
+    gap: 4,
+  },
+  previewBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 3,
+    borderRadius: radii.xs,
+  },
+  previewBadgeText: {
+    ...typography.overline,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  previewModalTitle: {
+    ...typography.cardTitle,
+    fontSize: 17,
+  },
+  previewScroll: {
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  previewAttribution: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    padding: spacing.sm,
+    borderRadius: radii.sm,
+  },
+  previewAttributionText: {
+    ...typography.caption,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  previewRow: {
+    gap: 2,
+  },
+  previewKey: {
+    ...typography.caption,
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  previewVal: {
+    ...typography.body,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  previewFooterNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingTop: spacing.xs,
+  },
+  previewFooterText: {
+    ...typography.caption,
+    fontSize: 11,
+    lineHeight: 15,
+    flex: 1,
+  },
+  closePreviewBtn: {
+    height: touchTargets.min,
+    borderRadius: radii.button,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.xs,
+  },
+  closePreviewBtnText: {
+    ...typography.bodyMedium,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

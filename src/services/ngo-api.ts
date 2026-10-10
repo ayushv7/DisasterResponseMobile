@@ -77,6 +77,21 @@ let inMemoryContributions: NgoContributionItem[] = [
     status: 'DRAFT',
     createdAt: '2026-10-09T18:00:00Z',
   },
+  {
+    id: 'contrib-seed-03',
+    eventId: 'fl-2026-083',
+    eventTitle: 'Kosi River Flash Surge — Supaul Lowland Sector',
+    contributionType: 'RELIEF_DISTRIBUTION',
+    summary:
+      'Shelter dispatch duplicate report. Handled via direct SDRF regional pipeline.',
+    locality: 'Nirmali Block, Supaul',
+    verificationMethod: 'Cross-agency ledger reconciliation',
+    authorOfficer: 'R. Sharma (Field Lead)',
+    ngoId: 'ngo-drn-india',
+    ngoName: 'Disaster Relief Network India',
+    status: 'REJECTED_OR_CLOSED',
+    createdAt: '2026-10-09T15:00:00Z',
+  },
 ];
 
 export async function loginNgo(
@@ -236,15 +251,41 @@ export async function fetchNgoContributions(): Promise<NgoContributionItem[]> {
   return JSON.parse(JSON.stringify(inMemoryContributions));
 }
 
+export async function fetchContributionById(
+  id: string
+): Promise<NgoContributionItem | null> {
+  await new Promise((res) => setTimeout(res, 100));
+  const found = inMemoryContributions.find((c) => c.id === id);
+  return found ? JSON.parse(JSON.stringify(found)) : null;
+}
+
 export async function saveContributionDraft(
-  draftInput: Omit<NgoContributionItem, 'id' | 'createdAt' | 'status' | 'authorOfficer' | 'ngoId' | 'ngoName'>
+  draftInput: Omit<NgoContributionItem, 'id' | 'createdAt' | 'status' | 'authorOfficer' | 'ngoId' | 'ngoName'> & { draftId?: string }
 ): Promise<NgoContributionItem> {
-  await new Promise((res) => setTimeout(res, 300));
+  await new Promise((res) => setTimeout(res, 250));
   assertAuthenticatedAndVerified();
+
+  if (draftInput.draftId) {
+    const existing = inMemoryContributions.find((c) => c.id === draftInput.draftId);
+    if (existing) {
+      existing.eventId = draftInput.eventId;
+      existing.eventTitle = draftInput.eventTitle;
+      existing.citizenMessageRef = draftInput.citizenMessageRef;
+      existing.contributionType = draftInput.contributionType;
+      existing.summary = draftInput.summary;
+      existing.locality = draftInput.locality;
+      existing.needs = draftInput.needs;
+      existing.availableResources = draftInput.availableResources;
+      existing.evidenceReferences = draftInput.evidenceReferences;
+      existing.verificationMethod = draftInput.verificationMethod;
+      existing.status = 'DRAFT';
+      return JSON.parse(JSON.stringify(existing));
+    }
+  }
 
   const newItem: NgoContributionItem = {
     ...draftInput,
-    id: `contrib-${Date.now()}`,
+    id: `draft-${Date.now()}`,
     status: 'DRAFT',
     authorOfficer: currentSession!.authorizedOfficerName,
     ngoId: currentSession!.ngoId,
@@ -256,52 +297,23 @@ export async function saveContributionDraft(
   return JSON.parse(JSON.stringify(newItem));
 }
 
+/**
+ * Publishes an officially verified NGO contribution.
+ *
+ * BACKEND REQUIREMENT:
+ * Requires live FastAPI endpoint: POST /api/v1/ngo/contributions/publish
+ * Per product architecture rules, contributions CANNOT be marked as published
+ * through local state alone. Must reject until server confirms publication.
+ */
 export async function publishContribution(
-  draftInput: Omit<NgoContributionItem, 'id' | 'createdAt' | 'status' | 'authorOfficer' | 'ngoId' | 'ngoName'> & { draftId?: string }
+  _draftInput: Omit<NgoContributionItem, 'id' | 'createdAt' | 'status' | 'authorOfficer' | 'ngoId' | 'ngoName'> & { draftId?: string }
 ): Promise<NgoContributionItem> {
   await new Promise((res) => setTimeout(res, 350));
   assertAuthenticatedAndVerified();
 
-  const now = new Date().toISOString();
-
-  if (draftInput.draftId) {
-    const existing = inMemoryContributions.find((c) => c.id === draftInput.draftId);
-    if (existing) {
-      existing.summary = draftInput.summary;
-      existing.locality = draftInput.locality;
-      existing.contributionType = draftInput.contributionType;
-      existing.needs = draftInput.needs;
-      existing.availableResources = draftInput.availableResources;
-      existing.evidenceReferences = draftInput.evidenceReferences;
-      existing.verificationMethod = draftInput.verificationMethod;
-      existing.status = 'PUBLISHED';
-      existing.publishedAt = now;
-      return JSON.parse(JSON.stringify(existing));
-    }
-  }
-
-  const publishedItem: NgoContributionItem = {
-    id: `contrib-${Date.now()}`,
-    eventId: draftInput.eventId,
-    eventTitle: draftInput.eventTitle,
-    citizenMessageRef: draftInput.citizenMessageRef,
-    contributionType: draftInput.contributionType,
-    summary: draftInput.summary,
-    locality: draftInput.locality,
-    needs: draftInput.needs,
-    availableResources: draftInput.availableResources,
-    evidenceReferences: draftInput.evidenceReferences,
-    verificationMethod: draftInput.verificationMethod,
-    authorOfficer: currentSession!.authorizedOfficerName,
-    ngoId: currentSession!.ngoId,
-    ngoName: currentSession!.ngoName,
-    status: 'PUBLISHED',
-    createdAt: now,
-    publishedAt: now,
-  };
-
-  inMemoryContributions.unshift(publishedItem);
-  return JSON.parse(JSON.stringify(publishedItem));
+  throw new Error(
+    'Backend publication endpoint (POST /api/v1/ngo/contributions/publish) is not yet available. Contributions cannot be marked as published through local state alone. Saved in local drafts.'
+  );
 }
 
 function assertAuthenticatedAndVerified() {

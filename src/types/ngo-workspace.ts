@@ -82,7 +82,7 @@ export type ContributionType =
   | 'EVACUATION_ROUTE'
   | 'MEDICAL_ASSISTANCE';
 
-export type ContributionStatus = 'DRAFT' | 'PUBLISHED';
+export type ContributionStatus = 'DRAFT' | 'PUBLISHED' | 'REJECTED_OR_CLOSED';
 
 export interface NgoContributionItem {
   id: string;

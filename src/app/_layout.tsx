@@ -34,6 +34,7 @@ function RootLayoutContent() {
         <Stack.Screen name="ngo/contributions/compose" />
         <Stack.Screen name="ngo/organization" options={{ animation: 'fade' }} />
         <Stack.Screen name="ngo/review/[id]" />
+        <Stack.Screen name="orchestration/[id]" />
         <Stack.Screen name="dev/index" />
       </Stack>
     </>

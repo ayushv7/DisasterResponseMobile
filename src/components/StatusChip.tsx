@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
 import { useTheme } from '@/theme';
-import { radii, spacing } from '@/theme/spacing';
+import { radii } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { EventStatus } from '@/types/disaster';
 
