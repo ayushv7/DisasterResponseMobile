@@ -1,12 +1,8 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Href } from 'expo-router';
 
-import { useTheme } from '@/theme';
-import { spacing, touchTargets } from '@/theme/spacing';
-import { typography } from '@/theme/typography';
+import { RoleTabBar } from '@/components/RoleTabBar';
 
 export type TabKey = 'feed' | 'map' | 'messages' | 'profile';
 
@@ -57,74 +53,13 @@ interface BottomNavBarProps {
   activeTab: TabKey;
 }
 
+/** Public tabs; rendered by the shared RoleTabBar. */
 export function BottomNavBar({ activeTab }: BottomNavBarProps) {
-  const { colors } = useTheme();
-  const insets = useSafeAreaInsets();
-
-  const handleTabPress = (tab: TabDef) => {
-    if (tab.key === activeTab) return;
-    // Use navigate to trigger smooth slide transition defined in stack options
-    router.navigate(tab.route as any);
-  };
-
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          backgroundColor: colors.background,
-          paddingBottom: Math.max(insets.bottom, 8),
-        },
-      ]}>
-      {VISIBLE_TABS.map((tab) => {
-        const isActive = tab.key === activeTab;
-        return (
-          <Pressable
-            key={tab.key}
-            onPress={() => handleTabPress(tab)}
-            style={styles.tabButton}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: isActive }}
-            accessibilityLabel={tab.accessibilityLabel}>
-            <Feather
-              name={tab.icon}
-              size={20}
-              color={isActive ? colors.textPrimary : colors.textTertiary}
-            />
-            <Text
-              style={[
-                styles.tabLabel,
-                {
-                  color: isActive ? colors.textPrimary : colors.textTertiary,
-                  fontWeight: isActive ? '700' : '500',
-                },
-              ]}>
-              {tab.label}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
+    <RoleTabBar
+      tabs={VISIBLE_TABS.map((t) => ({ ...t, route: t.route as Href }))}
+      activeTab={activeTab}
+      teal={false}
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-    paddingTop: spacing.xs,
-  },
-  tabButton: {
-    flex: 1,
-    minHeight: touchTargets.min,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 3,
-  },
-  tabLabel: {
-    ...typography.caption,
-    fontSize: 11,
-    lineHeight: 14,
-  },
-});
