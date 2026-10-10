@@ -251,7 +251,7 @@ export default function PrivateMessageComposeScreen() {
           )}
 
           <Pressable
-            onPress={() => router.replace('/')}
+            onPress={() => router.replace('/alerts')}
             style={[styles.primaryBtn, { backgroundColor: colors.brandPrimary }]}
             accessibilityRole="button"
             accessibilityLabel="Return to flood alerts feed"

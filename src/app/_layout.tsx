@@ -4,6 +4,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { SessionProvider } from '@/session/session-context';
 import { ThemeProvider, useTheme } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -20,7 +21,8 @@ function RootLayoutContent() {
           headerShown: false,
           animation: 'slide_from_right',
         }}>
-        <Stack.Screen name="index" options={{ animation: 'fade' }} />
+        <Stack.Screen name="index" />
+        <Stack.Screen name="alerts" options={{ animation: 'fade' }} />
         <Stack.Screen name="map" options={{ animation: 'fade' }} />
         <Stack.Screen name="messages" options={{ animation: 'fade' }} />
         <Stack.Screen name="profile" options={{ animation: 'fade' }} />
@@ -49,7 +51,9 @@ function RootLayoutContent() {
 export default function RootLayout() {
   return (
     <ThemeProvider>
-      <RootLayoutContent />
+      <SessionProvider>
+        <RootLayoutContent />
+      </SessionProvider>
     </ThemeProvider>
   );
 }

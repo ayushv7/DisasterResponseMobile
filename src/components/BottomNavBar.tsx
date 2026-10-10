@@ -23,7 +23,7 @@ const TABS: TabDef[] = [
     key: 'feed',
     label: 'Feed',
     icon: 'shield',
-    route: '/',
+    route: '/alerts',
     accessibilityLabel: 'Flood alerts feed',
   },
   {

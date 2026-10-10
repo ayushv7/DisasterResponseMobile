@@ -147,7 +147,7 @@ export default function MessagesScreen() {
         When you send a private message to a verified NGO from a flood alert, it will appear here.
       </Text>
       <Pressable
-        onPress={() => router.replace('/')}
+        onPress={() => router.replace('/alerts')}
         style={({ pressed }) => [
           styles.emptyAction,
           {

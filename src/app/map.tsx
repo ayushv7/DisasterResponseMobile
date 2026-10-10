@@ -55,7 +55,7 @@ export default function MapScreen() {
         </View>
 
         <Pressable
-          onPress={() => router.replace('/')}
+          onPress={() => router.replace('/alerts')}
           style={({ pressed }) => [
             styles.actionBtn,
             {
