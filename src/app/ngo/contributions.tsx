@@ -152,7 +152,7 @@ export default function NgoContributionsScreen() {
               }
               android_ripple={{ color: colors.surfaceMuted }}
               accessibilityRole="button"
-              accessibilityLabel={`Contribution ${item.title}`}
+              accessibilityLabel={`Contribution for ${item.eventTitle}`}
               style={[styles.card, { backgroundColor: colors.surface }]}>
               {/* Header */}
               <View style={styles.cardHeader}>
@@ -190,15 +190,17 @@ export default function NgoContributionsScreen() {
                 Event: {item.eventTitle}
               </Text>
 
-              {/* Title & Body */}
+              {/* Summary & Action Taken */}
               <Text style={[styles.contribTitle, { color: colors.textPrimary }]}>
-                {item.title}
+                {item.summary}
               </Text>
-              <Text
-                style={[styles.contribBody, { color: colors.textSecondary }]}
-                numberOfLines={3}>
-                {item.content}
-              </Text>
+              {item.actionTaken && (
+                <Text
+                  style={[styles.contribBody, { color: colors.textSecondary }]}
+                  numberOfLines={3}>
+                  Action: {item.actionTaken}
+                </Text>
+              )}
 
               {/* Verification Info */}
               <View style={styles.cardFooter}>
@@ -208,7 +210,7 @@ export default function NgoContributionsScreen() {
                     styles.verificationInfo,
                     { color: colors.textTertiary },
                   ]}>
-                  {item.verificationInfo}
+                  Published by {item.ngoName} (Verified)
                 </Text>
               </View>
             </Pressable>

@@ -85,12 +85,6 @@ export default function NgoInboxScreen() {
     loadData(true);
   };
 
-  const handleOrgStatusToggle = (newStatus: NgoOrgStatus) => {
-    const updated = setMockOrgStatus(newStatus);
-    setSession(updated);
-    loadData();
-  };
-
   const renderStatusDot = (status: NgoMessageStatus) => {
     let dotColor = colors.textTertiary;
     if (status === 'NEEDS_REVIEW') dotColor = colors.statusWatch;
