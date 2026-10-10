@@ -8,21 +8,29 @@ import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router';
 
 import { PrimaryButton } from '@/components/AuthForm';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
 import { StateView } from '@/components/StateView';
-import { StatusChip } from '@/components/StatusChip';
+import { ChipTone, StatusChip } from '@/components/StatusChip';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useGoBack } from '@/navigation/use-go-back';
 import { api, ApiError } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
-import { ContributorResource, PlanAllocation } from '@/types/contributors';
+import { ContributorResource, PlanAllocation, PlanStatus } from '@/types/contributors';
 import { InterventionRecord } from '@/types/operations';
 
 const REASON_MIN = 10;
+
+const PLAN_STATUS: Record<PlanStatus, { label: string; tone: ChipTone }> = {
+  PROPOSED: { label: 'Awaiting your approval', tone: 'warning' },
+  APPROVED: { label: 'Approved · published', tone: 'success' },
+  IN_PROGRESS: { label: 'In progress', tone: 'info' },
+  COMPLETED: { label: 'Completed', tone: 'success' },
+};
 
 const formatTime = (iso: string) =>
   new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
@@ -30,10 +38,12 @@ const formatTime = (iso: string) =>
 export default function ResourcePlanScreen() {
   const goBack = useGoBack();
   const { colors } = useTheme();
-  const query = useApiQuery(() => api.getResourcePlan(), [], () => false);
+  const { incidentId } = useLocalSearchParams<{ incidentId?: string }>();
+  const query = useApiQuery(() => api.getResourcePlan(incidentId), [incidentId], () => false);
   const plan = query.data;
 
   const [replanning, setReplanning] = useState(false);
+  const [approving, setApproving] = useState(false);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const inFlight = useRef(false);
@@ -63,12 +73,34 @@ export default function ResourcePlanScreen() {
     try {
       const result = await api.requestReplan(plan.id, plan.version);
       query.setData(result.data);
+      query.refresh();
       setNotice(`${result.source === 'sample' ? 'Simulated: ' : ''}plan recomputed as version ${result.data.version}.`);
     } catch (err) {
       showError(err);
     } finally {
       inFlight.current = false;
       setReplanning(false);
+    }
+  };
+
+  const approve = async () => {
+    if (!plan || inFlight.current) return;
+    inFlight.current = true;
+    setApproving(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await api.approvePlan(plan.id, plan.version);
+      query.setData(result.data);
+      query.refresh();
+      setNotice(
+        `${result.source === 'sample' ? 'Simulated: ' : ''}version ${result.data.version} approved. Tasks published to workers and instructions sent to contributors.`
+      );
+    } catch (err) {
+      showError(err);
+    } finally {
+      inFlight.current = false;
+      setApproving(false);
     }
   };
 
@@ -100,8 +132,9 @@ export default function ResourcePlanScreen() {
         reason: reason.trim(),
       });
       query.setData(result.data);
+      query.refresh();
       setNotice(
-        `${result.source === 'sample' ? 'Simulated: ' : ''}manual allocation saved as version ${result.data.version}.`
+        `${result.source === 'sample' ? 'Simulated: ' : ''}manual allocation saved as version ${result.data.version}. Approve it to publish.`
       );
       setShowManual(false);
       setReason('');
@@ -135,7 +168,7 @@ export default function ResourcePlanScreen() {
     </View>
   );
 
-  const busy = replanning || submitting;
+  const busy = replanning || submitting || approving;
   const reasonOk = reason.trim().length >= REASON_MIN;
 
   return (
@@ -153,7 +186,12 @@ export default function ResourcePlanScreen() {
           <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
             {/* Plan metadata */}
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>Version {plan.version}</Text>
+              <View style={styles.row}>
+                <Text style={[styles.body, styles.bold, styles.flex, { color: colors.textPrimary }]}>
+                  {plan.incidentTitle ? `${plan.incidentTitle} · ` : ''}Version {plan.version}
+                </Text>
+                {plan.status && <StatusChip label={PLAN_STATUS[plan.status].label} tone={PLAN_STATUS[plan.status].tone} />}
+              </View>
               <Text style={[styles.caption, { color: colors.textSecondary }]}>Generated {formatTime(plan.generatedAt)}</Text>
               {plan.lastChangedBy && (
                 <Text style={[styles.caption, { color: colors.textSecondary }]}>
@@ -162,12 +200,28 @@ export default function ResourcePlanScreen() {
                   {plan.lastChangedAt ? ` · ${formatTime(plan.lastChangedAt)}` : ''}
                 </Text>
               )}
+              {plan.approvedBy && plan.approvedAt && (
+                <Text style={[styles.caption, { color: colors.textSecondary }]}>
+                  Approved by {plan.approvedBy.name} · {formatTime(plan.approvedAt)}
+                </Text>
+              )}
               {plan.notes?.map((n) => (
                 <Text key={n} style={[styles.caption, { color: colors.statusWatch }]}>
                   • {n}
                 </Text>
               ))}
             </View>
+
+            {plan.replanSuggested && (
+              <View style={[styles.card, { backgroundColor: colors.statusWatchBg }]}>
+                <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>Replan suggested</Text>
+                {plan.replanReasons?.map((reasonText) => (
+                  <Text key={reasonText} style={[styles.caption, { color: colors.textPrimary }]}>
+                    • {reasonText}
+                  </Text>
+                ))}
+              </View>
+            )}
 
             {notice && (
               <Text style={[styles.caption, { color: colors.textPrimary }]} accessibilityLiveRegion="polite">
@@ -183,6 +237,9 @@ export default function ResourcePlanScreen() {
             )}
 
             {/* Actions */}
+            {plan.status === 'PROPOSED' && (
+              <PrimaryButton label="Approve and publish" onPress={approve} busy={approving} disabled={busy && !approving} />
+            )}
             <View style={styles.row}>
               <Pressable
                 onPress={replan}

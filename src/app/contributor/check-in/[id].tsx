@@ -59,6 +59,7 @@ export default function CheckInScreen() {
       const res = await api.checkInResource(resource.id, { available, evidence: payload });
       setResult({ resource: res.data, simulated: res.source === 'sample' });
       query.setData(res.data);
+      query.refresh();
     } catch (err) {
       // Keep the previous state: the check-in did not happen
       setError(err instanceof Error ? err.message : 'Check-in failed. Try again.');

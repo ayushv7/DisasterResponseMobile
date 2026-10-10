@@ -27,6 +27,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { AssignmentSummary } from '@/components/AssignmentSummary';
 import { InfoBar } from '@/components/InfoBar';
 import { TaskHistory } from '@/components/TaskHistory';
 import { VerificationStatus } from '@/components/VerificationStatus';
@@ -133,6 +134,8 @@ export default function FieldWorkerTasksScreen() {
     setTasks((prev) => prev.map((t) => (t.id === result.data.id ? result.data : t)));
     setFeedback(result.source === 'sample' ? `Simulated: ${message}` : message);
     setTimeout(() => setFeedback(null), 4000);
+    // Re-read from the service so plan/verification changes show up too
+    loadData();
   };
 
   const filteredTasks = [...tasks].sort((a, b) => ORDER[a.status] - ORDER[b.status]).filter((t) => {
@@ -341,6 +344,15 @@ export default function FieldWorkerTasksScreen() {
                     {item.instructions}
                   </Text>
                 </View>
+
+                {role === 'field_worker' && (
+                  <AssignmentSummary
+                    where={`${item.targetLocality} · ${item.incidentTitle}`}
+                    what={item.instructions}
+                    deadline={item.deadlineTimestamp}
+                    ngoName={item.assignedNgoName ?? session?.user?.ngoName}
+                  />
+                )}
 
                 {/* Assigned Crew & Equipment */}
                 {item.deadlineTimestamp && item.status === 'AWAITING_ACK' && (

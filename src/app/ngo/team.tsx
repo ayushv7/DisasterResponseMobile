@@ -93,7 +93,7 @@ export default function NgoTeamScreen() {
       setApplications((prev) => prev.map((a) => (a.id === app.id ? result.data : a)));
       setReasonFor(null);
       // Approving or revoking changes the team list
-      setMembers((await api.getFieldTeam()).data);
+      load();
     } catch (err: any) {
       Alert.alert('Could not save decision', err?.message || 'Try again.');
     } finally {
@@ -132,6 +132,7 @@ export default function NgoTeamScreen() {
         `${result.source === 'sample' ? 'Simulated: ' : ''}${result.data.id} assigned to ${assignFor.name}.`
       );
       setAssignFor(null);
+      load();
     } catch (err: any) {
       Alert.alert('Could not assign', err?.message || 'Try again.');
     } finally {
@@ -176,6 +177,7 @@ export default function NgoTeamScreen() {
     try {
       setBusyId(member.id);
       replaceMember((await api.disableWorker(member.id, member.status === 'ACTIVE')).data);
+      load();
     } catch (err: any) {
       Alert.alert('Could not update worker', err?.message || 'Try again.');
     } finally {

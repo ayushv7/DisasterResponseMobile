@@ -394,6 +394,15 @@ export async function allocateManually(input: ManualAllocationInput): Promise<Re
   if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > r.quantity) {
     throw new ApiError('INVALID_QUANTITY', `Quantity must be between 1 and ${r.quantity}.`);
   }
+  const alreadyAllocated = plan.allocations
+    .filter((a) => a.resourceId === r.id && a.workOrderId !== input.workOrderId)
+    .reduce((sum, a) => sum + a.quantity, 0);
+  if (alreadyAllocated + input.quantity > r.quantity) {
+    throw new ApiError(
+      'OVER_ALLOCATED',
+      `${resourceLabel(r)}: ${alreadyAllocated} already allocated elsewhere in this plan; only ${r.quantity - alreadyAllocated} left.`
+    );
+  }
   const actor = ngoActor();
   const at = new Date().toISOString();
   nextVersion(plan, {

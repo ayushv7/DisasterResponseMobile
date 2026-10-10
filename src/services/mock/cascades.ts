@@ -47,8 +47,9 @@ export function sweepMissedCheckIns(at = Date.now()) {
     r.freshness = 'STALE';
     r.eligibleForAllocation = false;
     r.statusReason = `Simulated: check-in missed (was due ${new Date(r.checkInDueAt).toLocaleString()}).`;
-    onResourceChanged(r.id);
   }
+  // Any plan still allocating an ineligible resource (including seeded ones) is flagged
+  for (const r of store.resources) onResourceChanged(r.id);
 }
 
 /** A resource became ineligible: flag every plan that allocates it. */

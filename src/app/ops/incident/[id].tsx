@@ -23,7 +23,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
@@ -70,7 +70,8 @@ export default function IncidentWorkspaceScreen() {
   const [showContingency, setShowContingency] = useState(false);
   const [showAllResources, setShowAllResources] = useState(false);
 
-  const loadAll = useCallback(async () => {
+  /** `keepId`: stay on this work order after an action instead of jumping to the first. */
+  const loadAll = useCallback(async (keepId?: string) => {
     if (!id) return;
     try {
       setErrorMsg(null);
@@ -89,7 +90,7 @@ export default function IncidentWorkspaceScreen() {
       setResources(resList);
 
       if (detail.interventions.length > 0) {
-        const first = detail.interventions[0];
+        const first = detail.interventions.find((i) => i.id === keepId) ?? detail.interventions[0];
         setSelectedIntervention(first);
         const rec = (await api.getRecommendation(first.id)).data;
         setRecommendation(rec);
@@ -140,6 +141,7 @@ export default function IncidentWorkspaceScreen() {
       setInterventions((prev) => prev.map((i) => (i.id === result.data.id ? result.data : i)));
       setSelectedIntervention(result.data);
       setShowWorkerPicker(false);
+      loadAll(result.data.id);
       Alert.alert(
         result.source === 'sample' ? 'Simulated: task assigned' : 'Task assigned',
         `${result.data.assignedWorkerName} must acknowledge it.` +
@@ -187,6 +189,7 @@ export default function IncidentWorkspaceScreen() {
       );
       setSelectedIntervention(updated);
       setShowAssignModal(false);
+      loadAll(updated.id);
 
       setOverrideReason('');
       Alert.alert(
@@ -405,6 +408,18 @@ export default function IncidentWorkspaceScreen() {
             );
           })}
         </View>
+
+        {/* NGO: contributor resources planned for this incident */}
+        {role === 'ngo' && (
+          <Pressable
+            onPress={() => router.push({ pathname: '/ops/plan', params: { incidentId: id } })}
+            style={styles.overrideButton}
+            accessibilityRole="link">
+            <Text style={[styles.overrideText, { color: colors.actionPrimary }]}>
+              Resource plan for this incident →
+            </Text>
+          </Pressable>
+        )}
 
         {/* 3. Resource Allocation Engine & Recommendation */}
         {selectedIntervention && (

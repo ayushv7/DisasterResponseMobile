@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 
+import { AssignmentSummary } from '@/components/AssignmentSummary';
 import { CheckInDueBanner, relativeTime } from '@/components/CheckInDue';
 import { ContributorTabBar } from '@/components/ContributorTabBar';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
@@ -39,9 +40,12 @@ export default function MyResourcesScreen() {
   const { session } = useSession();
   useConfirmExitAtRoot();
   const query = useApiQuery(() => api.getMyResources(), []);
+  // Instructions from NGO-approved plans: where to bring which resource, by when
+  const instructions = useApiQuery(() => api.getMyInstructions(), []);
 
   // Re-read from the service when returning from Add / Check-in
   const { refresh } = query;
+  const { refresh: refreshInstructions } = instructions;
   const firstFocus = useRef(true);
   useFocusEffect(
     useCallback(() => {
@@ -50,7 +54,8 @@ export default function MyResourcesScreen() {
         return;
       }
       refresh();
-    }, [refresh])
+      refreshInstructions();
+    }, [refresh, refreshInstructions])
   );
 
   const resources = query.data ?? [];
@@ -133,6 +138,23 @@ export default function MyResourcesScreen() {
               Check-in reminders are Simulated. Push delivery is not set up yet.
             </Text>
           )}
+          {(instructions.data ?? []).length > 0 && (
+            <>
+              <Text style={[styles.overline, { color: colors.textTertiary }]}>
+                YOUR ASSIGNMENTS{instructions.source === 'sample' ? ' · SIMULATED' : ''}
+              </Text>
+              {(instructions.data ?? []).map((ins) => (
+                <View key={ins.id} style={[styles.card, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>{ins.resourceLabel}</Text>
+                  <AssignmentSummary where={ins.where} what={ins.what} deadline={ins.deadline} ngoName={ins.ngoName} />
+                  <Text style={[styles.caption, { color: colors.textTertiary }]}>
+                    Plan v{ins.planVersion} · issued {formatTime(ins.issuedAt)}
+                  </Text>
+                </View>
+              ))}
+              <Text style={[styles.overline, { color: colors.textTertiary }]}>RESOURCES</Text>
+            </>
+          )}
           {resources.map(renderResource)}
         </ScrollView>
       </StateView>
@@ -171,6 +193,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   buttonText: { ...typography.bodyMedium, fontWeight: '700', fontSize: 14 },
+  overline: { ...typography.overline, fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginTop: spacing.xs },
   body: { ...typography.body, fontSize: 14, lineHeight: 20 },
   bold: { fontWeight: '600' },
   caption: { ...typography.caption, fontSize: 12, lineHeight: 17 },

@@ -48,6 +48,7 @@ export default function NgoContributorsScreen() {
       setBusyId(app.id);
       const result = await api.decideContributorApplication(app.id, decision, reason.trim() || undefined);
       query.setData((query.data ?? []).map((a) => (a.id === app.id ? result.data.application : a)));
+      query.refresh();
       if (result.data.credentials) {
         setIssued({ ...result.data.credentials, name: app.name, simulated: result.source === 'sample' });
       }
