@@ -1,0 +1,339 @@
+/**
+ * Resource plan (NGO) — the backend's allocation of contributor resources to
+ * work orders. The NGO can ask for a replan or add a manual allocation with a
+ * reason. The app never computes or patches the plan itself: it shows the
+ * plan the backend returns, and shows backend validation errors as they come.
+ */
+import React, { useRef, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Feather } from '@expo/vector-icons';
+
+import { PrimaryButton } from '@/components/AuthForm';
+import { SampleDataBadge } from '@/components/SampleDataBadge';
+import { StateView } from '@/components/StateView';
+import { StatusChip } from '@/components/StatusChip';
+import { useApiQuery } from '@/hooks/use-api-query';
+import { useGoBack } from '@/navigation/use-go-back';
+import { api, ApiError } from '@/services/api';
+import { useTheme } from '@/theme';
+import { radii, spacing, touchTargets } from '@/theme/spacing';
+import { typography } from '@/theme/typography';
+import { ContributorResource, PlanAllocation } from '@/types/contributors';
+import { InterventionRecord } from '@/types/operations';
+
+const REASON_MIN = 10;
+
+const formatTime = (iso: string) =>
+  new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+
+export default function ResourcePlanScreen() {
+  const goBack = useGoBack();
+  const { colors } = useTheme();
+  const query = useApiQuery(() => api.getResourcePlan(), [], () => false);
+  const plan = query.data;
+
+  const [replanning, setReplanning] = useState(false);
+  const [error, setError] = useState<{ code: string; message: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const inFlight = useRef(false);
+
+  // Manual allocation form (progressive disclosure)
+  const [showManual, setShowManual] = useState(false);
+  const [workOrders, setWorkOrders] = useState<InterventionRecord[] | null>(null);
+  const [resources, setResources] = useState<ContributorResource[] | null>(null);
+  const [workOrderId, setWorkOrderId] = useState<string | undefined>();
+  const [resourceId, setResourceId] = useState<string | undefined>();
+  const [quantity, setQuantity] = useState('1');
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const showError = (err: unknown) =>
+    setError({
+      code: err instanceof ApiError ? err.code : 'ERROR',
+      message: err instanceof Error ? err.message : 'Request failed.',
+    });
+
+  const replan = async () => {
+    if (!plan || inFlight.current) return;
+    inFlight.current = true;
+    setReplanning(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await api.requestReplan(plan.id, plan.version);
+      query.setData(result.data);
+      setNotice(`${result.source === 'sample' ? 'Simulated: ' : ''}plan recomputed as version ${result.data.version}.`);
+    } catch (err) {
+      showError(err);
+    } finally {
+      inFlight.current = false;
+      setReplanning(false);
+    }
+  };
+
+  const openManual = async () => {
+    setShowManual(true);
+    setError(null);
+    try {
+      const [orders, pool] = await Promise.all([api.getWorkOrders(), api.getAllocatableResources()]);
+      setWorkOrders(orders.data.filter((w) => w.status !== 'VERIFIED_RESOLVED'));
+      setResources(pool.data);
+    } catch (err) {
+      showError(err);
+    }
+  };
+
+  const submitManual = async () => {
+    if (!plan || inFlight.current || !workOrderId || !resourceId) return;
+    inFlight.current = true;
+    setSubmitting(true);
+    setError(null);
+    setNotice(null);
+    try {
+      const result = await api.allocateManually({
+        planId: plan.id,
+        expectedVersion: plan.version,
+        workOrderId,
+        resourceId,
+        quantity: Number(quantity),
+        reason: reason.trim(),
+      });
+      query.setData(result.data);
+      setNotice(
+        `${result.source === 'sample' ? 'Simulated: ' : ''}manual allocation saved as version ${result.data.version}.`
+      );
+      setShowManual(false);
+      setReason('');
+      setResourceId(undefined);
+      setWorkOrderId(undefined);
+    } catch (err) {
+      // Backend said no: show why, keep the form, change nothing
+      showError(err);
+    } finally {
+      inFlight.current = false;
+      setSubmitting(false);
+    }
+  };
+
+  const renderAllocation = (a: PlanAllocation) => (
+    <View key={a.id} style={[styles.card, { backgroundColor: colors.surface }]}>
+      <View style={styles.row}>
+        <Text style={[styles.body, styles.bold, styles.flex, { color: colors.textPrimary }]}>{a.workOrderLabel}</Text>
+        <StatusChip label={a.source === 'MANUAL' ? 'Manual' : 'Automatic'} tone={a.source === 'MANUAL' ? 'warning' : 'info'} />
+      </View>
+      <Text style={[styles.body, { color: colors.textPrimary }]}>
+        {a.resourceLabel} · {a.quantity}
+      </Text>
+      {a.reason && <Text style={[styles.caption, { color: colors.textSecondary }]}>Reason: {a.reason}</Text>}
+      {a.changedBy && (
+        <Text style={[styles.caption, { color: colors.textTertiary }]}>
+          By {a.changedBy.name}
+          {a.changedAt ? ` · ${formatTime(a.changedAt)}` : ''}
+        </Text>
+      )}
+    </View>
+  );
+
+  const busy = replanning || submitting;
+  const reasonOk = reason.trim().length >= REASON_MIN;
+
+  return (
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
+      <View style={styles.header}>
+        <Pressable onPress={goBack} style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Go back">
+          <Feather name="arrow-left" size={22} color={colors.textPrimary} />
+        </Pressable>
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Resource plan</Text>
+        <SampleDataBadge source={query.source ?? undefined} />
+      </View>
+
+      <StateView state={query.state} error={query.error} onRetry={query.refresh} receivedAt={query.receivedAt}>
+        {plan && (
+          <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+            {/* Plan metadata */}
+            <View style={[styles.card, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>Version {plan.version}</Text>
+              <Text style={[styles.caption, { color: colors.textSecondary }]}>Generated {formatTime(plan.generatedAt)}</Text>
+              {plan.lastChangedBy && (
+                <Text style={[styles.caption, { color: colors.textSecondary }]}>
+                  Last changed by {plan.lastChangedBy.name}
+                  {plan.lastChangedBy.kind === 'NGO' ? ' (manual)' : ' (system)'}
+                  {plan.lastChangedAt ? ` · ${formatTime(plan.lastChangedAt)}` : ''}
+                </Text>
+              )}
+              {plan.notes?.map((n) => (
+                <Text key={n} style={[styles.caption, { color: colors.statusWatch }]}>
+                  • {n}
+                </Text>
+              ))}
+            </View>
+
+            {notice && (
+              <Text style={[styles.caption, { color: colors.textPrimary }]} accessibilityLiveRegion="polite">
+                {notice}
+              </Text>
+            )}
+            {error && (
+              <View style={[styles.card, { backgroundColor: colors.statusActiveBg }]} accessibilityLiveRegion="polite">
+                <Text style={[styles.body, styles.bold, { color: colors.statusActive }]}>Not applied</Text>
+                <Text style={[styles.caption, { color: colors.textPrimary }]}>{error.message}</Text>
+                <Text style={[styles.caption, { color: colors.textTertiary }]}>Code: {error.code}</Text>
+              </View>
+            )}
+
+            {/* Actions */}
+            <View style={styles.row}>
+              <Pressable
+                onPress={replan}
+                disabled={busy}
+                style={[styles.button, styles.flex, { backgroundColor: colors.actionPrimary, opacity: busy ? 0.6 : 1 }]}
+                accessibilityRole="button"
+                accessibilityState={{ busy: replanning }}>
+                {replanning ? (
+                  <ActivityIndicator size="small" color={colors.onActionPrimary} />
+                ) : (
+                  <Text style={[styles.buttonText, { color: colors.onActionPrimary }]}>Replan</Text>
+                )}
+              </Pressable>
+              <Pressable
+                onPress={() => (showManual ? setShowManual(false) : openManual())}
+                disabled={busy}
+                style={[styles.button, styles.flex, { backgroundColor: colors.surfaceMuted }]}
+                accessibilityRole="button">
+                <Text style={[styles.buttonText, { color: colors.textPrimary }]}>
+                  {showManual ? 'Cancel manual' : 'Allocate manually'}
+                </Text>
+              </Pressable>
+            </View>
+
+            {showManual && (
+              <View style={[styles.card, styles.form, { backgroundColor: colors.surface }]}>
+                {!workOrders || !resources ? (
+                  <ActivityIndicator color={colors.brandPrimary} />
+                ) : (
+                  <>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Work order</Text>
+                    <View style={styles.chips}>
+                      {workOrders.map((w) => {
+                        const active = w.id === workOrderId;
+                        return (
+                          <Pressable
+                            key={w.id}
+                            onPress={() => setWorkOrderId(w.id)}
+                            style={[styles.chip, { backgroundColor: active ? colors.actionPrimary : colors.surfaceMuted }]}
+                            accessibilityRole="radio"
+                            accessibilityState={{ selected: active }}>
+                            <Text style={[styles.caption, styles.bold, { color: active ? colors.onActionPrimary : colors.textPrimary }]}>
+                              {w.id} · {w.targetLocality}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Resource</Text>
+                    {resources.map((r) => {
+                      const active = r.id === resourceId;
+                      return (
+                        <Pressable
+                          key={r.id}
+                          onPress={() => setResourceId(r.id)}
+                          disabled={!r.eligibleForAllocation}
+                          style={[
+                            styles.option,
+                            {
+                              backgroundColor: active ? colors.surfaceMuted : colors.background,
+                              opacity: r.eligibleForAllocation ? 1 : 0.55,
+                            },
+                          ]}
+                          accessibilityRole="radio"
+                          accessibilityState={{ selected: active, disabled: !r.eligibleForAllocation }}>
+                          <Text style={[styles.body, { color: colors.textPrimary }]}>
+                            {r.typeLabel} × {r.quantity} {r.unit}
+                            {active ? '  ✓' : ''}
+                          </Text>
+                          <Text style={[styles.caption, { color: colors.textSecondary }]}>
+                            {r.eligibleForAllocation ? 'Eligible' : 'Not eligible'}
+                            {r.statusReason ? ` · ${r.statusReason}` : ''}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Quantity</Text>
+                    <TextInput
+                      value={quantity}
+                      onChangeText={(t) => setQuantity(t.replace(/[^0-9]/g, ''))}
+                      keyboardType="number-pad"
+                      accessibilityLabel="Quantity"
+                      style={[styles.input, { color: colors.textPrimary, backgroundColor: colors.surfaceMuted }]}
+                    />
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>Reason (required)</Text>
+                    <TextInput
+                      value={reason}
+                      onChangeText={setReason}
+                      multiline
+                      placeholder="Why this differs from the automatic plan"
+                      placeholderTextColor={colors.textTertiary}
+                      accessibilityLabel="Reason for manual allocation"
+                      style={[styles.input, styles.multiline, { color: colors.textPrimary, backgroundColor: colors.surfaceMuted }]}
+                    />
+                    {!reasonOk && reason.length > 0 && (
+                      <Text style={[styles.caption, { color: colors.statusWatch }]}>
+                        At least {REASON_MIN} characters.
+                      </Text>
+                    )}
+                    <PrimaryButton
+                      label="Submit for validation"
+                      onPress={submitManual}
+                      busy={submitting}
+                      disabled={!workOrderId || !resourceId || !reasonOk || !Number(quantity)}
+                    />
+                  </>
+                )}
+              </View>
+            )}
+
+            <Text style={[styles.label, { color: colors.textTertiary }]}>ALLOCATIONS ({plan.allocations.length})</Text>
+            {plan.allocations.length === 0 ? (
+              <Text style={[styles.caption, { color: colors.textSecondary }]}>No allocations in this version.</Text>
+            ) : (
+              plan.allocations.map(renderAllocation)
+            )}
+          </ScrollView>
+        )}
+      </StateView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: { flex: 1 },
+  flex: { flex: 1 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.screenPadding,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  iconButton: { width: touchTargets.min, height: touchTargets.min, alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { ...typography.title, fontSize: 20, lineHeight: 24, flex: 1 },
+  content: { paddingHorizontal: spacing.screenPadding, paddingBottom: spacing.xxl, gap: spacing.sm },
+  card: { borderRadius: radii.card, padding: spacing.cardPadding, gap: spacing.xs },
+  form: { gap: spacing.sm },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
+  chip: { minHeight: touchTargets.min, paddingHorizontal: spacing.md, borderRadius: radii.button, justifyContent: 'center' },
+  option: { borderRadius: radii.sm, padding: spacing.sm, minHeight: touchTargets.min, justifyContent: 'center' },
+  button: { minHeight: touchTargets.min, borderRadius: radii.button, alignItems: 'center', justifyContent: 'center' },
+  buttonText: { ...typography.bodyMedium, fontWeight: '700', fontSize: 14 },
+  input: { minHeight: touchTargets.min, borderRadius: radii.sm, paddingHorizontal: spacing.md, fontSize: 15 },
+  multiline: { minHeight: 72, paddingTop: spacing.sm, textAlignVertical: 'top' },
+  label: { ...typography.caption, fontSize: 12, fontWeight: '600', marginTop: spacing.xs },
+  body: { ...typography.body, fontSize: 14, lineHeight: 20 },
+  bold: { fontWeight: '600' },
+  caption: { ...typography.caption, fontSize: 12, lineHeight: 17 },
+});

@@ -28,7 +28,9 @@ import {
   ContributorLoginInput,
   ContributorResource,
   CheckInInput,
+  ManualAllocationInput,
   RegisterResourceInput,
+  ResourcePlan,
   ResourceTypePolicy,
 } from '@/types/contributors';
 import { SentMessage } from '@/types/message-thread';
@@ -143,6 +145,18 @@ export interface ApiClient {
   registerResource(input: RegisterResourceInput): Promise<ApiResult<ContributorResource>>;
   /** Confirms availability. Due time and freshness come back from the backend. */
   checkInResource(id: string, input: CheckInInput): Promise<ApiResult<ContributorResource>>;
+
+  // Resource plans (PROPOSED). The backend computes, validates and versions them.
+  getResourcePlan(): Promise<ApiResult<ResourcePlan>>;
+  /** NGO's contributor resources with backend eligibility, for manual allocation. */
+  getAllocatableResources(): Promise<ApiResult<ContributorResource[]>>;
+  /** Asks the backend to recompute; returns the new plan. Throws VERSION_CONFLICT. */
+  requestReplan(planId: string, expectedVersion: number): Promise<ApiResult<ResourcePlan>>;
+  /**
+   * Manual override with a mandatory reason. Throws ApiError RESOURCE_STALE,
+   * RESOURCE_UNAVAILABLE, RESOURCE_INELIGIBLE, REASON_REQUIRED, VERSION_CONFLICT…
+   */
+  allocateManually(input: ManualAllocationInput): Promise<ApiResult<ResourcePlan>>;
 
   // Volunteers (PROPOSED). Eligibility comes from the backend, never the app.
   applyToVolunteer(input: ApplyToVolunteerInput): Promise<ApiResult<VolunteerApplication>>;

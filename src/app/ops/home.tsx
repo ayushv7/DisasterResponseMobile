@@ -24,7 +24,7 @@ import { router, useFocusEffect } from 'expo-router';
 
 import { ActionQueueCard } from '@/components/ActionQueueCard';
 import { InfoBar } from '@/components/InfoBar';
-import { NgoScopeNote } from '@/components/NgoScopeNote';
+import { NgoScopeNote, ResourcePlanLink } from '@/components/NgoScopeNote';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { StateView } from '@/components/StateView';
 import { useApiQuery } from '@/hooks/use-api-query';
@@ -150,6 +150,7 @@ export default function OperationsHomeScreen() {
       </View>
       <InfoBar isSampleData={true} persistent={true} />
       <NgoScopeNote />
+      <ResourcePlanLink />
 
       <StateView
         state={query.state}

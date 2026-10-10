@@ -9,6 +9,7 @@ import {
   SAMPLE_CONTRIBUTOR_APPLICATIONS,
   SAMPLE_CONTRIBUTOR_CODE,
   SAMPLE_RESOURCE_POLICIES,
+  SAMPLE_PLAN,
   SAMPLE_RESOURCES,
 } from '@/fixtures/sample-contributors';
 import { SAMPLE_VERIFIED_NGOS } from '@/fixtures/sample-ngos';
@@ -23,7 +24,9 @@ import {
   ContributorCredentials,
   ContributorLoginInput,
   ContributorResource,
+  ManualAllocationInput,
   RegisterResourceInput,
+  ResourcePlan,
   ResourceTypePolicy,
 } from '@/types/contributors';
 import { VolunteerDecision } from '@/types/volunteers';
@@ -262,4 +265,117 @@ export async function checkInResource(id: string, input: CheckInInput): Promise<
 /** Pool the plan mock allocates from (all contributors of the NGO). */
 export function allResourcesForNgo(ngoId: string): ContributorResource[] {
   return copy(resources.filter((r) => r.ngoId === ngoId));
+}
+
+// ── Plans ───────────────────────────────────────────────────────────────────
+// Simulated allocation service. Replan rule (documented in the API proposal):
+// AUTO allocations whose resource is no longer eligible are dropped; MANUAL
+// allocations are carried forward only if their resource is still eligible,
+// otherwise dropped with a note. Every change bumps the version.
+
+let plan: ResourcePlan = { ...copy(SAMPLE_PLAN), generatedAt: new Date().toISOString() };
+const planHistory: ResourcePlan[] = [];
+
+function requireNgo() {
+  const ngo = getCurrentNgoSession();
+  if (!ngo) throw new ApiError('UNAUTHORIZED', 'Only NGO staff can view or change plans.');
+  return ngo;
+}
+
+function resourceLabel(r: ContributorResource) {
+  const owner = SAMPLE_CONTRIBUTOR_ACCOUNTS.find((a) => a.contributorId === r.contributorId)?.name;
+  return `${r.typeLabel} × ${r.quantity}${owner ? ` (${owner})` : ''}`;
+}
+
+export async function getResourcePlan(): Promise<ResourcePlan> {
+  const ngo = requireNgo();
+  if (plan.ngoId !== ngo.ngoId) throw new ApiError('NOT_FOUND', 'No plan for this NGO yet.');
+  return copy(plan);
+}
+
+/** Eligible and ineligible resources the NGO may see when allocating manually. */
+export async function getAllocatableResources(): Promise<ContributorResource[]> {
+  const ngo = requireNgo();
+  return allResourcesForNgo(ngo.ngoId);
+}
+
+export async function requestReplan(planId: string, expectedVersion: number): Promise<ResourcePlan> {
+  const ngo = requireNgo();
+  if (planId !== plan.id) throw new ApiError('NOT_FOUND', 'Plan not found.');
+  if (expectedVersion !== plan.version) {
+    throw new ApiError('VERSION_CONFLICT', `The plan changed (now version ${plan.version}). Reload and try again.`);
+  }
+  const pool = allResourcesForNgo(ngo.ngoId);
+  const eligible = (id: string) => pool.find((r) => r.id === id)?.eligibleForAllocation === true;
+  const notes: string[] = [];
+  const kept = plan.allocations.filter((a) => {
+    if (eligible(a.resourceId)) return true;
+    notes.push(
+      `${a.source === 'MANUAL' ? 'Manual' : 'Automatic'} allocation of ${a.resourceLabel} to ${a.workOrderId} dropped: resource not eligible.`
+    );
+    return false;
+  });
+  planHistory.push(copy(plan));
+  plan = {
+    ...plan,
+    version: plan.version + 1,
+    generatedAt: new Date().toISOString(),
+    lastChangedBy: { name: 'Allocation service (Simulated)', kind: 'SYSTEM' },
+    lastChangedAt: new Date().toISOString(),
+    allocations: kept,
+    notes: notes.length ? notes : ['Simulated: recomputed; no changes needed.'],
+  };
+  return copy(plan);
+}
+
+export async function allocateManually(input: ManualAllocationInput): Promise<ResourcePlan> {
+  const ngo = requireNgo();
+  if (input.planId !== plan.id) throw new ApiError('NOT_FOUND', 'Plan not found.');
+  if (input.expectedVersion !== plan.version) {
+    throw new ApiError('VERSION_CONFLICT', `The plan changed (now version ${plan.version}). Reload and try again.`);
+  }
+  if (input.reason.trim().length < 10) {
+    throw new ApiError('REASON_REQUIRED', 'Give a reason of at least 10 characters for the manual allocation.');
+  }
+  const r = allResourcesForNgo(ngo.ngoId).find((x) => x.id === input.resourceId);
+  if (!r) throw new ApiError('UNAUTHORIZED', 'This resource does not belong to your NGO.');
+  if (r.availability === 'UNAVAILABLE') {
+    throw new ApiError('RESOURCE_UNAVAILABLE', `${resourceLabel(r)} is reported unavailable.`);
+  }
+  if (r.freshness === 'STALE') {
+    throw new ApiError('RESOURCE_STALE', `${resourceLabel(r)} missed its check-in and cannot be allocated.`);
+  }
+  if (!r.eligibleForAllocation) {
+    throw new ApiError('RESOURCE_INELIGIBLE', `${resourceLabel(r)} is not eligible: ${r.statusReason ?? 'see resource status'}.`);
+  }
+  if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > r.quantity) {
+    throw new ApiError('INVALID_QUANTITY', `Quantity must be between 1 and ${r.quantity}.`);
+  }
+  const actor = { name: `${ngo.authorizedOfficerName}, ${ngo.ngoName}`, kind: 'NGO' as const };
+  const now = new Date().toISOString();
+  planHistory.push(copy(plan));
+  plan = {
+    ...plan,
+    version: plan.version + 1,
+    lastChangedBy: actor,
+    lastChangedAt: now,
+    notes: undefined,
+    allocations: [
+      // A manual allocation replaces any allocation of the same resource to the same work order
+      ...plan.allocations.filter((a) => !(a.resourceId === r.id && a.workOrderId === input.workOrderId)),
+      {
+        id: `alloc-${Date.now()}`,
+        workOrderId: input.workOrderId,
+        workOrderLabel: input.workOrderId,
+        resourceId: r.id,
+        resourceLabel: resourceLabel(r),
+        quantity: input.quantity,
+        source: 'MANUAL',
+        reason: input.reason.trim(),
+        changedBy: actor,
+        changedAt: now,
+      },
+    ],
+  };
+  return copy(plan);
 }

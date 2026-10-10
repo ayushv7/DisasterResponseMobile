@@ -1,10 +1,12 @@
 import React from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { IS_MOCK_API } from '@/services/api';
 import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
-import { spacing } from '@/theme/spacing';
+import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
 /**
@@ -23,7 +25,37 @@ export function NgoScopeNote() {
   );
 }
 
+/** NGO only: entry to the contributor resource plan (replan / manual allocation). */
+export function ResourcePlanLink() {
+  const { colors } = useTheme();
+  const { role } = useSession();
+  if (role !== 'ngo') return null;
+  return (
+    <View style={styles.linkWrap}>
+      <Pressable
+        onPress={() => router.push('/ops/plan')}
+        style={[styles.link, { backgroundColor: colors.surface }]}
+        android_ripple={{ color: colors.surfaceMuted }}
+        accessibilityRole="button">
+        <Feather name="layers" size={16} color={colors.textSecondary} />
+        <Text style={[styles.linkText, { color: colors.textPrimary }]}>Resource plan</Text>
+        <Feather name="chevron-right" size={16} color={colors.textTertiary} />
+      </Pressable>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  linkWrap: { paddingHorizontal: spacing.screenPadding, paddingBottom: spacing.xs },
+  link: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: touchTargets.min,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.card,
+  },
+  linkText: { ...typography.bodyMedium, fontSize: 14, flex: 1 },
   text: {
     ...typography.caption,
     fontSize: 12,

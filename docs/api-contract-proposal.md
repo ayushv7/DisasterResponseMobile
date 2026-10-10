@@ -1,4 +1,4 @@
-# API Contract Proposal — Disaster Response Orchestration Network (Floods MVP)
+# API Contract Proposal (PROPOSED) — Disaster Response Orchestration Network (Floods MVP)
 
 Status: **PROPOSAL from the mobile frontend. Nothing here is implemented or agreed.**
 The backend (FastAPI + MongoDB Atlas + AWS) is authoritative for permissions, recommendations,
@@ -405,6 +405,130 @@ interface VolunteerApplication {
 "Field worker accounts" above. An approved volunteer becomes an `NgoMember` with
 `kind: 'VOLUNTEER'`; the backend issues their credentials.
 
+## Contributors and resource allocation (PROPOSED)
+
+All items in this section are **PROPOSED**; none is a verified server endpoint. The app calls
+them through `ApiClient` (`src/services/api/types.ts`); `httpApi` throws `NotImplementedError`
+until they exist, and `mockApi` simulates them with labelled sample data.
+
+**Registered capacity is not available capacity.** The backend owns check-in policy, freshness,
+staleness, eligibility, priorities, nearby-NGO selection, allocation, validation, plan versions
+and audit history. The app only displays what comes back.
+
+### Errors
+
+Non-2xx responses use the existing shape `{ "error": { "code", "message" } }`. The app maps
+`code` to `ApiError.code` and shows `message` unchanged.
+
+| HTTP | `code` | When |
+|---|---|---|
+| 400 | `REASON_REQUIRED`, `INVALID_QUANTITY`, `INVALID_TYPE`, `CONSENT_REQUIRED` | Bad input |
+| 401 | `INVALID_CREDENTIALS`, `CODE_EXPIRED` | Contributor sign-in failed |
+| 403 | `UNAUTHORIZED`, `REVOKED` | Caller may not do this / access revoked |
+| 404 | `NOT_FOUND` | Unknown or not visible to the caller |
+| 409 | `VERSION_CONFLICT`, `INVALID_STATE` | Plan changed since the caller read it / wrong state |
+| 422 | `RESOURCE_STALE`, `RESOURCE_UNAVAILABLE`, `RESOURCE_INELIGIBLE` | Allocation rejected |
+
+### Types
+
+```ts
+interface ResourceTypePolicy { type: string; label: string; unit: string; checkInIntervalHours: number }
+
+interface Resource {
+  id: string;
+  contributorId: string;
+  ngoId: string;                 // the NGO that approved the contributor (no cross-NGO sharing)
+  type: string; typeLabel: string; quantity: number; unit: string;
+  condition: 'GOOD' | 'FAIR' | 'POOR';
+  availability: 'AVAILABLE' | 'UNAVAILABLE';
+  freshness: 'FRESH' | 'DUE' | 'STALE' | 'PENDING' | 'UNVERIFIED';   // backend-decided
+  statusReason?: string;         // backend explanation shown verbatim
+  eligibleForAllocation: boolean;
+  lastCheckInAt?: string;
+  checkInDueAt?: string;         // backend deadline (UTC ISO 8601)
+  checkInIntervalHours?: number;
+  evidence?: {                   // supporting evidence, not proof; kept apart from descriptive fields
+    gps?: { latitude: number; longitude: number; accuracyMeters: number | null };
+    capturedAt: string;          // device capture time
+    photoUrl?: string;           // from the upload flow below
+    unverified: boolean;         // true when live GPS or camera photo is missing
+    reviewNote?: string;         // NGO doubt about the evidence
+  };
+}
+
+interface ResourcePlan {
+  id: string; ngoId: string;
+  version: number;               // incremented on every replan or manual change
+  generatedAt: string;
+  lastChangedBy?: { name: string; kind: 'SYSTEM' | 'NGO' };
+  lastChangedAt?: string;
+  allocations: {
+    id: string; workOrderId: string; workOrderLabel: string;
+    resourceId: string; resourceLabel: string; quantity: number;
+    source: 'AUTO' | 'MANUAL';
+    reason?: string;             // required for MANUAL
+    changedBy?: { name: string; kind: 'SYSTEM' | 'NGO' }; changedAt?: string;
+  }[];
+  notes?: string[];              // e.g. manual allocations dropped on replan, and why
+}
+```
+
+### Operations
+
+| Operation | Method / path | Who | Notes |
+|---|---|---|---|
+| `applyToContribute` | POST `/contributors/applications` | citizen | `{ name, ngoId, offering, area, consent: true }` → 201 `ContributorApplication` (status `PENDING`) |
+| `decideContributorApplication` | POST `/ngo/contributor-applications/{id}/decision` | ngo (owning NGO) | `{ decision: 'APPROVE'\|'REJECT'\|'REVOKE', reason? }`; reason required unless approving. On approve → `{ application, credentials: { contributorId, signInCode, codeExpiresAt? } }`, returned **once** |
+| `contributorLogin` | POST `/auth/contributor-session` | any | `{ contributorId, signInCode }` → token + `Contributor`; 401 `INVALID_CREDENTIALS`/`CODE_EXPIRED`, 403 `REVOKED` |
+| `getResourceTypePolicies` | GET `/resource-types` | contributor, ngo | `ResourceTypePolicy[]` |
+| `getMyResources` | GET `/contributors/me/resources` | contributor | `Resource[]` |
+| `registerResource` | POST `/contributors/me/resources` | contributor | `{ type, quantity, condition, evidence: { gps?, capturedAt, photoUrl?, note? } }` → 201 `Resource` with backend `freshness`, `checkInDueAt` |
+| `checkInResource` | POST `/contributors/me/resources/{id}/check-ins` | contributor (owner) | `{ available, evidence? }` → 200 updated `Resource`. The app changes nothing until this returns |
+| `getResourcePlan` | GET `/ngo/resource-plan` | ngo | Current `ResourcePlan` for the caller's NGO |
+| `requestReplan` | POST `/ngo/resource-plan/{id}/replan` | ngo | `{ expectedVersion }` → 200 new `ResourcePlan`; 409 `VERSION_CONFLICT` |
+| `allocateManually` | POST `/ngo/resource-plan/{id}/allocations` | ngo | `{ expectedVersion, workOrderId, resourceId, quantity, reason }` → 200 new `ResourcePlan`; 400/403/409/422 as above |
+
+Example rejection:
+
+```json
+HTTP 422
+{ "error": { "code": "RESOURCE_STALE", "message": "Generator × 1 missed its check-in and cannot be allocated." } }
+```
+
+### Photo upload (unresolved backend dependency)
+
+The app uploads the camera photo first, then sends only `photoUrl`. Proposed:
+`POST /evidence/upload-url` → `{ uploadUrl, photoUrl, expiresAt }` (presigned PUT), then PUT the
+JPEG to `uploadUrl`. Size/type limits, bucket and retention are backend decisions. Until this
+exists, `httpApi.uploadEvidencePhoto` is not implemented and mock mode returns a
+`simulated-upload://` URL. No AWS credentials or bucket names are in the app.
+
+### Privacy and access
+
+- Contributor GPS, photos and contact go only to the backend and the owning NGO's staff. They are
+  never included in public responses, alerts, logs or analytics.
+- Device GPS may be inaccurate or spoofed and photos may be reused; the NGO can mark evidence as
+  doubtful (`evidence.reviewNote`) and the backend may keep the resource ineligible.
+- Sign-in codes are shown once to the approving NGO and never stored by the app.
+- The UI hides actions by role for convenience only; every operation above must be authorized by
+  the backend.
+
+### Assumptions (smallest reversible choices; please confirm)
+
+1. **Check-in cadence** comes from `ResourceTypePolicy`. Mock defaults (boat 5 h, food 24 h, …)
+   live only in `src/fixtures/sample-contributors.ts`.
+2. **Missed check-ins:** the backend's `freshness`, `statusReason` and `checkInDueAt` govern. The
+   app adds no grace period and does not turn `DUE` into `STALE` itself.
+3. **Photo storage:** isolated behind `uploadEvidencePhoto` (see above).
+4. **Replanning:** previous versions are kept by the backend. Proposed deterministic rule (used by
+   the mock): on replan, AUTO allocations are recomputed; MANUAL allocations are carried forward
+   only while their resource stays eligible, otherwise dropped with an entry in `notes`. Every
+   change increments `version`; writes carry `expectedVersion` to prevent lost updates.
+5. **Ownership:** a contributor's resources belong to the NGO that approved them; no cross-NGO
+   sharing unless the backend adds it.
+6. **Credential delivery:** credentials go to the NGO once, which passes them on. Direct delivery
+   to the contributor (SMS/email) is an open question.
+
 ## Open questions for the backend
 
 1. Auth mechanism and token lifetime; how roles are assigned.
@@ -420,3 +544,6 @@ interface VolunteerApplication {
 11. Authority final verification: which authority role signs off, and in which screen (the app
     currently only displays its status).
 12. Eligibility checks for volunteers: which checks run (ID, certificates) and how reasons are worded.
+13. Contributor credential delivery (via NGO, SMS or email) and sign-in code expiry.
+14. Evidence upload: presigned URL flow, limits and retention.
+15. Resource freshness policy per type and what happens on a missed check-in.
