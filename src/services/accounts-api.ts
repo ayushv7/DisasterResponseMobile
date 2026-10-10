@@ -9,12 +9,16 @@
 import {
   SAMPLE_FIELD_TEAM,
   SAMPLE_NGO_CODE,
+  SAMPLE_OTP_CODE,
   SAMPLE_STAFF_ACCOUNTS,
   SAMPLE_TEMP_PASSWORD,
 } from '@/fixtures/sample-accounts';
 import {
+  Citizen,
   CreateWorkerInput,
   NgoMember,
+  NotificationAreasInput,
+  OtpChallenge,
   StaffLoginResult,
   WorkerCredentials,
   WorkerLoginInput,
@@ -108,4 +112,67 @@ export async function resetWorkerPassword(memberId: string): Promise<WorkerCrede
   if (!member) throw new Error('Worker not found.');
   member.mustChangePassword = true;
   return { workerId: member.workerId, temporaryPassword: SAMPLE_TEMP_PASSWORD };
+}
+
+// ── Citizen (optional public account) ─────────────────────────────────────
+
+let pendingContact: string | null = null;
+let currentCitizen: Citizen | null = null;
+
+function contactKind(contact: string): Citizen['contactKind'] {
+  return contact.includes('@') ? 'email' : 'phone';
+}
+
+function mask(contact: string): string {
+  if (contactKind(contact) === 'email') {
+    const [user, domain] = contact.split('@');
+    return `${user.slice(0, 1)}•••@${domain}`;
+  }
+  return `•••• ${contact.replace(/\D/g, '').slice(-4)}`;
+}
+
+export async function requestOtp(contact: string): Promise<OtpChallenge> {
+  const value = contact.trim();
+  const valid =
+    contactKind(value) === 'email'
+      ? /^\S+@\S+\.\S+$/.test(value)
+      : value.replace(/\D/g, '').length >= 10;
+  if (!valid) throw new Error('Enter a valid phone number or email address.');
+  pendingContact = value;
+  return {
+    challengeId: 'sample-otp-challenge',
+    sentTo: mask(value),
+    expiresAt: new Date(Date.now() + 10 * 60000).toISOString(),
+  };
+}
+
+export async function verifyOtp(_challengeId: string, code: string): Promise<Citizen> {
+  if (!pendingContact) throw new Error('Request a code first.');
+  if (code.trim() !== SAMPLE_OTP_CODE) {
+    throw new Error(`Incorrect code. In sample mode the code is ${SAMPLE_OTP_CODE}.`);
+  }
+  currentCitizen = {
+    id: 'sample-citizen-1',
+    contact: pendingContact,
+    contactKind: contactKind(pendingContact),
+    notificationAreas: [],
+    pushEnabled: false,
+  };
+  pendingContact = null;
+  return copy(currentCitizen);
+}
+
+export function getCurrentCitizen(): Citizen | null {
+  return currentCitizen ? copy(currentCitizen) : null;
+}
+
+export function signOutCitizen() {
+  currentCitizen = null;
+}
+
+export async function setNotificationAreas(input: NotificationAreasInput): Promise<Citizen> {
+  if (!currentCitizen) throw new Error('Sign in to save alert areas.');
+  currentCitizen.notificationAreas = input.areas;
+  currentCitizen.pushEnabled = input.pushEnabled;
+  return copy(currentCitizen);
 }

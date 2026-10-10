@@ -9,9 +9,9 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { Href, router, useNavigationContainerRef } from 'expo-router';
 
-import { selectSampleWorker, signOutAccounts } from '@/services/accounts-api';
+import { selectSampleWorker, signOutAccounts, signOutCitizen } from '@/services/accounts-api';
 import { loginDemoSession, logoutNgo } from '@/services/ngo-api';
-import { SessionUser } from '@/types/accounts';
+import { Citizen, SessionUser } from '@/types/accounts';
 import { Role } from '@/types/roles';
 
 export interface Session {
@@ -37,6 +37,14 @@ interface SessionContextValue {
   signInAs: (role: Exclude<Role, 'public'>, options?: SignInOptions) => Promise<void>;
   /** End the session and reset navigation to the public alerts. */
   signOut: () => Promise<void>;
+  /**
+   * Optional citizen account. Role stays 'public'; signing in only unlocks
+   * offers and alert areas, never emergency messaging.
+   */
+  citizen: Citizen | null;
+  /** Set after verifyOtp, or after the backend returns an updated Citizen. */
+  setCitizen: (citizen: Citizen) => void;
+  signOutCitizen: () => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
@@ -84,6 +92,7 @@ export function resetTo(href: Href) {
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const [citizen, setCitizenState] = useState<Citizen | null>(null);
   const resetToRoleHome = useResetToRoleHome();
 
   const signInAs = useCallback(async (role: Exclude<Role, 'public'>, options?: SignInOptions) => {
@@ -106,9 +115,23 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     resetToRoleHome('public');
   }, [resetToRoleHome]);
 
+  const setCitizen = useCallback((next: Citizen) => setCitizenState(next), []);
+  const endCitizenSession = useCallback(() => {
+    signOutCitizen();
+    setCitizenState(null);
+  }, []);
+
   const value = useMemo(
-    () => ({ role: session?.role ?? 'public', session, signInAs, signOut }),
-    [session, signInAs, signOut]
+    () => ({
+      role: session?.role ?? 'public',
+      session,
+      signInAs,
+      signOut,
+      citizen,
+      setCitizen,
+      signOutCitizen: endCitizenSession,
+    }),
+    [session, signInAs, signOut, citizen, setCitizen, endCitizenSession]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

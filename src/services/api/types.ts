@@ -10,8 +10,10 @@
  * Screens should migrate to `api` one at a time as they are touched.
  */
 import {
+  Citizen,
   CreateWorkerInput,
   NgoMember,
+  OtpChallenge,
   StaffLoginResult,
   WorkerCredentials,
   WorkerLoginInput,
@@ -80,6 +82,10 @@ export interface ApiClient {
   /** `disabled: false` re-enables the worker. */
   disableWorker(memberId: string, disabled: boolean): Promise<ApiResult<NgoMember>>;
   resetWorkerPassword(memberId: string): Promise<ApiResult<WorkerCredentials>>;
+
+  // Citizen (optional public account, PROPOSED). The backend sends the OTP.
+  requestOtp(contact: string): Promise<ApiResult<OtpChallenge>>;
+  verifyOtp(challengeId: string, code: string): Promise<ApiResult<Citizen>>;
 
   // Operations
   getOpsSummary(): Promise<ApiResult<OperationalOverviewStats>>;

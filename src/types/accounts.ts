@@ -57,3 +57,29 @@ export interface StaffLoginResult {
 export interface WorkerLoginResult {
   member: NgoMember;
 }
+
+/**
+ * Optional public account (phone or email OTP). Visitors need no account to
+ * read alerts or message an NGO; this only unlocks offers and alert areas.
+ */
+export interface Citizen {
+  id: string;
+  contact: string;
+  contactKind: 'phone' | 'email';
+  notificationAreas: string[];
+  /** Preference only until the backend delivers push notifications. */
+  pushEnabled: boolean;
+}
+
+/** Returned by requestOtp. The code itself is sent by the backend, never to the app. */
+export interface OtpChallenge {
+  challengeId: string;
+  /** Masked destination, e.g. "+91 •••• 1234". */
+  sentTo: string;
+  expiresAt: string;
+}
+
+export interface NotificationAreasInput {
+  areas: string[];
+  pushEnabled: boolean;
+}

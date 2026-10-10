@@ -13,12 +13,16 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { BottomNavBar } from '@/components/BottomNavBar';
+import { CitizenSignInPrompt } from '@/components/CitizenSignInPrompt';
+import { IS_MOCK_API } from '@/services/api';
+import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
 export default function ProfileScreen() {
   const { colors } = useTheme();
+  const { citizen, signOutCitizen } = useSession();
 
   const menuItems: {
     label: string;
@@ -52,20 +56,33 @@ export default function ProfileScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* User card (placeholder — auth not yet implemented) */}
+        {/* User card: visitor, or optional citizen account */}
         <View style={[styles.userCard, { backgroundColor: colors.surface }]}>
           <View style={[styles.avatarCircle, { backgroundColor: colors.surfaceMuted }]}>
             <Feather name="user" size={24} color={colors.textTertiary} />
           </View>
           <View style={styles.userInfo}>
             <Text style={[styles.userName, { color: colors.textPrimary }]}>
-              Public User
+              {citizen ? citizen.contact : 'Visitor'}
             </Text>
             <Text style={[styles.userRole, { color: colors.textTertiary }]}>
-              Civilian observer — no publishing permissions
+              {citizen
+                ? `Signed in${IS_MOCK_API ? ' (Simulated sign-in / sample account)' : ''}`
+                : 'Civilian observer — no publishing permissions'}
             </Text>
           </View>
+          {citizen && (
+            <Pressable
+              onPress={signOutCitizen}
+              style={styles.signOutButton}
+              accessibilityRole="button"
+              accessibilityLabel="Sign out">
+              <Text style={[styles.menuDesc, { color: colors.textSecondary }]}>Sign out</Text>
+            </Pressable>
+          )}
         </View>
+
+        <CitizenSignInPrompt />
 
         {/* Menu items */}
         <View style={styles.section}>
@@ -153,6 +170,11 @@ export default function ProfileScreen() {
 }
 
 const styles = StyleSheet.create({
+  signOutButton: {
+    minHeight: touchTargets.min,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xs,
+  },
   staffLink: {
     minHeight: touchTargets.min,
     alignItems: 'center',

@@ -50,3 +50,6 @@ export const SAMPLE_FIELD_TEAM: NgoMember[] = [
     createdAt: '2026-10-08T09:05:00Z',
   },
 ];
+
+/** Mock mode accepts only this one-time code. Real codes are sent by the backend. */
+export const SAMPLE_OTP_CODE = '123456';
