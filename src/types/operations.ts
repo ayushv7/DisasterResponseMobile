@@ -169,3 +169,24 @@ export interface TaskEvent {
   actor: string;
   note?: string;
 }
+
+/** Why a work order needs coordinator action now. Ordered most urgent first. */
+export type ActionQueueReason =
+  | 'FAILED'
+  | 'BLOCKED'
+  | 'OVERDUE_ACK'
+  | 'UNASSIGNED'
+  | 'NEEDS_VERIFICATION';
+
+/** One item in the coordinator's "needs action now" queue (prioritized by the backend). */
+export interface ActionQueueItem {
+  workOrderId: string;
+  incidentId: string;
+  reason: ActionQueueReason;
+  title: string;
+  locality: string;
+  priority: InterventionPriority;
+  /** Deadline that was missed or is pending, if any (ISO 8601). */
+  dueAt?: string;
+  detail?: string;
+}

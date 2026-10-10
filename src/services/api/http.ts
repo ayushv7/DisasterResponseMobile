@@ -16,6 +16,7 @@ function notImplemented(method: string): () => Promise<never> {
 export const httpApi: ApiClient = {
   mode: 'http',
   getOpsSummary: notImplemented('getOpsSummary'),
+  getActionQueue: notImplemented('getActionQueue'),
   getIncidents: notImplemented('getIncidents'),
   getIncident: notImplemented('getIncident'),
   getWorkOrders: notImplemented('getWorkOrders'),

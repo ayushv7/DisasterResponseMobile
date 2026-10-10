@@ -13,6 +13,7 @@ import { SentMessage } from '@/types/message-thread';
 import { MessageDraft, MessageReceipt, VerifiedNgo } from '@/types/messaging';
 import { NgoContributionItem, NgoInboxFilter, NgoInboxMessage } from '@/types/ngo-workspace';
 import {
+  ActionQueueItem,
   AllocationRecommendation,
   IncidentRecord,
   InterventionRecord,
@@ -56,6 +57,8 @@ export interface ApiClient {
 
   // Operations
   getOpsSummary(): Promise<ApiResult<OperationalOverviewStats>>;
+  /** Prioritized items needing coordinator action now. */
+  getActionQueue(): Promise<ApiResult<ActionQueueItem[]>>;
   getIncidents(): Promise<ApiResult<IncidentRecord[]>>;
   getIncident(
     id: string
