@@ -27,6 +27,8 @@ function RootLayoutContent() {
         <Stack.Screen name="event/[id]" />
         <Stack.Screen name="message/compose" />
         <Stack.Screen name="settings" />
+        <Stack.Screen name="ngo/inbox" />
+        <Stack.Screen name="ngo/review/[id]" />
       </Stack>
     </>
   );

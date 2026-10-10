@@ -110,6 +110,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+
         {/* About section */}
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>

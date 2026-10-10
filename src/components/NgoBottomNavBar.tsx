@@ -1,3 +1,15 @@
+/**
+ * NgoBottomNavBar — Dedicated Navigation for Verified NGO Workspace
+ *
+ * Provides dedicated 4-tab workspace navigation strictly for authorized NGOs:
+ * - Event Feed (/ngo/feed)
+ * - Inbox (/ngo/inbox)
+ * - Contributions (/ngo/contributions)
+ * - Organization (/ngo/organization)
+ *
+ * Isolated from the public user bottom navigation bar.
+ */
+
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -8,58 +20,57 @@ import { useTheme } from '@/theme';
 import { spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
-export type TabKey = 'feed' | 'map' | 'messages' | 'profile';
+export type NgoTabKey = 'feed' | 'inbox' | 'contributions' | 'organization';
 
-interface TabDef {
-  key: TabKey;
+interface NgoTabDef {
+  key: NgoTabKey;
   label: string;
   icon: keyof typeof Feather.glyphMap;
   route: string;
   accessibilityLabel: string;
 }
 
-const TABS: TabDef[] = [
+const NGO_TABS: NgoTabDef[] = [
   {
     key: 'feed',
-    label: 'Feed',
+    label: 'Event Feed',
+    icon: 'activity',
+    route: '/ngo/feed',
+    accessibilityLabel: 'NGO situational event feed',
+  },
+  {
+    key: 'inbox',
+    label: 'Inbox',
+    icon: 'inbox',
+    route: '/ngo/inbox',
+    accessibilityLabel: 'NGO private message triage inbox',
+  },
+  {
+    key: 'contributions',
+    label: 'Contributions',
+    icon: 'file-text',
+    route: '/ngo/contributions',
+    accessibilityLabel: 'Published and draft contributions',
+  },
+  {
+    key: 'organization',
+    label: 'Organization',
     icon: 'shield',
-    route: '/',
-    accessibilityLabel: 'Flood alerts feed',
-  },
-  {
-    key: 'map',
-    label: 'Map',
-    icon: 'map-pin',
-    route: '/map',
-    accessibilityLabel: 'Flood event map',
-  },
-  {
-    key: 'messages',
-    label: 'Messages',
-    icon: 'message-square',
-    route: '/messages',
-    accessibilityLabel: 'Sent private messages',
-  },
-  {
-    key: 'profile',
-    label: 'Profile',
-    icon: 'user',
-    route: '/profile',
-    accessibilityLabel: 'User profile and settings',
+    route: '/ngo/organization',
+    accessibilityLabel: 'Organization verification and details',
   },
 ];
 
-interface BottomNavBarProps {
-  activeTab: TabKey;
+interface NgoBottomNavBarProps {
+  activeTab: NgoTabKey;
 }
 
-export function BottomNavBar({ activeTab }: BottomNavBarProps) {
+export function NgoBottomNavBar({ activeTab }: NgoBottomNavBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const handleTabPress = (tab: TabDef) => {
+  const handleTabPress = (tab: NgoTabDef) => {
     if (tab.key === activeTab) return;
-    // Use navigate to trigger smooth slide transition defined in stack options
     router.navigate(tab.route as any);
   };
 
@@ -72,7 +83,7 @@ export function BottomNavBar({ activeTab }: BottomNavBarProps) {
           paddingBottom: Math.max(insets.bottom, 8),
         },
       ]}>
-      {TABS.map((tab) => {
+      {NGO_TABS.map((tab) => {
         const isActive = tab.key === activeTab;
         return (
           <Pressable
