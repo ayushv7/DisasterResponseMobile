@@ -59,7 +59,7 @@ export default function NgoInboxScreen() {
         const currentSess = await fetchNgoSession();
         setSession(currentSess);
 
-        if (currentSess.verificationStatus !== 'VERIFIED') {
+        if (!currentSess || currentSess.verificationStatus !== 'VERIFIED') {
           setMessages([]);
           return;
         }
@@ -175,10 +175,14 @@ export default function NgoInboxScreen() {
       {!isVerified ? (
         <View style={styles.gateBlockedContainer}>
           <EmptyState
-            title="Access Restricted"
-            description={`Your organization is currently marked ${
-              session?.verificationStatus
-            }. Publishing and triage privileges are disabled until an independent system administrator authorizes your organization.`}
+            title={!session ? 'Sign In Required' : 'Access Restricted'}
+            description={
+              !session
+                ? 'You must be signed in as an authorized responder to access the NGO inbox.'
+                : `Your organization is currently marked ${session.verificationStatus}. Publishing and triage privileges are disabled until an independent system administrator authorizes your organization.`
+            }
+            actionLabel={!session ? 'Sign In' : undefined}
+            onAction={!session ? () => router.replace('/login') : undefined}
           />
         </View>
       ) : (

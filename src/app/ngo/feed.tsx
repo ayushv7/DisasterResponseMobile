@@ -48,7 +48,7 @@ export default function NgoEventFeedScreen() {
       const sess = await fetchNgoSession();
       setSession(sess);
 
-      if (sess.verificationStatus !== 'VERIFIED') {
+      if (!sess || sess.verificationStatus !== 'VERIFIED') {
         setEvents([]);
         return;
       }
@@ -93,10 +93,14 @@ export default function NgoEventFeedScreen() {
       {!isVerified && !loading ? (
         <View style={styles.gateBlockedContainer}>
           <EmptyState
-            title="Access Restricted"
-            description={`Your organization is currently marked ${
-              session?.verificationStatus || 'UNAUTHORIZED'
-            }. Only independently VERIFIED organizations may access responder feeds.`}
+            title={!session ? 'Sign In Required' : 'Access Restricted'}
+            description={
+              !session
+                ? 'You must be signed in as an authorized responder to access the NGO situational feed.'
+                : `Your organization is currently marked ${session.verificationStatus}. Only independently VERIFIED organizations may access responder feeds.`
+            }
+            actionLabel={!session ? 'Sign In' : undefined}
+            onAction={!session ? () => router.replace('/login') : undefined}
           />
         </View>
       ) : loading && !refreshing ? (

@@ -75,3 +75,31 @@ export interface NgoInboxMessage {
 }
 
 export type NgoInboxUiState = 'loading' | 'success' | 'empty' | 'error' | 'offline';
+
+export type ContributionType =
+  | 'SITUATION_UPDATE'
+  | 'RELIEF_DISTRIBUTION'
+  | 'EVACUATION_ROUTE'
+  | 'MEDICAL_ASSISTANCE';
+
+export type ContributionStatus = 'DRAFT' | 'PUBLISHED';
+
+export interface NgoContributionItem {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  citizenMessageRef?: string;
+  contributionType: ContributionType;
+  summary: string;
+  locality: string;
+  needs?: string;
+  availableResources?: string;
+  evidenceReferences?: string;
+  verificationMethod: string;
+  authorOfficer: string;
+  ngoId: string;
+  ngoName: string;
+  status: ContributionStatus;
+  createdAt: string;
+  publishedAt?: string;
+}

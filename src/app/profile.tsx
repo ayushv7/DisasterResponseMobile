@@ -111,6 +111,34 @@ export default function ProfileScreen() {
         </View>
 
 
+        {/* Account & Access */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>
+            ACCOUNT & ACCESS
+          </Text>
+          <View style={[styles.menuCard, { backgroundColor: colors.surface }]}>
+            <Pressable
+              onPress={() => router.push('/login')}
+              android_ripple={{ color: colors.surfaceMuted }}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in"
+              style={styles.menuRow}>
+              <View style={[styles.menuIconBox, { backgroundColor: colors.surfaceMuted }]}>
+                <Feather name="log-in" size={16} color={colors.brandPrimary} />
+              </View>
+              <View style={styles.menuContent}>
+                <Text style={[styles.menuLabel, { color: colors.textPrimary }]}>
+                  Sign In
+                </Text>
+                <Text style={[styles.menuDesc, { color: colors.textTertiary }]}>
+                  Authorized responder and organization accounts
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={16} color={colors.textTertiary} />
+            </Pressable>
+          </View>
+        </View>
+
         {/* About section */}
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>

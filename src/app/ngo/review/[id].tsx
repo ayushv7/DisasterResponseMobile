@@ -137,9 +137,32 @@ export default function NgoReviewScreen() {
       }
 
       setMessage(updated);
+      const wasPrepare = modalMode === 'prepare';
       setModalMode('none');
       setModalInput('');
-      Alert.alert('Action Recorded', `Status updated to ${updated.status}.`);
+
+      if (wasPrepare) {
+        Alert.alert(
+          'Contribution Prepared',
+          'Observation queued. Open contribution composer to finalize public update?',
+          [
+            { text: 'Stay Here', style: 'cancel' },
+            {
+              text: 'Open Composer',
+              onPress: () =>
+                router.push({
+                  pathname: '/ngo/contributions/compose',
+                  params: {
+                    eventId: message.eventId,
+                    messageId: message.messageId,
+                  },
+                }),
+            },
+          ]
+        );
+      } else {
+        Alert.alert('Action Recorded', `Status updated to ${updated.status}.`);
+      }
     } catch (err: any) {
       Alert.alert('Error', err?.message || 'Failed to update review status.');
     } finally {

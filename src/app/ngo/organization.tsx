@@ -11,6 +11,7 @@
 
 import React, { useEffect, useState } from 'react';
 import {
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -18,10 +19,11 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { NgoBottomNavBar } from '@/components/NgoBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
-import { fetchNgoSession } from '@/services/ngo-api';
+import { fetchNgoSession, logoutNgo } from '@/services/ngo-api';
 import { useTheme } from '@/theme';
 import { radii, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -237,6 +239,29 @@ export default function NgoOrganizationScreen() {
               </View>
             </View>
           </View>
+
+          {/* Session Management / Sign Out */}
+          <View style={styles.section}>
+            <Pressable
+              onPress={async () => {
+                await logoutNgo();
+                router.replace('/');
+              }}
+              style={[
+                styles.signOutButton,
+                { backgroundColor: colors.surface },
+              ]}
+              android_ripple={{ color: colors.surfaceMuted }}>
+              <Feather name="log-out" size={18} color={colors.statusActive} />
+              <Text
+                style={[
+                  styles.signOutText,
+                  { color: colors.statusActive },
+                ]}>
+                Sign Out of NGO Workspace
+              </Text>
+            </Pressable>
+          </View>
         </ScrollView>
       )}
 
@@ -357,5 +382,19 @@ const styles = StyleSheet.create({
   chipText: {
     ...typography.caption,
     fontSize: 12,
+  },
+  signOutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: radii.button,
+    marginTop: spacing.sm,
+  },
+  signOutText: {
+    ...typography.bodyMedium,
+    fontWeight: '700',
+    fontSize: 14,
   },
 });

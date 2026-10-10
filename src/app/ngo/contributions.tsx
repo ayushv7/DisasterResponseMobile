@@ -2,14 +2,14 @@
  * NgoContributionsScreen — Authorized NGO Contributions Workspace
  *
  * Displays public bulletins, relief notices, and field updates published
- * or prepared by the authenticated verified NGO.
+ * or drafted by the authenticated verified NGO.
  *
  * GATED:
  * Only independently VERIFIED organizations may author, manage, or publish
  * relief contributions.
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -26,29 +26,32 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { NgoBottomNavBar } from '@/components/NgoBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
-import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
-import { fetchNgoSession } from '@/services/ngo-api';
+import {
+  fetchNgoContributions,
+  fetchNgoSession,
+} from '@/services/ngo-api';
 import { useTheme } from '@/theme';
-import { radii, spacing } from '@/theme/spacing';
+import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
-import { NgoContribution } from '@/types/disaster';
-import { NgoSession } from '@/types/ngo-workspace';
+import {
+  ContributionStatus,
+  NgoContributionItem,
+  NgoSession,
+} from '@/types/ngo-workspace';
 
-interface ContributionWithEvent extends NgoContribution {
-  eventId: string;
-  eventTitle: string;
-}
+type FilterTab = 'ALL' | 'PUBLISHED' | 'DRAFT';
 
 export default function NgoContributionsScreen() {
   const { colors } = useTheme();
 
   const [session, setSession] = useState<NgoSession | null>(null);
-  const [contributions, setContributions] = useState<ContributionWithEvent[]>([]);
+  const [activeFilter, setActiveFilter] = useState<FilterTab>('ALL');
+  const [items, setItems] = useState<NgoContributionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const loadData = async (isRefresh = false) => {
+  const loadData = useCallback(async (isRefresh = false) => {
     try {
       if (!isRefresh) setLoading(true);
       setErrorMsg(null);
@@ -56,35 +59,24 @@ export default function NgoContributionsScreen() {
       const sess = await fetchNgoSession();
       setSession(sess);
 
-      if (sess.verificationStatus !== 'VERIFIED') {
-        setContributions([]);
+      if (!sess || sess.verificationStatus !== 'VERIFIED') {
+        setItems([]);
         return;
       }
 
-      // Collect all NGO contributions from fixtures matching this NGO or all verified contributions
-      const collected: ContributionWithEvent[] = [];
-      SAMPLE_FLOOD_EVENTS.forEach((evt) => {
-        evt.contributions.forEach((c) => {
-          collected.push({
-            ...c,
-            eventId: evt.id,
-            eventTitle: evt.title,
-          });
-        });
-      });
-
-      setContributions(collected);
+      const all = await fetchNgoContributions();
+      setItems(all);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to load contributions.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -93,129 +85,256 @@ export default function NgoContributionsScreen() {
 
   const isVerified = session?.verificationStatus === 'VERIFIED';
 
+  const filteredItems = items.filter((item) => {
+    if (activeFilter === 'ALL') return true;
+    return item.status === activeFilter;
+  });
+
+  const renderStatusDot = (status: ContributionStatus) => {
+    const isPub = status === 'PUBLISHED';
+    return (
+      <View
+        style={[
+          styles.statusDot,
+          {
+            backgroundColor: isPub
+              ? colors.statusResolved
+              : colors.statusWatch,
+          },
+        ]}
+      />
+    );
+  };
+
+  const formatTypeLabel = (type: string) => {
+    return type.replace(/_/g, ' ');
+  };
+
   return (
     <SafeAreaView
       edges={['top', 'left', 'right']}
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      {/* Header */}
+      {/* Top Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleWrap}>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
             Contributions
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textTertiary }]}>
-            {session ? session.ngoName : 'Loading session...'}
+            {session ? session.ngoName : 'Responder Workspace'}
           </Text>
         </View>
+
+        {isVerified && (
+          <Pressable
+            onPress={() => router.push('/ngo/contributions/compose')}
+            style={[
+              styles.composeButton,
+              { backgroundColor: colors.brandPrimary },
+            ]}
+            android_ripple={{ color: colors.primaryPressed }}
+            accessibilityRole="button"
+            accessibilityLabel="Compose new contribution">
+            <Feather name="plus" size={16} color="#FFFFFF" />
+            <Text style={styles.composeButtonText}>Compose</Text>
+          </Pressable>
+        )}
       </View>
 
       {!isVerified && !loading ? (
         <View style={styles.gateBlockedContainer}>
           <EmptyState
-            title="Access Restricted"
-            description={`Your organization is currently marked ${
-              session?.verificationStatus || 'UNAUTHORIZED'
-            }. Only independently VERIFIED organizations may publish official contributions.`}
+            title={!session ? 'Sign In Required' : 'Access Restricted'}
+            description={
+              !session
+                ? 'You must be signed in as an authorized responder to access and author NGO contributions.'
+                : `Your organization is currently marked ${session.verificationStatus}. Only independently VERIFIED organizations may author official contributions.`
+            }
+            actionLabel={!session ? 'Sign In' : undefined}
+            onAction={!session ? () => router.replace('/login') : undefined}
           />
         </View>
-      ) : loading && !refreshing ? (
-        <View style={styles.skeletonContainer}>
-          <SkeletonCard />
-          <SkeletonCard />
-        </View>
-      ) : errorMsg ? (
-        <ErrorState message={errorMsg} onRetry={() => loadData()} />
-      ) : contributions.length === 0 ? (
-        <EmptyState
-          title="No Published Contributions"
-          description="Your organization has not yet published any verified situation updates."
-        />
       ) : (
-        <FlatList
-          data={contributions}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContent}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.brandPrimary}
-            />
-          }
-          renderItem={({ item }) => (
-            <Pressable
-              onPress={() =>
-                router.push({
-                  pathname: '/event/[id]',
-                  params: { id: item.eventId },
-                })
-              }
-              android_ripple={{ color: colors.surfaceMuted }}
-              accessibilityRole="button"
-              accessibilityLabel={`Contribution for ${item.eventTitle}`}
-              style={[styles.card, { backgroundColor: colors.surface }]}>
-              {/* Header */}
-              <View style={styles.cardHeader}>
-                <View style={styles.badgeRow}>
-                  <Feather
-                    name="check-circle"
-                    size={13}
-                    color={colors.statusResolved}
-                  />
+        <>
+          {/* Filter Chips */}
+          <View style={styles.filterBar}>
+            {(['ALL', 'PUBLISHED', 'DRAFT'] as FilterTab[]).map((tab) => {
+              const selected = activeFilter === tab;
+              return (
+                <Pressable
+                  key={tab}
+                  onPress={() => setActiveFilter(tab)}
+                  style={[
+                    styles.filterChip,
+                    {
+                      backgroundColor: selected
+                        ? colors.surfaceMuted
+                        : colors.surface,
+                    },
+                  ]}>
                   <Text
                     style={[
-                      styles.badgeText,
-                      { color: colors.statusResolved },
+                      styles.filterText,
+                      {
+                        color: selected
+                          ? colors.textPrimary
+                          : colors.textTertiary,
+                        fontWeight: selected ? '700' : '400',
+                      },
                     ]}>
-                    VERIFIED CONTRIBUTION
+                    {tab === 'ALL'
+                      ? 'All'
+                      : tab === 'PUBLISHED'
+                      ? 'Published'
+                      : 'Drafts'}
                   </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* List Content */}
+          {loading && !refreshing ? (
+            <View style={styles.skeletonContainer}>
+              <SkeletonCard />
+              <SkeletonCard />
+            </View>
+          ) : errorMsg ? (
+            <ErrorState message={errorMsg} onRetry={() => loadData()} />
+          ) : filteredItems.length === 0 ? (
+            <EmptyState
+              title={
+                activeFilter === 'DRAFT'
+                  ? 'No Draft Contributions'
+                  : 'No Contributions Found'
+              }
+              description={
+                activeFilter === 'DRAFT'
+                  ? 'You do not have any pending drafts in progress.'
+                  : 'No verified situation updates match this filter.'
+              }
+              actionLabel="Create Contribution"
+              onAction={() => router.push('/ngo/contributions/compose')}
+            />
+          ) : (
+            <FlatList
+              data={filteredItems}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.listContent}
+              refreshControl={
+                <RefreshControl
+                  refreshing={refreshing}
+                  onRefresh={onRefresh}
+                  tintColor={colors.brandPrimary}
+                />
+              }
+              renderItem={({ item }) => (
+                <View
+                  style={[styles.card, { backgroundColor: colors.surface }]}>
+                  {/* Top Status & Timestamp */}
+                  <View style={styles.cardHeader}>
+                    <View style={styles.statusWrap}>
+                      {renderStatusDot(item.status)}
+                      <Text
+                        style={[
+                          styles.statusText,
+                          {
+                            color:
+                              item.status === 'PUBLISHED'
+                                ? colors.statusResolved
+                                : colors.statusWatch,
+                          },
+                        ]}>
+                        {item.status}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.typeTag,
+                          { color: colors.textTertiary },
+                        ]}>
+                        · {formatTypeLabel(item.contributionType)}
+                      </Text>
+                    </View>
+                    <Text
+                      style={[
+                        styles.timeText,
+                        typography.tabular,
+                        { color: colors.textTertiary },
+                      ]}>
+                      {new Date(
+                        item.publishedAt || item.createdAt
+                      ).toLocaleDateString([], {
+                        month: 'short',
+                        day: 'numeric',
+                      })}
+                    </Text>
+                  </View>
+
+                  {/* Linked Event Title */}
+                  <Text
+                    style={[styles.eventLink, { color: colors.textSecondary }]}
+                    numberOfLines={1}>
+                    Event: {item.eventTitle}
+                  </Text>
+
+                  {/* Locality */}
+                  <View style={styles.localityRow}>
+                    <Feather
+                      name="map-pin"
+                      size={12}
+                      color={colors.textTertiary}
+                    />
+                    <Text
+                      style={[
+                        styles.localityText,
+                        { color: colors.textSecondary },
+                      ]}>
+                      {item.locality}
+                    </Text>
+                  </View>
+
+                  {/* Summary */}
+                  <Text
+                    style={[styles.summaryText, { color: colors.textPrimary }]}>
+                    {item.summary}
+                  </Text>
+
+                  {/* Extra fields if present */}
+                  {item.needs && (
+                    <Text
+                      style={[styles.metaText, { color: colors.textSecondary }]}
+                      numberOfLines={1}>
+                      Needs: {item.needs}
+                    </Text>
+                  )}
+                  {item.availableResources && (
+                    <Text
+                      style={[styles.metaText, { color: colors.textSecondary }]}
+                      numberOfLines={1}>
+                      Resources: {item.availableResources}
+                    </Text>
+                  )}
+
+                  {/* Attribution Footer */}
+                  <View style={styles.cardFooter}>
+                    <Feather
+                      name="shield"
+                      size={12}
+                      color={colors.textTertiary}
+                    />
+                    <Text
+                      style={[
+                        styles.attributionText,
+                        { color: colors.textTertiary },
+                      ]}>
+                      Attributed to {item.ngoName} ({item.authorOfficer})
+                    </Text>
+                  </View>
                 </View>
-                <Text
-                  style={[
-                    styles.timeText,
-                    typography.tabular,
-                    { color: colors.textTertiary },
-                  ]}>
-                  {new Date(item.publishedAt).toLocaleDateString([], {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </Text>
-              </View>
-
-              {/* Event Link */}
-              <Text
-                style={[styles.eventLink, { color: colors.textSecondary }]}
-                numberOfLines={1}>
-                Event: {item.eventTitle}
-              </Text>
-
-              {/* Summary & Action Taken */}
-              <Text style={[styles.contribTitle, { color: colors.textPrimary }]}>
-                {item.summary}
-              </Text>
-              {item.actionTaken && (
-                <Text
-                  style={[styles.contribBody, { color: colors.textSecondary }]}
-                  numberOfLines={3}>
-                  Action: {item.actionTaken}
-                </Text>
               )}
-
-              {/* Verification Info */}
-              <View style={styles.cardFooter}>
-                <Feather name="shield" size={12} color={colors.textTertiary} />
-                <Text
-                  style={[
-                    styles.verificationInfo,
-                    { color: colors.textTertiary },
-                  ]}>
-                  Published by {item.ngoName} (Verified)
-                </Text>
-              </View>
-            </Pressable>
+            />
           )}
-        />
+        </>
       )}
 
       {/* Dedicated NGO Bottom Navigation */}
@@ -229,12 +348,16 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.screenPadding,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
   },
   headerTitleWrap: {
     gap: 2,
+    flex: 1,
   },
   headerTitle: {
     ...typography.title,
@@ -245,10 +368,39 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontSize: 12,
   },
+  composeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 3,
+    borderRadius: radii.button,
+  },
+  composeButtonText: {
+    ...typography.bodyMedium,
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 13,
+  },
   gateBlockedContainer: {
     flex: 1,
     justifyContent: 'center',
     paddingHorizontal: spacing.screenPadding,
+  },
+  filterBar: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.screenPadding,
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  filterChip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: radii.chip,
+  },
+  filterText: {
+    ...typography.caption,
+    fontSize: 12,
   },
   skeletonContainer: {
     paddingHorizontal: spacing.screenPadding,
@@ -262,23 +414,33 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: radii.card,
     padding: spacing.cardPadding,
-    gap: spacing.xs,
+    gap: 6,
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  badgeRow: {
+  statusWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
   },
-  badgeText: {
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  statusText: {
     ...typography.caption,
     fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  typeTag: {
+    ...typography.caption,
+    fontSize: 11,
+    textTransform: 'capitalize',
   },
   timeText: {
     ...typography.caption,
@@ -287,16 +449,25 @@ const styles = StyleSheet.create({
   eventLink: {
     ...typography.caption,
     fontSize: 12,
-  },
-  contribTitle: {
-    ...typography.bodyMedium,
-    fontSize: 15,
     fontWeight: '600',
   },
-  contribBody: {
+  localityRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  localityText: {
+    ...typography.caption,
+    fontSize: 12,
+  },
+  summaryText: {
     ...typography.body,
     fontSize: 13,
     lineHeight: 18,
+  },
+  metaText: {
+    ...typography.caption,
+    fontSize: 12,
   },
   cardFooter: {
     flexDirection: 'row',
@@ -304,9 +475,8 @@ const styles = StyleSheet.create({
     gap: 5,
     marginTop: spacing.xs,
   },
-  verificationInfo: {
+  attributionText: {
     ...typography.caption,
     fontSize: 11,
-    flex: 1,
   },
 });

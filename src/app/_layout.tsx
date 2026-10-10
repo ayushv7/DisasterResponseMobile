@@ -20,17 +20,19 @@ function RootLayoutContent() {
           headerShown: false,
           animation: 'slide_from_right',
         }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="map" />
-        <Stack.Screen name="messages" />
-        <Stack.Screen name="profile" />
+        <Stack.Screen name="index" options={{ animation: 'fade' }} />
+        <Stack.Screen name="map" options={{ animation: 'fade' }} />
+        <Stack.Screen name="messages" options={{ animation: 'fade' }} />
+        <Stack.Screen name="profile" options={{ animation: 'fade' }} />
+        <Stack.Screen name="login" />
         <Stack.Screen name="event/[id]" />
         <Stack.Screen name="message/compose" />
         <Stack.Screen name="settings" />
-        <Stack.Screen name="ngo/feed" />
-        <Stack.Screen name="ngo/inbox" />
-        <Stack.Screen name="ngo/contributions" />
-        <Stack.Screen name="ngo/organization" />
+        <Stack.Screen name="ngo/feed" options={{ animation: 'fade' }} />
+        <Stack.Screen name="ngo/inbox" options={{ animation: 'fade' }} />
+        <Stack.Screen name="ngo/contributions" options={{ animation: 'fade' }} />
+        <Stack.Screen name="ngo/contributions/compose" />
+        <Stack.Screen name="ngo/organization" options={{ animation: 'fade' }} />
         <Stack.Screen name="ngo/review/[id]" />
         <Stack.Screen name="dev/index" />
       </Stack>
