@@ -140,7 +140,7 @@ export default function OperationsHomeScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* 1. Header: title + when the data was loaded */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Operations</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>Operations</Text>
         {query.receivedAt && (
           <Text style={[styles.updatedText, typography.tabular, { color: colors.textTertiary }]}>
             Loaded{' '}
@@ -221,7 +221,7 @@ export default function OperationsHomeScreen() {
                 </Text>
             </View>
 
-            <View style={styles.ribbonDivider} />
+            <View style={[styles.ribbonDivider, { backgroundColor: colors.divider }]} />
 
             <View style={styles.readinessItem}>
                 <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusActive }]}>
@@ -232,7 +232,7 @@ export default function OperationsHomeScreen() {
                 </Text>
             </View>
 
-            <View style={styles.ribbonDivider} />
+            <View style={[styles.ribbonDivider, { backgroundColor: colors.divider }]} />
 
             <View style={styles.readinessItem}>
                 <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusWatch }]}>
@@ -243,7 +243,7 @@ export default function OperationsHomeScreen() {
                 </Text>
             </View>
 
-            <View style={styles.ribbonDivider} />
+            <View style={[styles.ribbonDivider, { backgroundColor: colors.divider }]} />
 
             <View style={styles.readinessItem}>
                 <Text style={[styles.readinessCount, typography.tabular, { color: colors.brandTeal }]}>
@@ -254,7 +254,7 @@ export default function OperationsHomeScreen() {
                 </Text>
             </View>
 
-            <View style={styles.ribbonDivider} />
+            <View style={[styles.ribbonDivider, { backgroundColor: colors.divider }]} />
 
             <View style={styles.readinessItem}>
                 <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusActive }]}>
@@ -558,6 +558,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 22,
     lineHeight: 28,
+    flexShrink: 1,
   },
   roleChip: {
     flexDirection: 'row',
@@ -601,7 +602,6 @@ const styles = StyleSheet.create({
   ribbonDivider: {
     width: 1,
     height: 24,
-    backgroundColor: 'rgba(128,128,128,0.2)',
   },
   filterRow: {
     flexDirection: 'row',

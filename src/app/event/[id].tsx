@@ -487,6 +487,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     ...typography.cardTitle,
     fontSize: 16,
+    flexShrink: 1,
   },
   headerSpacer: {
     width: 60,

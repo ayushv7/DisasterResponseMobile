@@ -74,6 +74,7 @@ export function FilterChips({
 
           return (
             <Pressable
+              hitSlop={{ top: spacing.sm, bottom: spacing.sm }}
               key={opt.key}
               onPress={() => onSelectFilter(opt.key)}
               accessibilityRole="tab"
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 13,
+    paddingHorizontal: spacing.md,
     height: 36,
     borderRadius: radii.sm,
     minHeight: 36,

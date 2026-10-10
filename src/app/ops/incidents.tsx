@@ -162,7 +162,7 @@ export default function IncidentsCatalogueScreen() {
               ~{item.estimatedPopulationImpact.toLocaleString()}
             </Text>
           </View>
-          <View style={styles.metricDivider} />
+          <View style={[styles.metricDivider, { backgroundColor: colors.divider }]} />
           <View style={styles.metricItem}>
             <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
               AT-RISK ASSETS
@@ -171,7 +171,7 @@ export default function IncidentsCatalogueScreen() {
               {item.criticalAssetsAtRisk.length} Sites
             </Text>
           </View>
-          <View style={styles.metricDivider} />
+          <View style={[styles.metricDivider, { backgroundColor: colors.divider }]} />
           <View style={styles.metricItem}>
             <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
               INTERVENTIONS
@@ -433,7 +433,6 @@ const styles = StyleSheet.create({
   metricDivider: {
     width: 1,
     height: 24,
-    backgroundColor: 'rgba(150,150,150,0.2)',
   },
   provenanceRow: {
     flexDirection: 'row',

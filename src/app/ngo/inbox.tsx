@@ -133,7 +133,7 @@ export default function NgoInboxScreen() {
       {/* Top Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+          <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>
             Triage Inbox
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textTertiary }]}>
@@ -376,6 +376,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 20,
     lineHeight: 24,
+    flexShrink: 1,
   },
   headerSubtitle: {
     ...typography.caption,

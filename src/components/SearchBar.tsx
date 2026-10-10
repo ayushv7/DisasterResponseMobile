@@ -57,7 +57,7 @@ export function SearchBar({
             style={styles.clearButton}
             accessibilityRole="button"
             accessibilityLabel="Clear search text"
-            hitSlop={spacing.xs}>
+            hitSlop={spacing.sm}>
             <Feather name="x-circle" size={17} color={colors.textTertiary} />
           </Pressable>
         )}

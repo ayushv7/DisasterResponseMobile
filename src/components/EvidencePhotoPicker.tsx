@@ -84,7 +84,7 @@ export function EvidencePhotoPicker({
               <Pressable
                 onPress={() => onChange(photoUris.filter((u) => u !== uri))}
                 style={[styles.remove, { backgroundColor: colors.background }]}
-                hitSlop={spacing.sm}
+                hitSlop={spacing.lg}
                 accessibilityRole="button"
                 accessibilityLabel="Remove photo">
                 <Feather name="x" size={14} color={colors.textPrimary} />

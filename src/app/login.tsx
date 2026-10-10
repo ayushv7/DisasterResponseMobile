@@ -75,7 +75,7 @@ export default function LoginScreen() {
           accessibilityLabel="Go back">
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>
           Sign In
         </Text>
       </View>
@@ -165,9 +165,9 @@ export default function LoginScreen() {
                 },
               ]}>
               {submitting ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
+                <ActivityIndicator size="small" color={colors.onPrimary} />
               ) : (
-                <Text style={styles.submitButtonText}>Sign In</Text>
+                <Text style={[styles.submitButtonText, { color: colors.onPrimary }]}>Sign In</Text>
               )}
             </Pressable>
 
@@ -243,6 +243,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 20,
     lineHeight: 24,
+    flexShrink: 1,
   },
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
@@ -304,7 +305,6 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     ...typography.bodyMedium,
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
   },

@@ -98,7 +98,7 @@ export default function WorkerLoginScreen() {
           accessibilityLabel="Go back">
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Field worker sign-in</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>Field worker sign-in</Text>
       </View>
 
       <KeyboardAvoidingView
@@ -187,6 +187,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 20,
     lineHeight: 24,
+    flexShrink: 1,
   },
   content: {
     paddingHorizontal: spacing.screenPadding,

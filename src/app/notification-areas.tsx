@@ -73,7 +73,7 @@ export default function NotificationAreasScreen() {
           accessibilityLabel="Go back">
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Alert areas</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>Alert areas</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -175,6 +175,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 20,
     lineHeight: 24,
+    flexShrink: 1,
   },
   content: {
     paddingHorizontal: spacing.screenPadding,

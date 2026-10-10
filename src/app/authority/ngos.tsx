@@ -164,7 +164,7 @@ export default function ApproveNgosScreen() {
       edges={['top', 'left', 'right']}
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>NGOs</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>NGOs</Text>
       </View>
 
       {loading ? (
@@ -226,6 +226,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 20,
     lineHeight: 24,
+    flexShrink: 1,
   },
   loader: {
     marginTop: spacing.xl,

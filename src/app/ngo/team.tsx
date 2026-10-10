@@ -228,7 +228,7 @@ export default function NgoTeamScreen() {
           accessibilityLabel="Go back">
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>My field team</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>My field team</Text>
       </View>
 
       {loading ? (
@@ -280,7 +280,7 @@ export default function NgoTeamScreen() {
               <Text style={[styles.mono, { color: colors.textPrimary }]} selectable>
                 {credentials.temporaryPassword}
               </Text>
-              <Text style={[styles.caption, { color: colors.statusWatch }]}>
+              <Text style={[styles.caption, { color: colors.info }]}>
                 Shown only once. Give it to the worker now; they must change it at first sign-in.
               </Text>
               <PrimaryButton label="Done" onPress={() => setCredentials(null)} />
@@ -318,7 +318,7 @@ export default function NgoTeamScreen() {
             VOLUNTEER APPLICATIONS ({applications.filter((a) => a.status === 'PENDING').length} pending)
           </Text>
           {applications.length === 0 ? (
-            <Text style={[styles.caption, { color: colors.textSecondary }]}>No applications yet.</Text>
+            <EmptyState title="No applications yet" description="Citizens who apply to volunteer appear here." />
           ) : (
             applications.map((app) => {
               const busy = busyId === app.id;
@@ -554,6 +554,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 20,
     lineHeight: 24,
+    flexShrink: 1,
   },
   loader: {
     marginTop: spacing.xl,

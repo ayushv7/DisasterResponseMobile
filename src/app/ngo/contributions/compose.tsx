@@ -322,7 +322,7 @@ export default function NgoContributionComposeScreen() {
               styles.doneButton,
               { backgroundColor: colors.brandPrimary },
             ]}>
-            <Text style={styles.doneButtonText}>
+            <Text style={[styles.doneButtonText, { color: colors.onPrimary }]}>
               Return to Contributions
             </Text>
           </Pressable>
@@ -344,7 +344,7 @@ export default function NgoContributionComposeScreen() {
           accessibilityLabel="Go back">
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>
           {activeDraftId ? 'Edit Draft' : 'New Contribution'}
         </Text>
       </View>
@@ -666,8 +666,8 @@ export default function NgoContributionComposeScreen() {
                   opacity: isPublishing ? 0.6 : 1,
                 },
               ]}>
-              <Feather name="send" size={16} color="#FFFFFF" />
-              <Text style={styles.actionButtonPrimaryText}>
+              <Feather name="send" size={16} color={colors.onPrimary} />
+              <Text style={[styles.actionButtonPrimaryText, { color: colors.onPrimary }]}>
                 Publish Contribution
               </Text>
             </Pressable>
@@ -681,7 +681,7 @@ export default function NgoContributionComposeScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setShowConfirmModal(false)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
           <View
             style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
@@ -727,9 +727,9 @@ export default function NgoContributionComposeScreen() {
                   { backgroundColor: colors.brandPrimary },
                 ]}>
                 {isPublishing ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={colors.onPrimary} />
                 ) : (
-                  <Text style={styles.modalConfirmText}>
+                  <Text style={[styles.modalConfirmText, { color: colors.onPrimary }]}>
                     Confirm & Publish
                   </Text>
                 )}
@@ -745,7 +745,7 @@ export default function NgoContributionComposeScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setShowPreviewModal(false)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
           <View style={[styles.previewModalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.previewModalHeader}>
               <View style={styles.previewHeaderWrap}>
@@ -848,7 +848,7 @@ export default function NgoContributionComposeScreen() {
             <Pressable
               onPress={() => setShowPreviewModal(false)}
               style={[styles.closePreviewBtn, { backgroundColor: colors.brandPrimary }]}>
-              <Text style={styles.closePreviewBtnText}>Close Preview</Text>
+              <Text style={[styles.closePreviewBtnText, { color: colors.onPrimary }]}>Close Preview</Text>
             </Pressable>
           </View>
         </View>
@@ -879,6 +879,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 20,
     lineHeight: 24,
+    flexShrink: 1,
   },
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
@@ -1042,13 +1043,11 @@ const styles = StyleSheet.create({
   },
   actionButtonPrimaryText: {
     ...typography.bodyMedium,
-    color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.screenPadding,
@@ -1098,7 +1097,6 @@ const styles = StyleSheet.create({
   },
   modalConfirmText: {
     ...typography.bodyMedium,
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
   },
@@ -1158,7 +1156,6 @@ const styles = StyleSheet.create({
   },
   doneButtonText: {
     ...typography.bodyMedium,
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 15,
   },
@@ -1245,7 +1242,6 @@ const styles = StyleSheet.create({
   },
   closePreviewBtnText: {
     ...typography.bodyMedium,
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 14,
   },

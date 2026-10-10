@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 
 import { AuthField, PrimaryButton } from '@/components/AuthForm';
 import { CitizenSignInPrompt } from '@/components/CitizenSignInPrompt';
+import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { useGoBack } from '@/navigation/use-go-back';
 import { api, IS_MOCK_API } from '@/services/api';
@@ -84,7 +85,7 @@ export default function OfferHelpScreen() {
           accessibilityLabel="Go back">
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Offer help</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>Offer help</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -100,9 +101,10 @@ export default function OfferHelpScreen() {
         ) : errorMsg ? (
           <ErrorState message={errorMsg} onRetry={load} />
         ) : needs.length === 0 ? (
-          <Text style={[styles.caption, { color: colors.textSecondary }]}>
-            No published needs right now. You can still make a general offer.
-          </Text>
+          <EmptyState
+            title="No published needs right now"
+            description="You can still make a general offer below."
+          />
         ) : (
           needs.map((need) => {
             const selected = need.id === needId;
@@ -236,6 +238,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 20,
     lineHeight: 24,
+    flexShrink: 1,
   },
   content: {
     paddingHorizontal: spacing.screenPadding,

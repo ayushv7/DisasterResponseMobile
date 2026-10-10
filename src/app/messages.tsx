@@ -274,7 +274,7 @@ export default function MessagesScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>
           Messages
         </Text>
         {IS_MESSAGES_STUB && <SampleDataBadge source="sample" />}
@@ -357,6 +357,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 22,
     lineHeight: 28,
+    flexShrink: 1,
   },
   stubChip: {
     paddingHorizontal: spacing.sm,

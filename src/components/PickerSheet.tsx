@@ -38,7 +38,7 @@ export function PickerSheet({
   const { colors } = useTheme();
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close" />
+      <Pressable style={[styles.backdrop, { backgroundColor: colors.scrim }]} onPress={onClose} accessibilityLabel="Close" />
       <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>{title}</Text>
         {note && <Text style={[styles.caption, { color: colors.textSecondary }]}>{note}</Text>}
@@ -78,7 +78,7 @@ export function PickerSheet({
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
+  backdrop: { flex: 1 },
   sheet: {
     borderTopLeftRadius: radii.card,
     borderTopRightRadius: radii.card,

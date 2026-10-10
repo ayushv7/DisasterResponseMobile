@@ -65,7 +65,7 @@ function DevHarnessScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.statusActive }]}>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.statusActive }]}>
           DEVELOPER HARNESS
         </Text>
         <Text style={[styles.headerSubtitle, { color: colors.textTertiary }]}>
@@ -223,6 +223,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     letterSpacing: 1,
+    flexShrink: 1,
   },
   headerSubtitle: {
     ...typography.caption,

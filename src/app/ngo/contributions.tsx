@@ -120,7 +120,7 @@ export default function NgoContributionsScreen() {
       {/* Top Header */}
       <View style={styles.header}>
         <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+          <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>
             Contributions
           </Text>
           <Text style={[styles.headerSubtitle, { color: colors.textTertiary }]}>
@@ -138,8 +138,8 @@ export default function NgoContributionsScreen() {
             android_ripple={{ color: colors.primaryPressed }}
             accessibilityRole="button"
             accessibilityLabel="Compose new contribution">
-            <Feather name="plus" size={16} color="#FFFFFF" />
-            <Text style={styles.composeButtonText}>Compose</Text>
+            <Feather name="plus" size={16} color={colors.onPrimary} />
+            <Text style={[styles.composeButtonText, { color: colors.onPrimary }]}>Compose</Text>
           </Pressable>
         )}
       </View>
@@ -398,6 +398,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 22,
     lineHeight: 28,
+    flexShrink: 1,
   },
   headerSubtitle: {
     ...typography.caption,
@@ -413,7 +414,6 @@ const styles = StyleSheet.create({
   },
   composeButtonText: {
     ...typography.bodyMedium,
-    color: '#FFFFFF',
     fontWeight: '700',
     fontSize: 13,
   },

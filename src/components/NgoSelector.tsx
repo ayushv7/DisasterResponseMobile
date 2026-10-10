@@ -103,7 +103,7 @@ export function NgoSelector({
         statusBarTranslucent
       >
         <Pressable
-          style={styles.modalOverlay}
+          style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}
           onPress={() => setOpen(false)}
           accessibilityRole="none"
         />
@@ -271,7 +271,6 @@ const styles = StyleSheet.create({
   // ── Modal overlay ─────────────────────────────────────────────────────────
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.55)',
   },
 
   // ── Bottom sheet ──────────────────────────────────────────────────────────

@@ -79,3 +79,14 @@ export const typography: Record<string, TextStyle> = {
     fontVariant: ['tabular-nums'],
   },
 };
+
+/**
+ * The text-size scale for refined screens: at most these four per screen.
+ * Pair each with the matching line height for consistent rhythm.
+ */
+export const textScale = {
+  caption: { fontSize: 12, lineHeight: 16 },
+  body: { fontSize: 14, lineHeight: 20 },
+  subtitle: { fontSize: 16, lineHeight: 24 },
+  title: { fontSize: 20, lineHeight: 28 },
+} as const;

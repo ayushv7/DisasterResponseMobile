@@ -66,7 +66,7 @@ export default function NgoContributorsScreen() {
         <Pressable onPress={goBack} style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Go back">
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Contributor applications</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>Contributor applications</Text>
         <SampleDataBadge source={query.source ?? undefined} />
       </View>
 
@@ -92,7 +92,7 @@ export default function NgoContributorsScreen() {
                   Code expires {new Date(issued.codeExpiresAt).toLocaleString()}
                 </Text>
               )}
-              <Text style={[styles.caption, { color: colors.statusWatch }]}>
+              <Text style={[styles.caption, { color: colors.info }]}>
                 Shown only once. Give these to the contributor directly.
               </Text>
               <PrimaryButton label="Done" onPress={() => setIssued(null)} />

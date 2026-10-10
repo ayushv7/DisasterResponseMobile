@@ -198,7 +198,7 @@ export default function NgoReviewScreen() {
             accessibilityLabel="Go back">
             <Feather name="arrow-left" size={22} color={colors.textPrimary} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+          <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>
             Review
           </Text>
         </View>
@@ -224,7 +224,7 @@ export default function NgoReviewScreen() {
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
         <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+          <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>
             Message Triage
           </Text>
           <Text
@@ -587,13 +587,13 @@ export default function NgoReviewScreen() {
               <Feather
                 name="check-circle"
                 size={18}
-                color={isVerified ? '#FFFFFF' : colors.textTertiary}
+                color={isVerified ? colors.onPrimary : colors.textTertiary}
               />
               <Text
                 style={[
                   styles.actionButtonPrimaryText,
                   {
-                    color: isVerified ? '#FFFFFF' : colors.textTertiary,
+                    color: isVerified ? colors.onPrimary : colors.textTertiary,
                   },
                 ]}>
                 Prepare Contribution for Publication
@@ -609,7 +609,7 @@ export default function NgoReviewScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setModalMode('none')}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
           <View
             style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
@@ -685,12 +685,12 @@ export default function NgoReviewScreen() {
                   },
                 ]}>
                 {actionInProgress ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={colors.onPrimary} />
                 ) : (
                   <Text
                     style={[
                       styles.modalButtonText,
-                      { color: '#FFFFFF', fontWeight: '700' },
+                      { color: colors.onPrimary, fontWeight: '700' },
                     ]}>
                     Confirm
                   </Text>
@@ -739,6 +739,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 20,
     lineHeight: 24,
+    flexShrink: 1,
   },
   headerSubtitle: {
     ...typography.caption,
@@ -958,7 +959,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.screenPadding,

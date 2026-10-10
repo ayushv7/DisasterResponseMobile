@@ -15,6 +15,10 @@ export interface ThemeColors {
   surface: string;
   surfaceMuted: string;
   border: string;
+  /** Modal backdrop. */
+  scrim: string;
+  /** Hairline separators (e.g. between counts). */
+  divider: string;
   textPrimary: string;
   textSecondary: string;
   textTertiary: string;
@@ -63,6 +67,8 @@ export const lightColors: ThemeColors = {
   surface: '#FFFFFF',
   surfaceMuted: '#F0F0F0',
   border: 'transparent',
+  scrim: 'rgba(0,0,0,0.5)',
+  divider: 'rgba(0,0,0,0.1)',
   textPrimary: '#0F0F0F',
   textSecondary: '#606060',
   textTertiary: '#909090',
@@ -102,6 +108,8 @@ export const darkColors: ThemeColors = {
   surface: '#1F1F1F', // YouTube card & elevated surface
   surfaceMuted: '#272727', // YouTube pill / search / chip surface
   border: 'transparent',
+  scrim: 'rgba(0,0,0,0.7)',
+  divider: 'rgba(255,255,255,0.12)',
   textPrimary: '#F1F1F1', // YouTube primary white
   textSecondary: '#AAAAAA', // YouTube secondary neutral grey
   textTertiary: '#717171', // YouTube metadata grey

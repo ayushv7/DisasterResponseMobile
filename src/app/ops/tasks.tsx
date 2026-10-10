@@ -219,7 +219,7 @@ export default function FieldWorkerTasksScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Tasks</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>Tasks</Text>
         {role === 'field_worker' && session?.user && (
           <Text style={[styles.crewText, { color: colors.textSecondary }]}>
             {session.user.name}
@@ -481,7 +481,7 @@ export default function FieldWorkerTasksScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setBlockerTarget(null)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Feather name="alert-octagon" size={20} color={colors.statusActive} />
@@ -567,9 +567,9 @@ export default function FieldWorkerTasksScreen() {
                 disabled={submittingBlocker}
                 style={[styles.modalConfirm, { backgroundColor: colors.statusActive }]}>
                 {submittingBlocker ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
+                  <ActivityIndicator size="small" color={colors.onPrimary} />
                 ) : (
-                  <Text style={[styles.modalConfirmText, { color: '#FFFFFF' }]}>
+                  <Text style={[styles.modalConfirmText, { color: colors.onPrimary }]}>
                     Report
                   </Text>
                 )}
@@ -585,7 +585,7 @@ export default function FieldWorkerTasksScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setCompleteTarget(null)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Feather name="check-circle" size={20} color={colors.statusResolved} />
@@ -709,6 +709,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 22,
     lineHeight: 28,
+    flexShrink: 1,
   },
   filterRow: {
     flexDirection: 'row',
@@ -852,13 +853,11 @@ const styles = StyleSheet.create({
   },
   actionBtnSuccessText: {
     ...typography.bodyMedium,
-    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.screenPadding,

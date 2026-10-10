@@ -464,7 +464,7 @@ export default function VerificationAndReplanningScreen() {
         animationType="slide"
         transparent
         onRequestClose={() => setSelectedVerification(null)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
@@ -539,7 +539,7 @@ export default function VerificationAndReplanningScreen() {
         animationType="slide"
         transparent
         onRequestClose={() => setSelectedReplanning(null)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
@@ -779,7 +779,6 @@ const styles = StyleSheet.create({
   primaryButtonText: {
     ...typography.caption,
     fontWeight: '700',
-    color: '#FFFFFF',
     fontSize: 13,
   },
   outlineButton: {
@@ -834,7 +833,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -906,7 +904,6 @@ const styles = StyleSheet.create({
   modalApproveText: {
     ...typography.caption,
     fontWeight: '700',
-    color: '#FFFFFF',
     fontSize: 13,
   },
 });

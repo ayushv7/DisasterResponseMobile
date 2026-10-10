@@ -66,7 +66,7 @@ export default function CreateNgoScreen() {
             <Text style={[styles.mono, { color: colors.textPrimary }]} selectable>
               {issued.temporaryPassword}
             </Text>
-            <Text style={[styles.caption, { color: colors.statusWatch }]}>
+            <Text style={[styles.caption, { color: colors.info }]}>
               Shown only once. Share it with the NGO securely.
             </Text>
             <PrimaryButton label="Done" onPress={() => setIssued(null)} />

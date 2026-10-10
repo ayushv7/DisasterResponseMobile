@@ -53,7 +53,7 @@ export default function SettingsScreen() {
             <Feather name="arrow-left" size={20} color={colors.textPrimary} />
           </Pressable>
         )}
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Settings</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>Settings</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -184,6 +184,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 22,
     lineHeight: 28,
+    flexShrink: 1,
   },
   scrollContent: {
     paddingTop: spacing.xs,

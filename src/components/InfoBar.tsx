@@ -50,7 +50,7 @@ export function InfoBar({
           </Text>
           <Pressable
             onPress={() => setIsModalVisible(true)}
-            hitSlop={spacing.sm}
+            hitSlop={spacing.lg}
             accessibilityRole="button"
             accessibilityLabel="Learn more about sample data">
             <Text style={[styles.learnMore, { color: colors.brandPrimary }]}>Learn more</Text>
@@ -63,7 +63,7 @@ export function InfoBar({
             style={styles.dismissButton}
             accessibilityRole="button"
             accessibilityLabel="Dismiss sample data notice"
-            hitSlop={spacing.xs}>
+            hitSlop={spacing.md}>
             <Feather name="x" size={16} color={colors.textTertiary} />
           </Pressable>
         )}
@@ -75,7 +75,7 @@ export function InfoBar({
         transparent
         animationType="fade"
         onRequestClose={() => setIsModalVisible(false)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.screenPadding,
-    paddingVertical: 10,
+    paddingVertical: spacing.sm,
     minHeight: 40,
   },
   contentRow: {
@@ -151,7 +151,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(15, 27, 45, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: spacing.screenPadding,

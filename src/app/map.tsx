@@ -27,7 +27,7 @@ export default function MapScreen() {
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>
           Map
         </Text>
       </View>
@@ -89,6 +89,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 22,
     lineHeight: 28,
+    flexShrink: 1,
   },
   centerContent: {
     flex: 1,

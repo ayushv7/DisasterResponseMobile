@@ -228,7 +228,7 @@ export default function IncidentWorkspaceScreen() {
           <Pressable onPress={goBack} style={styles.backButton}>
             <Feather name="arrow-left" size={22} color={colors.textPrimary} />
           </Pressable>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
+          <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>
             Incident Workspace
           </Text>
         </View>
@@ -645,7 +645,7 @@ export default function IncidentWorkspaceScreen() {
         transparent
         animationType="fade"
         onRequestClose={() => setShowAssignModal(false)}>
-        <View style={styles.modalOverlay}>
+        <View style={[styles.modalOverlay, { backgroundColor: colors.scrim }]}>
           <View style={[styles.modalCard, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Feather name="check-square" size={20} color={colors.brandTeal} />
@@ -814,6 +814,7 @@ const styles = StyleSheet.create({
     ...typography.title,
     fontSize: 18,
     lineHeight: 22,
+    flexShrink: 1,
   },
   scrollContent: {
     paddingHorizontal: spacing.screenPadding,
@@ -1127,7 +1128,6 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.65)',
     alignItems: 'center',
     justifyContent: 'center',
     padding: spacing.screenPadding,
@@ -1197,7 +1197,6 @@ const styles = StyleSheet.create({
   },
   modalConfirmText: {
     ...typography.bodyMedium,
-    color: '#0B111A',
     fontWeight: '700',
     fontSize: 14,
   },

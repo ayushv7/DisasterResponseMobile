@@ -11,6 +11,7 @@ import { Feather } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 
 import { PrimaryButton } from '@/components/AuthForm';
+import { EmptyState } from '@/components/EmptyState';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
 import { StateView } from '@/components/StateView';
 import { ChipTone, StatusChip } from '@/components/StatusChip';
@@ -177,7 +178,7 @@ export default function ResourcePlanScreen() {
         <Pressable onPress={goBack} style={styles.iconButton} accessibilityRole="button" accessibilityLabel="Go back">
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Resource plan</Text>
+        <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>Resource plan</Text>
         <SampleDataBadge source={query.source ?? undefined} />
       </View>
 
@@ -354,7 +355,7 @@ export default function ResourcePlanScreen() {
 
             <Text style={[styles.label, { color: colors.textTertiary }]}>ALLOCATIONS ({plan.allocations.length})</Text>
             {plan.allocations.length === 0 ? (
-              <Text style={[styles.caption, { color: colors.textSecondary }]}>No allocations in this version.</Text>
+              <EmptyState title="No allocations" description="This plan version allocates no resources." />
             ) : (
               plan.allocations.map(renderAllocation)
             )}
