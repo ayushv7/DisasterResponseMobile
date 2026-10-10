@@ -23,6 +23,7 @@ import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { NgoMember, WorkerCredentials } from '@/types/accounts';
 import { InterventionRecord } from '@/types/operations';
+import { VOLUNTEER_STATUS_LABELS, VolunteerApplication, VolunteerDecision } from '@/types/volunteers';
 
 interface ShownCredentials extends WorkerCredentials {
   name: string;
@@ -48,11 +49,23 @@ export default function NgoTeamScreen() {
   /** Shown once; cleared when the NGO taps Done or leaves the screen. */
   const [credentials, setCredentials] = useState<ShownCredentials | null>(null);
 
+  // Volunteer applications: eligibility comes from the backend; the NGO decides
+  const [applications, setApplications] = useState<VolunteerApplication[]>([]);
+  const [appsSimulated, setAppsSimulated] = useState(false);
+  const [reasonFor, setReasonFor] = useState<{ id: string; decision: VolunteerDecision } | null>(null);
+  const [decisionReason, setDecisionReason] = useState('');
+
   const load = useCallback(async () => {
     try {
       setErrorMsg(null);
-      const [team, ngo] = await Promise.all([api.getFieldTeam(), fetchNgoSession()]);
+      const [team, ngo, apps] = await Promise.all([
+        api.getFieldTeam(),
+        fetchNgoSession(),
+        api.listVolunteerApplications(),
+      ]);
       setMembers(team.data);
+      setApplications(apps.data);
+      setAppsSimulated(apps.source === 'sample');
       setNgoCode(ngo?.ngoCode);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Could not load your field team.');
@@ -65,6 +78,28 @@ export default function NgoTeamScreen() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  // Volunteer applications: eligibility comes from the backend; the NGO decides
+
+  const decide = async (app: VolunteerApplication, decision: VolunteerDecision, reason?: string) => {
+    if (decision !== 'APPROVE' && !reason?.trim()) {
+      setReasonFor({ id: app.id, decision });
+      setDecisionReason('');
+      return;
+    }
+    try {
+      setBusyId(app.id);
+      const result = await api.decideVolunteerApplication(app.id, decision, reason?.trim());
+      setApplications((prev) => prev.map((a) => (a.id === app.id ? result.data : a)));
+      setReasonFor(null);
+      // Approving or revoking changes the team list
+      setMembers((await api.getFieldTeam()).data);
+    } catch (err: any) {
+      Alert.alert('Could not save decision', err?.message || 'Try again.');
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   // Assign-task sheet: open tasks from the (backend-scoped) work orders
   const [assignFor, setAssignFor] = useState<NgoMember | null>(null);
@@ -277,6 +312,120 @@ export default function NgoTeamScreen() {
             <PrimaryButton label="Add field worker" onPress={() => setShowForm(true)} />
           )}
 
+          <Text style={[styles.overline, { color: colors.textTertiary }]}>
+            VOLUNTEER APPLICATIONS ({applications.filter((a) => a.status === 'PENDING').length} pending)
+          </Text>
+          {applications.length === 0 ? (
+            <Text style={[styles.caption, { color: colors.textSecondary }]}>No applications yet.</Text>
+          ) : (
+            applications.map((app) => {
+              const busy = busyId === app.id;
+              const askingReason = reasonFor?.id === app.id;
+              return (
+                <View key={app.id} style={[styles.card, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>
+                    {app.name} · {app.source === 'INVITED' ? 'Invited' : 'Applied'}
+                  </Text>
+                  <Text style={[styles.caption, { color: colors.textSecondary }]}>
+                    {app.skills.join(', ')} · {app.availability}
+                  </Text>
+                  <Text style={[styles.caption, { color: colors.textSecondary }]}>
+                    {VOLUNTEER_STATUS_LABELS[app.status]}
+                    {app.decisionReason ? ` · ${app.decisionReason}` : ''}
+                  </Text>
+                  {app.eligibility && (
+                    <View style={[styles.eligibility, { backgroundColor: colors.surfaceMuted }]}>
+                      <View style={styles.row}>
+                        <View
+                          style={[
+                            styles.dot,
+                            {
+                              backgroundColor: app.eligibility.eligible
+                                ? colors.statusResolved
+                                : colors.statusWatch,
+                            },
+                          ]}
+                        />
+                        <Text style={[styles.caption, styles.bold, { color: colors.textPrimary }]}>
+                          {app.eligibility.eligible ? 'Eligible' : 'Not eligible'}
+                          {appsSimulated ? ' (Simulated)' : ''} — system check
+                        </Text>
+                      </View>
+                      {app.eligibility.reasons.map((reason) => (
+                        <Text key={reason} style={[styles.caption, { color: colors.textSecondary }]}>
+                          • {reason}
+                        </Text>
+                      ))}
+                    </View>
+                  )}
+                  {askingReason ? (
+                    <>
+                      <AuthField
+                        label={reasonFor?.decision === 'REVOKE' ? 'Reason for revoking' : 'Reason for rejecting'}
+                        value={decisionReason}
+                        onChangeText={setDecisionReason}
+                      />
+                      <View style={styles.row}>
+                        <Pressable
+                          onPress={() => decide(app, reasonFor!.decision, decisionReason)}
+                          disabled={busy || !decisionReason.trim()}
+                          style={[styles.smallButton, { backgroundColor: colors.statusActive }]}
+                          accessibilityRole="button">
+                          <Text style={[styles.caption, styles.bold, { color: colors.onPrimary }]}>
+                            {reasonFor?.decision === 'REVOKE' ? 'Revoke' : 'Reject'}
+                          </Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => setReasonFor(null)}
+                          style={[styles.smallButton, { backgroundColor: colors.surfaceMuted }]}
+                          accessibilityRole="button">
+                          <Text style={[styles.caption, styles.bold, { color: colors.textPrimary }]}>Cancel</Text>
+                        </Pressable>
+                      </View>
+                    </>
+                  ) : (
+                    <View style={styles.row}>
+                      {app.status === 'PENDING' && (
+                        <>
+                          <Pressable
+                            onPress={() => decide(app, 'APPROVE')}
+                            disabled={busy}
+                            style={[styles.smallButton, { backgroundColor: colors.actionPrimary }]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Approve ${app.name}`}>
+                            <Text style={[styles.caption, styles.bold, { color: colors.onActionPrimary }]}>
+                              Approve
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => decide(app, 'REJECT')}
+                            disabled={busy}
+                            style={[styles.smallButton, { backgroundColor: colors.surfaceMuted }]}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Reject ${app.name}`}>
+                            <Text style={[styles.caption, styles.bold, { color: colors.textPrimary }]}>Reject</Text>
+                          </Pressable>
+                        </>
+                      )}
+                      {app.status === 'APPROVED' && (
+                        <Pressable
+                          onPress={() => decide(app, 'REVOKE')}
+                          disabled={busy}
+                          style={[styles.smallButton, { backgroundColor: colors.surfaceMuted }]}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Revoke ${app.name}`}>
+                          <Text style={[styles.caption, styles.bold, { color: colors.statusActive }]}>Revoke</Text>
+                        </Pressable>
+                      )}
+                      {busy && <ActivityIndicator size="small" color={colors.textTertiary} />}
+                    </View>
+                  )}
+                </View>
+              );
+            })
+          )}
+
+          <Text style={[styles.overline, { color: colors.textTertiary }]}>FIELD WORKERS</Text>
           {members.length === 0 ? (
             <EmptyState
               title="No field workers yet"
@@ -445,6 +594,18 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontSize: 16,
     letterSpacing: 0.5,
+  },
+  overline: {
+    ...typography.overline,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    marginTop: spacing.sm,
+  },
+  eligibility: {
+    borderRadius: radii.sm,
+    padding: spacing.sm,
+    gap: 2,
   },
   wrap: {
     flexWrap: 'wrap',
