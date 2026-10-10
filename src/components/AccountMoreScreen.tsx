@@ -29,6 +29,9 @@ export function AccountMoreScreen({ tabBar }: { tabBar: React.ReactNode }) {
   };
 
   const rows: { icon: keyof typeof Feather.glyphMap; label: string; onPress: () => void }[] = [
+    ...(role === 'field_worker' || role === 'contributor'
+      ? [{ icon: 'bell' as const, label: 'Notifications (Simulated)', onPress: () => router.push('/notifications') }]
+      : []),
     { icon: 'sliders', label: 'Settings', onPress: () => router.push('/settings') },
     ...(__DEV__
       ? [{ icon: 'code' as const, label: 'Developer role switcher', onPress: () => router.push('/dev') }]

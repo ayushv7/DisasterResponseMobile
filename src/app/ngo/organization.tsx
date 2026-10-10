@@ -257,6 +257,16 @@ export default function NgoOrganizationScreen() {
           </Pressable>
 
           <Pressable
+            onPress={() => router.push('/notifications')}
+            style={[styles.card, styles.teamRow, { backgroundColor: colors.surface }]}
+            android_ripple={{ color: colors.surfaceMuted }}
+            accessibilityRole="button">
+            <Feather name="bell" size={18} color={colors.textSecondary} />
+            <Text style={[styles.teamLabel, { color: colors.textPrimary }]}>Notifications (Simulated)</Text>
+            <Feather name="chevron-right" size={18} color={colors.textTertiary} />
+          </Pressable>
+
+          <Pressable
             onPress={() => router.push('/ngo/contributors')}
             style={[styles.card, styles.teamRow, { backgroundColor: colors.surface }]}
             android_ripple={{ color: colors.surfaceMuted }}

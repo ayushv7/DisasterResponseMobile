@@ -40,6 +40,7 @@ function RootLayoutContent() {
         <Stack.Screen name="my-offers" />
         <Stack.Screen name="notification-areas" />
         <Stack.Screen name="volunteer" />
+        <Stack.Screen name="notifications" />
         <Stack.Screen name="contribute" />
         <Stack.Screen name="contributor-login" />
         <Stack.Screen name="contributor" options={{ animation: 'fade', gestureEnabled: false }} />
