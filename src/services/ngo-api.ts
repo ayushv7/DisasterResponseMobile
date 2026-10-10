@@ -257,6 +257,16 @@ export async function fetchPublishedContributions(): Promise<NgoContributionItem
   return JSON.parse(JSON.stringify(inMemoryContributions.filter((c) => c.status === 'PUBLISHED')));
 }
 
+/** Authority takedown of a published update (POST /admin/updates/{id}/takedown). */
+export async function takedownContribution(id: string, reason: string): Promise<NgoContributionItem> {
+  await new Promise((res) => setTimeout(res, 150));
+  const item = inMemoryContributions.find((c) => c.id === id);
+  if (!item) throw new Error('Update not found.');
+  item.status = 'TAKEN_DOWN';
+  item.takenDownReason = reason;
+  return JSON.parse(JSON.stringify(item));
+}
+
 export async function fetchContributionById(
   id: string
 ): Promise<NgoContributionItem | null> {

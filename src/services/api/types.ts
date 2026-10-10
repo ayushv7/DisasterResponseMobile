@@ -24,7 +24,9 @@ import { SentMessage } from '@/types/message-thread';
 import { HelpOffer, NgoNeed, OfferHelpInput } from '@/types/offers';
 import { MessageDraft, MessageReceipt, VerifiedNgo } from '@/types/messaging';
 import {
+  CreateNgoInput,
   NgoApplication,
+  NgoCredentials,
   NgoContributionItem,
   NgoInboxFilter,
   NgoInboxMessage,
@@ -143,6 +145,13 @@ export interface ApiClient {
   getNgoApplications(): Promise<ApiResult<NgoApplication[]>>;
   /** Approve, or decline/suspend when `approved` is false. */
   approveNgo(ngoId: string, approved: boolean): Promise<ApiResult<NgoApplication>>;
+  /** Authority creates an NGO account; credentials come back once. */
+  createNgo(
+    input: CreateNgoInput
+  ): Promise<ApiResult<{ ngo: NgoApplication; credentials: NgoCredentials }>>;
+  /** Published NGO updates, for authority review and takedown. */
+  getPublishedUpdates(): Promise<ApiResult<NgoContributionItem[]>>;
+  takedownUpdate(updateId: string, reason: string): Promise<ApiResult<NgoContributionItem>>;
 }
 
 export class NotImplementedError extends Error {

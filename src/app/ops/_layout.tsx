@@ -8,9 +8,10 @@ import { useSession } from '@/session/session-context';
  */
 export default function OpsLayout() {
   const { role } = useSession();
-  if (role !== 'coordinator' && role !== 'admin' && role !== 'field_worker') {
-    return <Redirect href="/" />;
-  }
+  // Ops screens now serve NGOs (scoped by the backend) and field workers.
+  // Authority roles have their own area and are sent back to it.
+  if (role === 'coordinator' || role === 'admin') return <Redirect href="/authority/ngos" />;
+  if (role !== 'ngo' && role !== 'field_worker') return <Redirect href="/" />;
 
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>

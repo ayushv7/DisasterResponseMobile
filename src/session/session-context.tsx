@@ -53,8 +53,8 @@ export function homeRouteFor(role: Role): Href {
   switch (role) {
     case 'coordinator':
     case 'admin':
-      // Coordinator and admin share one staff console for now
-      return '/ops/home';
+      // Authority (coordinator + admin) shares one console: NGO approval and oversight
+      return '/authority/ngos';
     case 'field_worker':
       return '/ops/tasks';
     case 'ngo':

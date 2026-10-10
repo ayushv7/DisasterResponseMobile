@@ -31,10 +31,10 @@ import { ROLE_LABELS, Role } from '@/types/roles';
 
 const ROLE_LAUNCHERS: { role: Role; icon: keyof typeof Feather.glyphMap; tabs: string }[] = [
   { role: 'public', icon: 'user', tabs: 'Alerts · Message NGO · Profile' },
-  { role: 'coordinator', icon: 'activity', tabs: 'Ops · Incidents · Tasks · Replan · More' },
+  { role: 'coordinator', icon: 'activity', tabs: 'Authority: NGOs · Add NGO · Takedown · More' },
   { role: 'field_worker', icon: 'tool', tabs: 'Tasks · Profile' },
   { role: 'ngo', icon: 'shield', tabs: 'Inbox · Publish · Evidence · Organization' },
-  { role: 'admin', icon: 'key', tabs: 'Same staff console as coordinator · Approve NGOs' },
+  { role: 'admin', icon: 'key', tabs: 'Same authority console as coordinator' },
 ];
 
 /** Development builds only; production builds redirect away. */

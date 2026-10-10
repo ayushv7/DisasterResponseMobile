@@ -5,10 +5,15 @@
  */
 import * as accounts from '@/services/accounts-api';
 import * as offers from '@/services/offers-api';
-import { decideNgo, fetchNgoApplications } from '@/services/ngo-approval-api';
+import { createNgo, decideNgo, fetchNgoApplications } from '@/services/ngo-approval-api';
 import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
-import { fetchNgoInbox, publishContribution } from '@/services/ngo-api';
+import {
+  fetchNgoInbox,
+  fetchPublishedContributions,
+  publishContribution,
+  takedownContribution,
+} from '@/services/ngo-api';
 import { SAMPLE_REFERENCE_TIME } from '@/fixtures/sample-operations';
 import * as ops from '@/services/operations-api';
 
@@ -168,4 +173,7 @@ export const mockApi: ApiClient = {
 
   getNgoApplications: () => simulate(fetchNgoApplications),
   approveNgo: (id, approved) => simulate(() => decideNgo(id, approved)),
+  createNgo: (input) => simulate(() => createNgo(input)),
+  getPublishedUpdates: () => simulate(fetchPublishedContributions),
+  takedownUpdate: (id, reason) => simulate(() => takedownContribution(id, reason)),
 };

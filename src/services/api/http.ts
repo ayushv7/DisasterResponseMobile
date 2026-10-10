@@ -52,4 +52,7 @@ export const httpApi: ApiClient = {
   publishUpdate: notImplemented('publishUpdate'),
   getNgoApplications: notImplemented('getNgoApplications'),
   approveNgo: notImplemented('approveNgo'),
+  createNgo: notImplemented('createNgo'),
+  getPublishedUpdates: notImplemented('getPublishedUpdates'),
+  takedownUpdate: notImplemented('takedownUpdate'),
 };

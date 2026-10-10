@@ -84,7 +84,7 @@ export type ContributionType =
   | 'EVACUATION_ROUTE'
   | 'MEDICAL_ASSISTANCE';
 
-export type ContributionStatus = 'DRAFT' | 'PUBLISHED' | 'REJECTED_OR_CLOSED';
+export type ContributionStatus = 'DRAFT' | 'PUBLISHED' | 'REJECTED_OR_CLOSED' | 'TAKEN_DOWN';
 
 export interface NgoContributionItem {
   id: string;
@@ -104,6 +104,8 @@ export interface NgoContributionItem {
   status: ContributionStatus;
   createdAt: string;
   publishedAt?: string;
+  /** Set by the authority when the update is taken down. */
+  takenDownReason?: string;
 }
 
 /** An NGO's registration as seen by staff deciding whether to approve it. */
@@ -116,4 +118,19 @@ export interface NgoApplication {
   /** Registration or licence reference supplied by the NGO; checked by the backend/admin. */
   registrationRef?: string;
   decidedAt?: string;
+  /** Area the NGO serves; the backend uses it to pick nearby NGOs. */
+  area?: string;
+}
+
+export interface CreateNgoInput {
+  name: string;
+  email: string;
+  area: string;
+}
+
+/** Issued by the backend when the authority creates an NGO. Shown once. */
+export interface NgoCredentials {
+  ngoCode: string;
+  loginEmail: string;
+  temporaryPassword: string;
 }
