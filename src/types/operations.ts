@@ -79,6 +79,12 @@ export interface InterventionRecord {
   };
   
   contingencyPlan: string;
+  /** Photo evidence URIs attached on completion (local URIs in mock mode). */
+  completionPhotoUris?: string[];
+  /** Set when the coordinator assigned something other than the recommendation. */
+  overrideReason?: string;
+  /** Append-only action history. */
+  history?: TaskEvent[];
 }
 
 export type ResourceCategory = 'EQUIPMENT' | 'CREW' | 'VEHICLE';
@@ -98,6 +104,8 @@ export interface OperationalResource {
   proximityKm: number;
   specifications: string; // e.g. '6000 LPM Diesel Dewatering Pump'
   currentAssignmentId?: string;
+  /** When the backend last received a status/condition report for this resource. Drives freshness. */
+  statusReportedAt?: string;
 }
 
 export interface AllocationRecommendation {
@@ -130,6 +138,9 @@ export interface ReplanningRecord {
   recommendedAlternative: string;
   status: 'ESCALATED' | 'REASSIGNED' | 'PENDING_SUPERVISOR_ACTION';
   timestamp: string;
+  /** What was actually assigned, once a decision is made (may differ from the recommendation). */
+  actualAssignment?: string;
+  decidedAt?: string;
 }
 
 export interface OperationalOverviewStats {
@@ -140,4 +151,21 @@ export interface OperationalOverviewStats {
   blockedOrFailedInterventions: number;
   awaitingVerification: number;
   lastTelemetrySync: string;
+}
+
+export type TaskEventType =
+  | 'ASSIGNED'
+  | 'ACKNOWLEDGED'
+  | 'STARTED'
+  | 'PROBLEM_REPORTED'
+  | 'COMPLETED'
+  | 'VERIFIED'
+  | 'REJECTED'
+  | 'REASSIGNED';
+
+export interface TaskEvent {
+  type: TaskEventType;
+  at: string; // ISO 8601
+  actor: string;
+  note?: string;
 }
