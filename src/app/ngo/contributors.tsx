@@ -10,6 +10,8 @@ import { Feather } from '@expo/vector-icons';
 
 import { AuthField, PrimaryButton } from '@/components/AuthForm';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
+import { useToast } from '@/components/Toast';
+import { confirmAction } from '@/components/confirm';
 import { StateView } from '@/components/StateView';
 import { ChipTone, StatusChip } from '@/components/StatusChip';
 import { useApiQuery } from '@/hooks/use-api-query';
@@ -32,18 +34,35 @@ export default function NgoContributorsScreen() {
   const goBack = useGoBack();
   const { colors } = useTheme();
   const query = useApiQuery(() => api.listContributorApplications(), []);
+  const toast = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [reasonFor, setReasonFor] = useState<{ id: string; decision: VolunteerDecision } | null>(null);
   const [reason, setReason] = useState('');
   const [issued, setIssued] = useState<(ContributorCredentials & { name: string; simulated: boolean }) | null>(null);
 
-  const decide = async (app: ContributorApplication, decision: VolunteerDecision) => {
+  const VERB = { APPROVE: 'Approve', REJECT: 'Reject', REVOKE: 'Revoke' } as const;
+  const decide = (app: ContributorApplication, decision: VolunteerDecision) => {
     if (busyId) return;
     if (decision !== 'APPROVE' && reasonFor?.id !== app.id) {
       setReasonFor({ id: app.id, decision });
       setReason('');
       return;
     }
+    confirmAction({
+      title: `${VERB[decision]} ${app.name}?`,
+      message:
+        decision === 'APPROVE'
+          ? 'The system issues a contributor ID and sign-in code, shown to you once.'
+          : decision === 'REVOKE'
+            ? 'They can no longer sign in, and their resources leave your plans.'
+            : 'They see the reason you gave.',
+      confirmLabel: VERB[decision],
+      destructive: decision !== 'APPROVE',
+      onConfirm: () => runDecide(app, decision),
+    });
+  };
+
+  const runDecide = async (app: ContributorApplication, decision: VolunteerDecision) => {
     try {
       setBusyId(app.id);
       const result = await api.decideContributorApplication(app.id, decision, reason.trim() || undefined);
@@ -53,6 +72,9 @@ export default function NgoContributorsScreen() {
         setIssued({ ...result.data.credentials, name: app.name, simulated: result.source === 'sample' });
       }
       setReasonFor(null);
+      if (!result.data.credentials) {
+        toast(`${result.source === 'sample' ? 'Simulated: ' : ''}${app.name}: ${VERB[decision].toLowerCase()} saved.`);
+      }
     } catch (err) {
       Alert.alert('Could not save decision', err instanceof Error ? err.message : 'Try again.');
     } finally {

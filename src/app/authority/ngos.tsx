@@ -12,6 +12,7 @@ import { StateView } from '@/components/StateView';
 import { AuthorityTabBar } from '@/components/AuthorityTabBar';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { deriveQueryState } from '@/hooks/use-api-query';
+import { useToast } from '@/components/Toast';
 import { api, IS_MOCK_API } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -34,7 +35,7 @@ export default function ApproveNgosScreen() {
   /** Last successful load; earlier data stays visible if a refresh fails. */
   const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const toast = useToast();
 
   const load = useCallback(async () => {
     try {
@@ -72,7 +73,7 @@ export default function ApproveNgosScreen() {
               setApplications((prev) => prev.map((a) => (a.id === app.id ? result.data : a)));
               load();
               const done = `${app.name}: ${verb.toLowerCase()} saved.`;
-              setFeedback(result.source === 'sample' ? `Simulated: ${done}` : done);
+              toast(result.source === 'sample' ? `Simulated: ${done}` : done);
             } catch (err: any) {
               Alert.alert('Could not save decision', err?.message || 'Try again.');
             } finally {
@@ -181,13 +182,6 @@ export default function ApproveNgosScreen() {
             {IS_MOCK_API ? 'SAMPLE DATA — not real organizations. ' : ''}
             The backend checks who may approve, reject or suspend.
           </Text>
-          {feedback && (
-            <Text
-              style={[styles.caption, { color: colors.textPrimary }]}
-              accessibilityLiveRegion="polite">
-              {feedback}
-            </Text>
-          )}
 
           <Text style={[styles.overline, { color: colors.textTertiary }]}>
             PENDING ({pending.length})

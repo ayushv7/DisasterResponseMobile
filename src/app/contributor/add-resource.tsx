@@ -13,6 +13,7 @@ import { isEvidenceVerified, LiveEvidence } from '@/components/LiveEvidence';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
 import { StateView } from '@/components/StateView';
 import { useApiQuery } from '@/hooks/use-api-query';
+import { useToast } from '@/components/Toast';
 import { useGoBack } from '@/navigation/use-go-back';
 import { api } from '@/services/api';
 import { prepareEvidence } from '@/services/evidence';
@@ -25,6 +26,7 @@ const CONDITIONS = Object.keys(RESOURCE_CONDITION_LABELS) as ResourceCondition[]
 
 export default function AddResourceScreen() {
   const goBack = useGoBack();
+  const toast = useToast();
   const { colors } = useTheme();
   const policies = useApiQuery(() => api.getResourceTypePolicies(), []);
 
@@ -46,17 +48,17 @@ export default function AddResourceScreen() {
       const { evidence: payload, uploadSimulated } = await prepareEvidence(evidence, setStage);
       const result = await api.registerResource({ type, quantity: qty, condition, evidence: payload });
       const r = result.data;
-      Alert.alert(
-        result.source === 'sample' ? 'Simulated: resource registered' : 'Resource registered',
+      toast(
         [
-          `Status: ${r.statusReason ?? r.freshness}`,
-          r.checkInDueAt ? `Next check-in due ${new Date(r.checkInDueAt).toLocaleString()}.` : '',
-          uploadSimulated ? 'Photo upload was simulated; nothing left the device.' : '',
+          result.source === 'sample' ? 'Simulated: resource registered.' : 'Resource registered.',
+          r.statusReason ?? r.freshness,
+          uploadSimulated ? 'Photo upload simulated.' : '',
         ]
           .filter(Boolean)
-          .join('\n'),
-        [{ text: 'OK', onPress: () => (router.canGoBack() ? router.back() : router.replace('/contributor/resources')) }]
+          .join(' ')
       );
+      if (router.canGoBack()) router.back();
+      else router.replace('/contributor/resources');
     } catch (err) {
       Alert.alert('Not registered', err instanceof Error ? err.message : 'Try again.');
     } finally {

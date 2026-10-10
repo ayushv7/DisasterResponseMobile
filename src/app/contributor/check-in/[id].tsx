@@ -13,6 +13,7 @@ import { PrimaryButton } from '@/components/AuthForm';
 import { CheckInDueBanner } from '@/components/CheckInDue';
 import { LiveEvidence } from '@/components/LiveEvidence';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
+import { useToast } from '@/components/Toast';
 import { StateView } from '@/components/StateView';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useGoBack } from '@/navigation/use-go-back';
@@ -26,6 +27,7 @@ import { ContributorResource, EvidenceDraft } from '@/types/contributors';
 export default function CheckInScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const goBack = useGoBack();
+  const toast = useToast();
   const { colors } = useTheme();
   const query = useApiQuery(
     async () => {
@@ -58,6 +60,7 @@ export default function CheckInScreen() {
       setStage('submitting');
       const res = await api.checkInResource(resource.id, { available, evidence: payload });
       setResult({ resource: res.data, simulated: res.source === 'sample' });
+      toast(res.source === 'sample' ? 'Simulated: check-in recorded.' : 'Check-in recorded.');
       query.setData(res.data);
       query.refresh();
     } catch (err) {

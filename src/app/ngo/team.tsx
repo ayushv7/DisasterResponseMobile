@@ -15,7 +15,9 @@ import { AuthField, PrimaryButton } from '@/components/AuthForm';
 import { EmptyState } from '@/components/EmptyState';
 import { StateView } from '@/components/StateView';
 import { PickerSheet } from '@/components/PickerSheet';
+import { confirmAction } from '@/components/confirm';
 import { deriveQueryState } from '@/hooks/use-api-query';
+import { useToast } from '@/components/Toast';
 import { useGoBack } from '@/navigation/use-go-back';
 import { api, IS_MOCK_API } from '@/services/api';
 import { fetchNgoSession } from '@/services/ngo-api';
@@ -85,17 +87,34 @@ export default function NgoTeamScreen() {
 
   // Volunteer applications: eligibility comes from the backend; the NGO decides
 
-  const decide = async (app: VolunteerApplication, decision: VolunteerDecision, reason?: string) => {
+  const VERB = { APPROVE: 'Approve', REJECT: 'Reject', REVOKE: 'Revoke' } as const;
+  const decide = (app: VolunteerApplication, decision: VolunteerDecision, reason?: string) => {
     if (decision !== 'APPROVE' && !reason?.trim()) {
       setReasonFor({ id: app.id, decision });
       setDecisionReason('');
       return;
     }
+    confirmAction({
+      title: `${VERB[decision]} ${app.name}?`,
+      message:
+        decision === 'APPROVE'
+          ? 'They join your field team as a volunteer.'
+          : decision === 'REVOKE'
+            ? 'Their volunteer account is disabled.'
+            : 'They are told the reason you gave.',
+      confirmLabel: VERB[decision],
+      destructive: decision !== 'APPROVE',
+      onConfirm: () => runDecide(app, decision, reason),
+    });
+  };
+
+  const runDecide = async (app: VolunteerApplication, decision: VolunteerDecision, reason?: string) => {
     try {
       setBusyId(app.id);
       const result = await api.decideVolunteerApplication(app.id, decision, reason?.trim());
       setApplications((prev) => prev.map((a) => (a.id === app.id ? result.data : a)));
       setReasonFor(null);
+      toast(`${result.source === 'sample' ? 'Simulated: ' : ''}${app.name}: ${VERB[decision].toLowerCase()} saved.`);
       // Approving or revoking changes the team list
       load();
     } catch (err: any) {
@@ -109,7 +128,7 @@ export default function NgoTeamScreen() {
   const [assignFor, setAssignFor] = useState<NgoMember | null>(null);
   const [openTasks, setOpenTasks] = useState<InterventionRecord[] | null>(null);
   const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const toast = useToast();
 
   const openAssign = async (member: NgoMember) => {
     setAssignFor(member);
@@ -132,7 +151,7 @@ export default function NgoTeamScreen() {
     try {
       setAssigningTaskId(taskId);
       const result = await api.assignTask(taskId, assignFor.id);
-      setFeedback(
+      toast(
         `${result.source === 'sample' ? 'Simulated: ' : ''}${result.data.id} assigned to ${assignFor.name}.`
       );
       setAssignFor(null);
@@ -177,10 +196,25 @@ export default function NgoTeamScreen() {
     }
   };
 
-  const toggleDisabled = async (member: NgoMember) => {
+  const toggleDisabled = (member: NgoMember) => {
+    if (member.status !== 'ACTIVE') return runToggleDisabled(member);
+    confirmAction({
+      title: `Disable ${member.name}?`,
+      message: 'They can no longer sign in or receive tasks until you enable them again.',
+      confirmLabel: 'Disable',
+      destructive: true,
+      onConfirm: () => runToggleDisabled(member),
+    });
+  };
+
+  const runToggleDisabled = async (member: NgoMember) => {
     try {
       setBusyId(member.id);
-      replaceMember((await api.disableWorker(member.id, member.status === 'ACTIVE')).data);
+      const result = await api.disableWorker(member.id, member.status === 'ACTIVE');
+      replaceMember(result.data);
+      toast(
+        `${result.source === 'sample' ? 'Simulated: ' : ''}${member.name} ${result.data.status === 'ACTIVE' ? 'enabled' : 'disabled'}.`
+      );
       load();
     } catch (err: any) {
       Alert.alert('Could not update worker', err?.message || 'Try again.');
@@ -248,13 +282,6 @@ export default function NgoTeamScreen() {
             </Text>
           )}
 
-          {feedback && (
-            <Text
-              style={[styles.caption, { color: colors.textPrimary }]}
-              accessibilityLiveRegion="polite">
-              {feedback}
-            </Text>
-          )}
 
           {ngoCode && (
             <View style={[styles.card, { backgroundColor: colors.surface }]}>

@@ -31,6 +31,7 @@ import { NgoScopeNote } from '@/components/NgoScopeNote';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { StatusChip } from '@/components/StatusChip';
+import { useToast } from '@/components/Toast';
 import { TaskHistory } from '@/components/TaskHistory';
 import { VerificationStatus } from '@/components/VerificationStatus';
 import { api } from '@/services/api';
@@ -43,6 +44,7 @@ import { InterventionRecord, OperationalResource, ReplanningRecord } from '@/typ
 type TabView = 'VERIFICATION' | 'REPLANNING';
 
 export default function VerificationAndReplanningScreen() {
+  const toast = useToast();
   const { colors } = useTheme();
   useConfirmExitAtRoot();
 
@@ -107,11 +109,10 @@ export default function VerificationAndReplanningScreen() {
       setActionLoading(true);
       const result = await api.verify(selectedVerification.id, approved);
       const prefix = result.source === 'sample' ? 'Simulated: ' : '';
-      Alert.alert(
-        approved ? `${prefix}Verified` : `${prefix}Reopened`,
+      toast(
         approved
-          ? `${selectedVerification.id}: your check is recorded. Final verification is up to the authority.`
-          : `${selectedVerification.id} is back in progress for the field team.`
+          ? `${prefix}${selectedVerification.id} checked. Final verification is up to the authority.`
+          : `${prefix}${selectedVerification.id} sent back to the field team.`
       );
       setSelectedVerification(null);
       setSignOffNotes('');
@@ -129,10 +130,9 @@ export default function VerificationAndReplanningScreen() {
       setActionLoading(true);
       const actual = replanInstructions.trim() || selectedReplanning.recommendedAlternative;
       const result = await api.reassign(selectedReplanning.id, actual);
-      Alert.alert(
-        result.source === 'sample' ? 'Simulated: reassignment recorded' : 'Reassignment recorded',
-        `${selectedReplanning.interventionId} goes back to the assignment queue.` +
-          (result.source === 'sample' ? '\n\nSample mode: no crew was notified.' : '')
+      toast(
+        `${result.source === 'sample' ? 'Simulated: ' : ''}${selectedReplanning.interventionId} goes back to the assignment queue.` +
+          (result.source === 'sample' ? ' No crew was notified.' : '')
       );
       setSelectedReplanning(null);
       setReplanInstructions('');

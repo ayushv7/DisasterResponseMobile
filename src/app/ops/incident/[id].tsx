@@ -34,6 +34,7 @@ import { NgoMember } from '@/types/accounts';
 import { TaskHistory } from '@/components/TaskHistory';
 import { FreshnessDot, freshnessOf } from '@/components/FreshnessDot';
 import { api } from '@/services/api';
+import { useToast } from '@/components/Toast';
 import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -65,6 +66,7 @@ export default function IncidentWorkspaceScreen() {
   const [asOf, setAsOf] = useState<string | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
   const { role } = useSession();
+  const toast = useToast();
   const [showWorkerPicker, setShowWorkerPicker] = useState(false);
   const [workers, setWorkers] = useState<NgoMember[] | null>(null);
   const [pickingId, setPickingId] = useState<string | null>(null);
@@ -143,10 +145,10 @@ export default function IncidentWorkspaceScreen() {
       setSelectedIntervention(result.data);
       setShowWorkerPicker(false);
       loadAll(result.data.id);
-      Alert.alert(
-        result.source === 'sample' ? 'Simulated: task assigned' : 'Task assigned',
-        `${result.data.assignedWorkerName} must acknowledge it.` +
-          (result.source === 'sample' ? '\n\nSample mode: nobody was notified.' : '')
+      toast(
+        result.source === 'sample'
+          ? `Simulated: task assigned to ${result.data.assignedWorkerName}. Nobody was notified.`
+          : `Task assigned to ${result.data.assignedWorkerName}.`
       );
     } catch (err: any) {
       Alert.alert('Could not assign', err?.message || 'Try again.');
@@ -193,10 +195,9 @@ export default function IncidentWorkspaceScreen() {
       loadAll(updated.id);
 
       setOverrideReason('');
-      Alert.alert(
-        result.source === 'sample' ? 'Simulated: assignment recorded' : 'Assignment sent',
-        `${chosenTeam?.name || teamId} must acknowledge within ${deadline} min.` +
-          (result.source === 'sample' ? '\n\nSample mode: no crew was notified.' : '')
+      toast(
+        `${result.source === 'sample' ? 'Simulated: ' : ''}${chosenTeam?.name || teamId} must acknowledge within ${deadline} min.` +
+          (result.source === 'sample' ? ' No crew was notified.' : '')
       );
     } catch (err: any) {
       Alert.alert('Assignment Error', err?.message || 'Could not complete assignment.');

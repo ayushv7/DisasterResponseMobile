@@ -12,10 +12,12 @@ import { useLocalSearchParams } from 'expo-router';
 
 import { PrimaryButton } from '@/components/AuthForm';
 import { EmptyState } from '@/components/EmptyState';
+import { confirmAction } from '@/components/confirm';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
 import { StateView } from '@/components/StateView';
 import { ChipTone, StatusChip } from '@/components/StatusChip';
 import { useApiQuery } from '@/hooks/use-api-query';
+import { useToast } from '@/components/Toast';
 import { useGoBack } from '@/navigation/use-go-back';
 import { api, ApiError } from '@/services/api';
 import { useTheme } from '@/theme';
@@ -46,7 +48,7 @@ export default function ResourcePlanScreen() {
   const [replanning, setReplanning] = useState(false);
   const [approving, setApproving] = useState(false);
   const [error, setError] = useState<{ code: string; message: string } | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  const toast = useToast();
   const inFlight = useRef(false);
 
   // Manual allocation form (progressive disclosure)
@@ -70,12 +72,11 @@ export default function ResourcePlanScreen() {
     inFlight.current = true;
     setReplanning(true);
     setError(null);
-    setNotice(null);
     try {
       const result = await api.requestReplan(plan.id, plan.version);
       query.setData(result.data);
       query.refresh();
-      setNotice(`${result.source === 'sample' ? 'Simulated: ' : ''}plan recomputed as version ${result.data.version}.`);
+      toast(`${result.source === 'sample' ? 'Simulated: ' : ''}plan recomputed as version ${result.data.version}.`);
     } catch (err) {
       showError(err);
     } finally {
@@ -89,12 +90,11 @@ export default function ResourcePlanScreen() {
     inFlight.current = true;
     setApproving(true);
     setError(null);
-    setNotice(null);
     try {
       const result = await api.approvePlan(plan.id, plan.version);
       query.setData(result.data);
       query.refresh();
-      setNotice(
+      toast(
         `${result.source === 'sample' ? 'Simulated: ' : ''}version ${result.data.version} approved. Tasks published to workers and instructions sent to contributors.`
       );
     } catch (err) {
@@ -122,7 +122,6 @@ export default function ResourcePlanScreen() {
     inFlight.current = true;
     setSubmitting(true);
     setError(null);
-    setNotice(null);
     try {
       const result = await api.allocateManually({
         planId: plan.id,
@@ -134,7 +133,7 @@ export default function ResourcePlanScreen() {
       });
       query.setData(result.data);
       query.refresh();
-      setNotice(
+      toast(
         `${result.source === 'sample' ? 'Simulated: ' : ''}manual allocation saved as version ${result.data.version}. Approve it to publish.`
       );
       setShowManual(false);
@@ -224,11 +223,6 @@ export default function ResourcePlanScreen() {
               </View>
             )}
 
-            {notice && (
-              <Text style={[styles.caption, { color: colors.textPrimary }]} accessibilityLiveRegion="polite">
-                {notice}
-              </Text>
-            )}
             {error && (
               <View style={[styles.card, { backgroundColor: colors.statusActiveBg }]} accessibilityLiveRegion="polite">
                 <Text style={[styles.body, styles.bold, { color: colors.statusActive }]}>Not applied</Text>
@@ -239,7 +233,19 @@ export default function ResourcePlanScreen() {
 
             {/* Actions */}
             {plan.status === 'PROPOSED' && (
-              <PrimaryButton label="Approve and publish" onPress={approve} busy={approving} disabled={busy && !approving} />
+              <PrimaryButton
+                label="Approve and publish"
+                onPress={() =>
+                  confirmAction({
+                    title: `Approve version ${plan.version}?`,
+                    message: 'Tasks are published to workers and instructions sent to contributors.',
+                    confirmLabel: 'Approve',
+                    onConfirm: approve,
+                  })
+                }
+                busy={approving}
+                disabled={busy && !approving}
+              />
             )}
             <Pressable
               onPress={replan}

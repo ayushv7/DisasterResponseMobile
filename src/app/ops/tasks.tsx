@@ -37,6 +37,7 @@ import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { EvidencePhotoPicker } from '@/components/EvidencePhotoPicker';
 import { ChipTone, StatusChip } from '@/components/StatusChip';
+import { useToast } from '@/components/Toast';
 import { api, ApiResult } from '@/services/api';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useSession } from '@/session/session-context';
@@ -100,7 +101,7 @@ export default function FieldWorkerTasksScreen() {
   const [completionPhotos, setCompletionPhotos] = useState<string[]>([]);
   const [problemKind, setProblemKind] = useState<ReplanningReason>('ROUTE_BLOCKED');
   // Short confirmation shown after each action
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const toast = useToast();
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<string[]>([]);
   const toggleExpanded = (id: string) =>
@@ -140,8 +141,7 @@ export default function FieldWorkerTasksScreen() {
 
   const showFeedback = (result: ApiResult<InterventionRecord>, message: string) => {
     setTasks((prev) => prev.map((t) => (t.id === result.data.id ? result.data : t)));
-    setFeedback(result.source === 'sample' ? `Simulated: ${message}` : message);
-    setTimeout(() => setFeedback(null), 4000);
+    toast(result.source === 'sample' ? `Simulated: ${message}` : message);
     // Re-read from the service so plan/verification changes show up too
     loadData();
   };
@@ -249,14 +249,6 @@ export default function FieldWorkerTasksScreen() {
       />
 
       {/* Feedback after each action */}
-      {feedback && (
-        <View
-          style={[styles.feedbackStrip, { backgroundColor: colors.surfaceMuted }]}
-          accessibilityLiveRegion="polite">
-          <Feather name="check" size={16} color={colors.actionPrimary} />
-          <Text style={[styles.feedbackText, { color: colors.textPrimary }]}>{feedback}</Text>
-        </View>
-      )}
 
       {/* Filter Chips */}
       <View style={styles.filterRow}>

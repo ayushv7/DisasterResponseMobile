@@ -7,11 +7,13 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AuthField } from '@/components/AuthForm';
+import { confirmAction } from '@/components/confirm';
 import { AuthorityTabBar } from '@/components/AuthorityTabBar';
 import { EmptyState } from '@/components/EmptyState';
 import { StateView } from '@/components/StateView';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { deriveQueryState } from '@/hooks/use-api-query';
+import { useToast } from '@/components/Toast';
 import { api, IS_MOCK_API } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -28,7 +30,7 @@ export default function TakedownScreen() {
   const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [targetId, setTargetId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
-  const [feedback, setFeedback] = useState<string | null>(null);
+  const toast = useToast();
   const [pendingId, setPendingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -58,7 +60,7 @@ export default function TakedownScreen() {
       setPendingId(item.id);
       const result = await api.takedownUpdate(item.id, reason.trim());
       setUpdates((prev) => prev.filter((u) => u.id !== item.id));
-      setFeedback(`${result.source === 'sample' ? 'Simulated: ' : ''}update from ${item.ngoName} taken down.`);
+      toast(`${result.source === 'sample' ? 'Simulated: ' : ''}update from ${item.ngoName} taken down.`);
       setTargetId(null);
       setReason('');
       load();
@@ -81,7 +83,6 @@ export default function TakedownScreen() {
           {IS_MOCK_API && (
             <Text style={[styles.caption, { color: colors.textTertiary }]}>SAMPLE DATA — published NGO updates</Text>
           )}
-          {feedback && <Text style={[styles.caption, { color: colors.textPrimary }]}>{feedback}</Text>}
           {updates.length === 0 ? (
             <EmptyState title="No published updates" description="Nothing to review." />
           ) : (
@@ -97,7 +98,15 @@ export default function TakedownScreen() {
                     <AuthField label="Reason" value={reason} onChangeText={setReason} />
                     <View style={styles.row}>
                       <Pressable
-                        onPress={() => takedown(item)}
+                        onPress={() =>
+                          confirmAction({
+                            title: 'Take down this update?',
+                            message: `${item.ngoName}'s update is removed from public view with your reason.`,
+                            confirmLabel: 'Take down',
+                            destructive: true,
+                            onConfirm: () => takedown(item),
+                          })
+                        }
                         disabled={pendingId === item.id}
                         style={[
                           styles.button,

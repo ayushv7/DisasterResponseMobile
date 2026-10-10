@@ -7,6 +7,7 @@ import { StatusBar } from 'expo-status-bar';
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BackendBanner } from '@/components/BackendBanner';
 import { IS_MOCK_API } from '@/services/api';
+import { ToastProvider } from '@/components/Toast';
 import { SessionProvider } from '@/session/session-context';
 import { ThemeProvider, useTheme } from '@/theme';
 
@@ -59,7 +60,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <SessionProvider>
-        <RootLayoutContent />
+        <ToastProvider>
+          <RootLayoutContent />
+        </ToastProvider>
       </SessionProvider>
     </ThemeProvider>
   );
