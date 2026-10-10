@@ -21,7 +21,7 @@ interface TabDef {
 const TABS: TabDef[] = [
   {
     key: 'feed',
-    label: 'Feed',
+    label: 'Alerts',
     icon: 'shield',
     route: '/alerts',
     accessibilityLabel: 'Flood alerts feed',
@@ -35,10 +35,10 @@ const TABS: TabDef[] = [
   },
   {
     key: 'messages',
-    label: 'Messages',
+    label: 'Message NGO',
     icon: 'message-square',
     route: '/messages',
-    accessibilityLabel: 'Sent private messages',
+    accessibilityLabel: 'Message a verified NGO and see sent messages',
   },
   {
     key: 'profile',
@@ -48,6 +48,10 @@ const TABS: TabDef[] = [
     accessibilityLabel: 'User profile and settings',
   },
 ];
+
+/** Map is hidden until it shows real geospatial data (route still exists). */
+const HIDDEN_TABS: TabKey[] = ['map'];
+const VISIBLE_TABS = TABS.filter((tab) => !HIDDEN_TABS.includes(tab.key));
 
 interface BottomNavBarProps {
   activeTab: TabKey;
@@ -72,7 +76,7 @@ export function BottomNavBar({ activeTab }: BottomNavBarProps) {
           paddingBottom: Math.max(insets.bottom, 8),
         },
       ]}>
-      {TABS.map((tab) => {
+      {VISIBLE_TABS.map((tab) => {
         const isActive = tab.key === activeTab;
         return (
           <Pressable

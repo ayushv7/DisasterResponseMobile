@@ -32,32 +32,32 @@ interface NgoTabDef {
 
 const NGO_TABS: NgoTabDef[] = [
   {
-    key: 'feed',
-    label: 'Event Feed',
-    icon: 'activity',
-    route: '/ngo/feed',
-    accessibilityLabel: 'NGO situational event feed',
-  },
-  {
     key: 'inbox',
     label: 'Inbox',
     icon: 'inbox',
     route: '/ngo/inbox',
-    accessibilityLabel: 'NGO private message triage inbox',
+    accessibilityLabel: 'Private messages from the public',
   },
   {
     key: 'contributions',
-    label: 'Contributions',
-    icon: 'file-text',
+    label: 'Publish',
+    icon: 'edit-3',
     route: '/ngo/contributions',
-    accessibilityLabel: 'Published and draft contributions',
+    accessibilityLabel: 'Draft and published updates',
+  },
+  {
+    key: 'feed',
+    label: 'Evidence',
+    icon: 'activity',
+    route: '/ngo/feed',
+    accessibilityLabel: 'Incidents and source evidence',
   },
   {
     key: 'organization',
     label: 'Organization',
     icon: 'shield',
     route: '/ngo/organization',
-    accessibilityLabel: 'Organization verification and details',
+    accessibilityLabel: 'Organization status, settings and sign out',
   },
 ];
 

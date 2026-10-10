@@ -6,6 +6,8 @@
  * 2. Incidents Catalogue (/ops/incidents)
  * 3. Field Tasks Management (/ops/tasks)
  * 4. Verification & Replanning (/ops/replanning)
+ * 5. More (/ops/more)
+ * Field workers see Tasks + Profile only.
  */
 
 import React from 'react';
@@ -14,6 +16,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -31,7 +34,7 @@ interface OpsTabDef {
 const OPS_TABS: OpsTabDef[] = [
   {
     key: 'operations',
-    label: 'Operations',
+    label: 'Ops',
     icon: 'activity',
     route: '/ops/home',
     accessibilityLabel: 'Operations queue and active interventions',
@@ -45,14 +48,14 @@ const OPS_TABS: OpsTabDef[] = [
   },
   {
     key: 'tasks',
-    label: 'Field Tasks',
+    label: 'Tasks',
     icon: 'check-square',
     route: '/ops/tasks',
     accessibilityLabel: 'Field worker task execution and acknowledgements',
   },
   {
     key: 'replanning',
-    label: 'Replanning',
+    label: 'Replan',
     icon: 'refresh-cw',
     route: '/ops/replanning',
     accessibilityLabel: 'Verification and alternative allocation replanning',
@@ -66,6 +69,9 @@ const OPS_TABS: OpsTabDef[] = [
   },
 ];
 
+/** Field workers only see their tasks and profile; coordinators see all. */
+const FIELD_WORKER_TABS: OpsTabKey[] = ['tasks', 'more'];
+
 interface OpsBottomNavBarProps {
   activeTab: OpsTabKey;
 }
@@ -73,6 +79,13 @@ interface OpsBottomNavBarProps {
 export function OpsBottomNavBar({ activeTab }: OpsBottomNavBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
+  const { role } = useSession();
+  const tabs =
+    role === 'field_worker'
+      ? OPS_TABS.filter((tab) => FIELD_WORKER_TABS.includes(tab.key)).map((tab) =>
+          tab.key === 'more' ? { ...tab, label: 'Profile' } : tab
+        )
+      : OPS_TABS;
 
   const handleTabPress = (tab: OpsTabDef) => {
     if (tab.key === activeTab) return;
@@ -88,7 +101,7 @@ export function OpsBottomNavBar({ activeTab }: OpsBottomNavBarProps) {
           paddingBottom: Math.max(insets.bottom, 8),
         },
       ]}>
-      {OPS_TABS.map((tab) => {
+      {tabs.map((tab) => {
         const isActive = tab.key === activeTab;
         return (
           <Pressable
