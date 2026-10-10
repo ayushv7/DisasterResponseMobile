@@ -40,7 +40,7 @@ import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
-import { typography } from '@/theme/typography';
+import { textScale, typography } from '@/theme/typography';
 import { InterventionRecord, InterventionStatus, ReplanningReason } from '@/types/operations';
 
 type TaskFilter = 'ALL' | 'ASSIGNED' | 'ACTIVE' | 'BLOCKED';
@@ -98,6 +98,9 @@ export default function FieldWorkerTasksScreen() {
   // Short confirmation shown after each action
   const [feedback, setFeedback] = useState<string | null>(null);
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<string[]>([]);
+  const toggleExpanded = (id: string) =>
+    setExpandedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const [submittingComplete, setSubmittingComplete] = useState(false);
 
   const loadData = useCallback(async (isRefresh = false) => {
@@ -144,6 +147,11 @@ export default function FieldWorkerTasksScreen() {
     if (filter === 'BLOCKED') return t.status === 'BLOCKED' || t.status === 'FAILED';
     return true;
   });
+
+  /** The first actionable card in the sorted list; only it gets a filled button. */
+  const urgentTaskId = filteredTasks.find((t) =>
+    ['AWAITING_ACK', 'EN_ROUTE', 'IN_PROGRESS'].includes(t.status)
+  )?.id;
 
   const handleAcknowledge = async (item: InterventionRecord) => {
     try {
@@ -313,6 +321,8 @@ export default function FieldWorkerTasksScreen() {
           renderItem={({ item }) => {
             const chip = STATE_CHIPS[item.status];
             const busy = busyTaskId === item.id;
+            const expanded = expandedIds.includes(item.id);
+            const isUrgent = item.id === urgentTaskId;
 
             return (
               <View
@@ -325,36 +335,14 @@ export default function FieldWorkerTasksScreen() {
                   <StatusChip label={chip.label} tone={chip.tone} />
                 </View>
 
-                {/* Target Locality & Incident */}
-                <Text style={[styles.localityText, { color: colors.textPrimary }]}>
-                  {item.targetLocality}
-                </Text>
-                <Text style={[styles.incidentSubtitle, { color: colors.textTertiary }]}>
-                  {item.incidentTitle}
-                </Text>
-
-                {/* Work Instructions */}
-                <View style={[styles.instructionBox, { backgroundColor: colors.surfaceMuted }]}>
-                  <Text style={[styles.instructionLabel, { color: colors.textTertiary }]}>
-                    DISPATCH ORDERS:
-                  </Text>
-                  <Text
-                    style={[styles.instructionBody, { color: colors.textPrimary }]}
-                    numberOfLines={3}>
-                    {item.instructions}
-                  </Text>
-                </View>
-
-                {role === 'field_worker' && (
-                  <AssignmentSummary
-                    where={`${item.targetLocality} · ${item.incidentTitle}`}
-                    what={item.instructions}
-                    deadline={item.deadlineTimestamp}
-                    ngoName={item.assignedNgoName ?? session?.user?.ngoName}
-                  />
-                )}
-
-                {/* Assigned Crew & Equipment */}
+                {/* Summary: where, what, by when, which NGO */}
+                <AssignmentSummary
+                  where={`${item.targetLocality} · ${item.incidentTitle}`}
+                  what={item.instructions}
+                  whatLines={2}
+                  deadline={item.deadlineTimestamp}
+                  ngoName={item.assignedNgoName ?? (role === 'field_worker' ? session?.user?.ngoName : undefined)}
+                />
                 {item.deadlineTimestamp && item.status === 'AWAITING_ACK' && (
                   <Text style={[styles.crewText, { color: colors.statusWatch }]}>
                     Acknowledge by{' '}
@@ -364,28 +352,6 @@ export default function FieldWorkerTasksScreen() {
                     })}
                   </Text>
                 )}
-                {item.assignedTeamName && (
-                  <View style={styles.crewRow}>
-                    <Feather name="users" size={13} color={colors.textTertiary} />
-                    <Text style={[styles.crewText, { color: colors.textSecondary }]}>
-                      Assigned: {item.assignedTeamName}
-                      {item.assignedNgoName ? ` · ${item.assignedNgoName}` : ''}
-                    </Text>
-                  </View>
-                )}
-                {item.assignedWorkerName && (
-                  <Text style={[styles.crewText, { color: colors.textSecondary }]}>
-                    Worker: {item.assignedWorkerName}
-                    {item.assignedWorkerIsVolunteer ? ' · Volunteer' : ''}
-                  </Text>
-                )}
-                {item.requiredQualification && (
-                  <Text style={[styles.crewText, { color: colors.textSecondary }]}>
-                    Requires: {item.requiredQualification}
-                  </Text>
-                )}
-                <VerificationStatus item={item} />
-                <TaskHistory history={item.history} />
 
                 {/* Blocker details if blocked */}
                 {item.blockerReport && (
@@ -430,17 +396,27 @@ export default function FieldWorkerTasksScreen() {
                           style={({ pressed }) => [
                             styles.actionBtnPrimary,
                             {
-                              backgroundColor: pressed
-                                ? colors.actionPrimaryPressed
-                                : colors.actionPrimary,
+                              // Only the most urgent card gets the filled button
+                              backgroundColor: isUrgent
+                                ? pressed
+                                  ? colors.actionPrimaryPressed
+                                  : colors.actionPrimary
+                                : colors.surfaceMuted,
                             },
                           ]}
                           accessibilityRole="button"
                           accessibilityLabel={`${primary.label}: ${item.id}`}>
                           {busy ? (
-                            <ActivityIndicator size="small" color={colors.onActionPrimary} />
+                            <ActivityIndicator
+                              size="small"
+                              color={isUrgent ? colors.onActionPrimary : colors.textPrimary}
+                            />
                           ) : (
-                            <Text style={[styles.actionBtnPrimaryText, { color: colors.onActionPrimary }]}>
+                            <Text
+                              style={[
+                                styles.actionBtnPrimaryText,
+                                { color: isUrgent ? colors.onActionPrimary : colors.textPrimary },
+                              ]}>
                               {primary.label}
                             </Text>
                           )}
@@ -469,6 +445,49 @@ export default function FieldWorkerTasksScreen() {
                     </View>
                   );
                 })()}
+
+                {/* Details: progressive disclosure */}
+                <Pressable
+                  onPress={() => toggleExpanded(item.id)}
+                  style={styles.moreRow}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded }}
+                  accessibilityLabel={`${expanded ? 'Hide' : 'Show'} details for ${item.id}`}>
+                  <Text style={[styles.crewText, { color: colors.textSecondary }]}>
+                    {expanded ? 'Less' : 'More details'}
+                  </Text>
+                  <Feather name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textSecondary} />
+                </Pressable>
+                {expanded && (
+                  <View style={styles.details}>
+                    <View style={[styles.instructionBox, { backgroundColor: colors.surfaceMuted }]}>
+                      <Text style={[styles.instructionLabel, { color: colors.textTertiary }]}>DISPATCH ORDERS</Text>
+                      <Text style={[styles.instructionBody, { color: colors.textPrimary }]}>{item.instructions}</Text>
+                    </View>
+                    {item.assignedTeamName && (
+                      <View style={styles.crewRow}>
+                        <Feather name="users" size={13} color={colors.textTertiary} />
+                        <Text style={[styles.crewText, { color: colors.textSecondary }]}>
+                          Assigned: {item.assignedTeamName}
+                          {item.assignedNgoName ? ` · ${item.assignedNgoName}` : ''}
+                        </Text>
+                      </View>
+                    )}
+                    {item.assignedWorkerName && (
+                      <Text style={[styles.crewText, { color: colors.textSecondary }]}>
+                        Worker: {item.assignedWorkerName}
+                        {item.assignedWorkerIsVolunteer ? ' · Volunteer' : ''}
+                      </Text>
+                    )}
+                    {item.requiredQualification && (
+                      <Text style={[styles.crewText, { color: colors.textSecondary }]}>
+                        Requires: {item.requiredQualification}
+                      </Text>
+                    )}
+                    <VerificationStatus item={item} />
+                    <TaskHistory history={item.history} />
+                  </View>
+                )}
               </View>
             );
           }}
@@ -548,7 +567,7 @@ export default function FieldWorkerTasksScreen() {
                 size={16}
                 color={isCriticalBlocker ? colors.statusActive : colors.textTertiary}
               />
-              <Text style={{ ...typography.caption, color: colors.textPrimary, fontSize: 12 }}>
+              <Text style={{ ...typography.caption, ...textScale.caption, color: colors.textPrimary }}>
                 Critical: work cannot continue
               </Text>
             </Pressable>
@@ -648,6 +667,15 @@ export default function FieldWorkerTasksScreen() {
 }
 
 const styles = StyleSheet.create({
+  moreRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    minHeight: touchTargets.min,
+  },
+  details: {
+    gap: spacing.sm,
+  },
   feedbackStrip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -659,7 +687,7 @@ const styles = StyleSheet.create({
   },
   feedbackText: {
     ...typography.body,
-    fontSize: 15,
+    ...textScale.body,
     flex: 1,
   },
   secondaryAction: {
@@ -669,7 +697,7 @@ const styles = StyleSheet.create({
   },
   secondaryActionText: {
     ...typography.bodyMedium,
-    fontSize: 15,
+    ...textScale.body,
     fontWeight: '600',
   },
   kindRow: {
@@ -685,7 +713,7 @@ const styles = StyleSheet.create({
   },
   kindChipText: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '600',
   },
   safeArea: {
@@ -697,18 +725,17 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   headerTitleWrap: {
-    gap: 2,
+    gap: spacing.xxs,
   },
   headerOverline: {
     ...typography.overline,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   headerTitle: {
     ...typography.title,
-    fontSize: 22,
-    lineHeight: 28,
+    ...textScale.title,
     flexShrink: 1,
   },
   filterRow: {
@@ -719,12 +746,12 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
+    paddingVertical: spacing.sm,
     borderRadius: radii.chip,
   },
   filterChipText: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
   },
   skeletonWrap: {
     paddingHorizontal: spacing.screenPadding,
@@ -738,7 +765,7 @@ const styles = StyleSheet.create({
   taskCard: {
     borderRadius: radii.card,
     padding: spacing.cardPadding,
-    gap: 6,
+    gap: spacing.sm,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -747,82 +774,81 @@ const styles = StyleSheet.create({
   },
   taskTypeTag: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '700',
   },
   badgePill: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: radii.xs,
   },
   badgeText: {
     ...typography.overline,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '700',
     letterSpacing: 0.4,
   },
   localityText: {
     ...typography.bodyMedium,
-    fontSize: 15,
+    ...textScale.body,
     fontWeight: '700',
   },
   incidentSubtitle: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
   },
   instructionBox: {
     borderRadius: radii.sm,
     padding: spacing.md,
-    gap: 2,
-    marginTop: 2,
+    gap: spacing.xxs,
+    marginTop: spacing.xxs,
   },
   instructionLabel: {
     ...typography.overline,
-    fontSize: 12,
+    ...textScale.caption,
   },
   instructionBody: {
     ...typography.body,
-    fontSize: 12,
-    lineHeight: 18,
+    ...textScale.caption,
   },
   crewRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    marginTop: 2,
+    gap: spacing.xs,
+    marginTop: spacing.xxs,
   },
   crewText: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
   },
   blockerAlert: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
     padding: spacing.sm,
     borderRadius: radii.xs,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   blockerAlertText: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '600',
   },
   actionButtonsRow: {
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   actionBtnPrimary: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: spacing.sm,
     height: touchTargets.min,
     borderRadius: radii.button,
   },
   actionBtnPrimaryText: {
     ...typography.bodyMedium,
     fontWeight: '700',
-    fontSize: 15,
+    ...textScale.body,
   },
   dualActionsRow: {
     flexDirection: 'row',
@@ -833,13 +859,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: spacing.xs,
     height: touchTargets.min,
     borderRadius: radii.button,
   },
   actionBtnDangerText: {
     ...typography.bodyMedium,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '700',
   },
   actionBtnSuccess: {
@@ -847,13 +873,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: spacing.xs,
     height: touchTargets.min,
     borderRadius: radii.button,
   },
   actionBtnSuccessText: {
     ...typography.bodyMedium,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '700',
   },
   modalOverlay: {
@@ -875,19 +901,17 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     ...typography.cardTitle,
-    fontSize: 15,
+    ...textScale.body,
   },
   modalDesc: {
     ...typography.body,
-    fontSize: 12,
-    lineHeight: 18,
+    ...textScale.caption,
   },
   modalTextInput: {
     borderRadius: radii.sm,
     padding: spacing.sm,
-    minHeight: 90,
-    fontSize: 12,
-    lineHeight: 18,
+    minHeight: touchTargets.min * 2,
+    ...textScale.caption,
   },
   modalActions: {
     flexDirection: 'row',
@@ -903,7 +927,7 @@ const styles = StyleSheet.create({
   },
   modalCancelText: {
     ...typography.bodyMedium,
-    fontSize: 15,
+    ...textScale.body,
   },
   modalConfirm: {
     flex: 1.2,
@@ -915,6 +939,6 @@ const styles = StyleSheet.create({
   modalConfirmText: {
     ...typography.bodyMedium,
     fontWeight: '700',
-    fontSize: 15,
+    ...textScale.body,
   },
 });

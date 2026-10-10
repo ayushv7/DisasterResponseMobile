@@ -11,23 +11,28 @@ export function AssignmentSummary({
   what,
   deadline,
   ngoName,
+  whatLines,
 }: {
   where: string;
   what: string;
+  /** Truncate "What" to this many lines (full text shown elsewhere). */
+  whatLines?: number;
   deadline?: string;
   ngoName?: string;
 }) {
   const { colors } = useTheme();
-  const row = (label: string, value: string) => (
+  const row = (label: string, value: string, lines?: number) => (
     <View style={styles.row}>
       <Text style={[styles.label, { color: colors.textTertiary }]}>{label}</Text>
-      <Text style={[styles.value, { color: colors.textPrimary }]}>{value}</Text>
+      <Text style={[styles.value, { color: colors.textPrimary }]} numberOfLines={lines}>
+        {value}
+      </Text>
     </View>
   );
   return (
     <View style={[styles.box, { backgroundColor: colors.surfaceMuted }]} accessibilityLabel="Your assignment">
       {row('Where', where)}
-      {row('What', what)}
+      {row('What', what, whatLines)}
       {row(
         'By',
         deadline
