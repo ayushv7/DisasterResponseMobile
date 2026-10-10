@@ -1,11 +1,10 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { router } from 'expo-router';
 
 import { Colors } from '@/constants/theme';
 import { FloodEvent } from '@/types/disaster';
 import { FreshnessBadge, StatusBadge } from './status-badge';
-import { useColorScheme } from 'react-native';
 
 interface EventCardProps {
   event: FloodEvent;

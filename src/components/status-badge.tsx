@@ -1,9 +1,8 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
 import { EventStatus, FreshnessState } from '@/types/disaster';
-import { useColorScheme } from 'react-native';
 
 interface StatusBadgeProps {
   status: EventStatus;

@@ -1,8 +1,7 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, useColorScheme, View } from 'react-native';
 
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from 'react-native';
 
 interface SampleDataBannerProps {
   isFixtureData?: boolean;
