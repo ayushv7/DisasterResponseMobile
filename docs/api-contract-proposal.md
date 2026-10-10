@@ -319,10 +319,91 @@ The list of NGO needs is currently read from published NGO updates (`GET /incide
 
 ## Staff roles
 
-`coordinator` and `admin` stay **separate roles** in this contract. The app shows both the same
-staff console for now (Ops console + "Approve NGOs"). The backend must still enforce that only
-`admin` can call `POST /admin/ngos/{id}/approve` and only `coordinator` performs dispatch actions
-unless the backend decides otherwise. Listing registrations uses `GET /ngos?status=PENDING`.
+`coordinator` and `admin` stay **separate roles** in this contract. The app shows both one
+"authority" console for now. The backend must still enforce which of them may do what.
+
+## Final role model (PROPOSED)
+
+All items in this section are **PROPOSED** and not implemented.
+
+- **Backend (AWS):** detects incidents, computes priority and resource allocation, and selects the
+  nearby NGO(s). The app never decides any of this. In mock mode the app shows sample plans
+  labelled "Simulated".
+- **Authority** (`coordinator` + `admin`): no disaster assignment. Pending NGO queue
+  (approve/reject), create NGO account, suspend NGO, content takedown.
+- **NGO:** sees only incidents and plans the backend scoped to it. Accepts or adjusts the plan,
+  assigns tasks to its own workers, verifies evidence (step 1), manages its field team and
+  volunteers. Cannot approve NGOs or override authority decisions.
+- **Field worker** (staff or volunteer): own tasks only, tagged with the NGO name.
+- **Citizen:** optional sign-in for offers, alerts and volunteering. Visitors need no sign-in.
+
+### Scoping
+
+`GET /incidents`, `GET /ops/summary`, `GET /ops/action-queue`, `GET /work-orders` and
+`GET /reassignments` return results **pre-scoped per caller**: an NGO gets only incidents near it
+(nearby-NGO selection is backend-side), a field worker only its own work orders. The app does not
+filter by role or distance.
+
+### Types
+
+```ts
+interface WorkOrder {          // additions, PROPOSED
+  requiredQualification?: string;
+  assignedWorkerId?: string;
+  assignedWorkerName?: string;
+  assignedWorkerIsVolunteer?: boolean;
+  assignedNgoName?: string;
+  ngoVerification?: VerificationStep;        // step 1: the NGO checks evidence
+  authorityVerification?: VerificationStep;  // step 2: authority final verification
+}
+
+interface VerificationStep { status: 'PENDING' | 'VERIFIED' | 'REJECTED'; by?: string; at?: string }
+
+interface Ngo {                // additions, PROPOSED
+  ngoCode: string;             // backend-issued
+  area: string;                // used by the backend to select nearby NGOs
+  status: 'PENDING' | 'APPROVED' | 'SUSPENDED';
+}
+
+interface NgoMember { kind: 'STAFF_WORKER' | 'VOLUNTEER' }   // addition, PROPOSED
+
+interface EligibilityResult { eligible: boolean; reasons: string[]; checkedAt: string }
+
+interface VolunteerApplication {
+  id: string;
+  name: string;
+  contact: string;             // masked
+  skills: string[];
+  availability: string;
+  ngoId?: string;
+  source: 'APPLIED' | 'INVITED';
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'REVOKED';
+  decisionReason?: string;
+  eligibility?: EligibilityResult;   // computed by the backend only
+  createdAt: string;
+}
+```
+
+### Endpoints
+
+| Method | Path | Who | Purpose | Status |
+|---|---|---|---|---|
+| GET | `/ngos?status=PENDING` | authority | Pending NGO queue | PROPOSED |
+| POST | `/admin/ngos` | authority | `createNgo`: `{ name, email, area }` → `{ ngo, credentials }` (shown once) | PROPOSED |
+| POST | `/admin/ngos/{id}/approve` | authority | `approveNgo`: `{ approved }`; `false` rejects a pending NGO or suspends an approved one | PROPOSED |
+| POST | `/admin/updates/{id}/takedown` | authority | `{ reason }` | PROPOSED |
+| POST | `/work-orders/{id}/accept` | ngo | Accept the backend plan as is | PROPOSED |
+| POST | `/work-orders/{id}/assign` | ngo | Adjust the plan: `{ resourceIds, deadline, overrideReason }` | PROPOSED |
+| POST | `/work-orders/{id}/assign-worker` | ngo | `assignTask` / `assignToWorker`: `{ memberId }`; backend checks the worker belongs to the NGO and holds the qualification | PROPOSED |
+| POST | `/work-orders/{id}/verify` | ngo, authority | Step 1 (ngo) or step 2 (authority): `{ outcome, notes? }` | PROPOSED |
+| POST | `/volunteers/applications` | citizen | `applyToVolunteer`: `{ name, skills, availability, ngoId?, consent: true }` | PROPOSED |
+| GET | `/volunteers/applications?owner=me` | citizen | Own application with status and reason | PROPOSED |
+| GET | `/ngo/volunteer-applications` | ngo | `listVolunteerApplications` with `eligibility` | PROPOSED |
+| POST | `/ngo/volunteer-applications/{id}/decision` | ngo | `decideVolunteerApplication`: `{ decision: 'APPROVE' \| 'REJECT' \| 'REVOKE', reason? }` (reason required for reject/revoke) | PROPOSED |
+
+`createWorker`, `disableWorker`, `resetWorkerPassword` and `workerLogin` are listed under
+"Field worker accounts" above. An approved volunteer becomes an `NgoMember` with
+`kind: 'VOLUNTEER'`; the backend issues their credentials.
 
 ## Open questions for the backend
 
@@ -336,3 +417,6 @@ unless the backend decides otherwise. Listing registrations uses `GET /ngos?stat
 8. OTP: code length, expiry, resend limits, and which SMS/email provider.
 9. Offer matching: how and when offers are matched, and how the citizen is told.
 10. Push notifications: provider (Expo push?) and how device tokens are registered.
+11. Authority final verification: which authority role signs off, and in which screen (the app
+    currently only displays its status).
+12. Eligibility checks for volunteers: which checks run (ID, certificates) and how reasons are worded.
