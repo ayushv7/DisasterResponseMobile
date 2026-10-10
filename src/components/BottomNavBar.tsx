@@ -8,7 +8,46 @@ import { useTheme } from '@/theme';
 import { spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
-export type TabKey = 'alerts' | 'settings';
+export type TabKey = 'feed' | 'map' | 'messages' | 'profile';
+
+interface TabDef {
+  key: TabKey;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+  route: string;
+  accessibilityLabel: string;
+}
+
+const TABS: TabDef[] = [
+  {
+    key: 'feed',
+    label: 'Feed',
+    icon: 'shield',
+    route: '/',
+    accessibilityLabel: 'Flood alerts feed',
+  },
+  {
+    key: 'map',
+    label: 'Map',
+    icon: 'map-pin',
+    route: '/map',
+    accessibilityLabel: 'Flood event map',
+  },
+  {
+    key: 'messages',
+    label: 'Messages',
+    icon: 'message-square',
+    route: '/messages',
+    accessibilityLabel: 'Sent private messages',
+  },
+  {
+    key: 'profile',
+    label: 'Profile',
+    icon: 'user',
+    route: '/profile',
+    accessibilityLabel: 'User profile and settings',
+  },
+];
 
 interface BottomNavBarProps {
   activeTab: TabKey;
@@ -18,13 +57,10 @@ export function BottomNavBar({ activeTab }: BottomNavBarProps) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
 
-  const handleTabPress = (tab: TabKey) => {
-    if (tab === activeTab) return;
-    if (tab === 'alerts') {
-      router.replace('/');
-    } else if (tab === 'settings') {
-      router.push('/settings');
-    }
+  const handleTabPress = (tab: TabDef) => {
+    if (tab.key === activeTab) return;
+    // Use replace for top-level tab switches to avoid stacking
+    router.replace(tab.route as any);
   };
 
   return (
@@ -32,57 +68,38 @@ export function BottomNavBar({ activeTab }: BottomNavBarProps) {
       style={[
         styles.container,
         {
-          backgroundColor: colors.background, // seamlessly anchors into true-dark canvas
+          backgroundColor: colors.background,
           paddingBottom: Math.max(insets.bottom, 8),
         },
       ]}>
-      {/* Tab 1: Alerts */}
-      <Pressable
-        onPress={() => handleTabPress('alerts')}
-        style={styles.tabButton}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: activeTab === 'alerts' }}
-        accessibilityLabel="Flood alerts feed tab">
-        <Feather
-          name="shield"
-          size={20}
-          color={activeTab === 'alerts' ? colors.textPrimary : colors.textTertiary}
-        />
-        <Text
-          style={[
-            styles.tabLabel,
-            {
-              color: activeTab === 'alerts' ? colors.textPrimary : colors.textTertiary,
-              fontWeight: activeTab === 'alerts' ? '700' : '500',
-            },
-          ]}>
-          Alerts
-        </Text>
-      </Pressable>
-
-      {/* Tab 2: Settings */}
-      <Pressable
-        onPress={() => handleTabPress('settings')}
-        style={styles.tabButton}
-        accessibilityRole="tab"
-        accessibilityState={{ selected: activeTab === 'settings' }}
-        accessibilityLabel="Application settings tab">
-        <Feather
-          name="settings"
-          size={20}
-          color={activeTab === 'settings' ? colors.textPrimary : colors.textTertiary}
-        />
-        <Text
-          style={[
-            styles.tabLabel,
-            {
-              color: activeTab === 'settings' ? colors.textPrimary : colors.textTertiary,
-              fontWeight: activeTab === 'settings' ? '700' : '500',
-            },
-          ]}>
-          Settings
-        </Text>
-      </Pressable>
+      {TABS.map((tab) => {
+        const isActive = tab.key === activeTab;
+        return (
+          <Pressable
+            key={tab.key}
+            onPress={() => handleTabPress(tab)}
+            style={styles.tabButton}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isActive }}
+            accessibilityLabel={tab.accessibilityLabel}>
+            <Feather
+              name={tab.icon}
+              size={20}
+              color={isActive ? colors.textPrimary : colors.textTertiary}
+            />
+            <Text
+              style={[
+                styles.tabLabel,
+                {
+                  color: isActive ? colors.textPrimary : colors.textTertiary,
+                  fontWeight: isActive ? '700' : '500',
+                },
+              ]}>
+              {tab.label}
+            </Text>
+          </Pressable>
+        );
+      })}
     </View>
   );
 }

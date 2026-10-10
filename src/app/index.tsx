@@ -166,7 +166,7 @@ export default function FloodIntelligenceFeedScreen() {
       </ScrollView>
 
       {/* 6. Bottom Navigation Bar */}
-      <BottomNavBar activeTab="alerts" />
+      <BottomNavBar activeTab="feed" />
     </SafeAreaView>
   );
 }

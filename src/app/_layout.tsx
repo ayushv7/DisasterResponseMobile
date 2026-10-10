@@ -21,6 +21,9 @@ function RootLayoutContent() {
           animation: 'slide_from_right',
         }}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="map" />
+        <Stack.Screen name="messages" />
+        <Stack.Screen name="profile" />
         <Stack.Screen name="event/[id]" />
         <Stack.Screen name="message/compose" />
         <Stack.Screen name="settings" />

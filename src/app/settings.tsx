@@ -143,7 +143,7 @@ export default function SettingsScreen() {
       </ScrollView>
 
       {/* 4. Bottom Navigation Bar */}
-      <BottomNavBar activeTab="settings" />
+      <BottomNavBar activeTab="profile" />
     </SafeAreaView>
   );
 }

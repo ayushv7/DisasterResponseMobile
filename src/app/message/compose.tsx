@@ -8,7 +8,7 @@
  *
  * ─── BACKEND STATUS (Oct 2026) ───────────────────────────────────────────────
  * This screen is a UI-COMPLETE STUB. The API layer (src/services/messaging-api.ts)
- * returns fixture data and a simulated receipt. To integrate:
+ * returns fixture NGOs and sends nothing (no receipt). To integrate:
  *   1. Set EXPO_PUBLIC_API_BASE_URL in your .env file.
  *   2. Remove IS_STUB_API = true from the service module.
  *   3. Add real authentication (Bearer token) to the service headers.
@@ -170,7 +170,8 @@ export default function PrivateMessageComposeScreen() {
   const isSubmitting = uiState === 'submitting';
 
   // ─── SUCCESS VIEW ─────────────────────────────────────────────────────────
-  if (uiState === 'success' && receipt) {
+  // `receipt` is null when the stub is active: nothing was sent.
+  if (uiState === 'success') {
     return (
       <SafeAreaView
         edges={['top', 'left', 'right']}
@@ -191,50 +192,63 @@ export default function PrivateMessageComposeScreen() {
           contentContainerStyle={styles.successContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Success Icon */}
-          <View style={[styles.successIconRing, { backgroundColor: colors.statusResolvedBg }]}>
-            <Feather name="check" size={32} color={colors.statusResolved} />
-          </View>
-
-          <Text style={[styles.successTitle, { color: colors.textPrimary }]}>
-            Message Sent Privately
-          </Text>
-          <Text style={[styles.successDesc, { color: colors.textSecondary }]}>
-            Your message has been delivered to{' '}
-            <Text style={{ fontWeight: '700' }}>{selectedNgo?.name}</Text> regarding this
-            flood alert. It is private and will not appear publicly on the platform.
-          </Text>
-
-          {/* Receipt details */}
-          <View style={[styles.receiptBox, { backgroundColor: colors.surface }]}>
-            {IS_STUB_API && (
-              <View style={[styles.stubBanner, { backgroundColor: colors.statusWatchBg }]}>
-                <Feather name="alert-triangle" size={13} color={colors.statusWatch} />
-                <Text style={[styles.stubBannerText, { color: colors.statusWatch }]}>
-                  Simulation only — no real message was sent (backend not yet connected)
-                </Text>
+          {receipt ? (
+            <>
+              <View style={[styles.successIconRing, { backgroundColor: colors.statusResolvedBg }]}>
+                <Feather name="check" size={32} color={colors.statusResolved} />
               </View>
-            )}
-            <ReceiptRow label="Message ID" value={receipt.messageId} />
-            <ReceiptRow label="NGO" value={selectedNgo?.name ?? receipt.ngoId} />
-            <ReceiptRow label="Status" value="Pending NGO Review" />
-            <ReceiptRow
-              label="Submitted"
-              value={new Date(receipt.submittedAt).toLocaleString([], {
-                month: 'short',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false,
-              })}
-            />
-          </View>
 
-          <Text style={[styles.nextStepNote, { color: colors.textTertiary }]}>
-            The NGO will review your message privately. You will not receive a
-            push notification in this version — NGO response tracking will be
-            added in a future release.
-          </Text>
+              <Text style={[styles.successTitle, { color: colors.textPrimary }]}>
+                Message Submitted
+              </Text>
+              <Text style={[styles.successDesc, { color: colors.textSecondary }]}>
+                The server accepted your private message for{' '}
+                <Text style={{ fontWeight: '700' }}>{selectedNgo?.name}</Text>. It will not
+                appear publicly on the platform.
+              </Text>
+
+              {/* Server receipt — only fields returned by the backend */}
+              <View style={[styles.receiptBox, { backgroundColor: colors.surface }]}>
+                <ReceiptRow label="Message ID" value={receipt.messageId} />
+                <ReceiptRow label="NGO" value={selectedNgo?.name ?? receipt.ngoId} />
+                <ReceiptRow
+                  label="Submitted"
+                  value={new Date(receipt.submittedAt).toLocaleString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                  })}
+                />
+              </View>
+
+              <Text style={[styles.nextStepNote, { color: colors.textTertiary }]}>
+                Review status is reported by the NGO through the server and will
+                appear in Messages when available.
+              </Text>
+            </>
+          ) : (
+            <>
+              <View style={[styles.successIconRing, { backgroundColor: colors.surfaceMuted }]}>
+                <Feather name="eye" size={28} color={colors.textSecondary} />
+              </View>
+
+              <Text style={[styles.successTitle, { color: colors.textPrimary }]}>
+                Not Sent — Preview Only
+              </Text>
+              <Text style={[styles.successDesc, { color: colors.textSecondary }]}>
+                The backend is not connected yet, so this message was not sent to{' '}
+                <Text style={{ fontWeight: '700' }}>{selectedNgo?.name}</Text> and was not
+                stored. No message ID or status exists.
+              </Text>
+
+              <View style={[styles.receiptBox, { backgroundColor: colors.surface }]}>
+                <ReceiptRow label="NGO" value={selectedNgo?.name ?? '—'} />
+                <ReceiptRow label="Event" value={eventId ?? '—'} />
+              </View>
+            </>
+          )}
 
           <Pressable
             onPress={() => router.replace('/')}

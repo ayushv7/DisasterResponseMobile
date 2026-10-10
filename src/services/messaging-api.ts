@@ -92,10 +92,11 @@ export async function fetchVerifiedNgos(): Promise<VerifiedNgo[]> {
 /**
  * Submits a private public-user message to a verified NGO.
  *
- * STUB: Simulates a successful submission after a delay.
- *       Set FORCE_STUB_FAILURE = true below to test error handling.
+ * STUB: Nothing is sent. Resolves with `null` after a delay — no receipt is
+ *       fabricated. Set FORCE_STUB_FAILURE = true below to test error handling.
  * REAL: POST ${API_BASE}/api/v1/events/{eventId}/messages
  *
+ * @returns The server receipt, or `null` when the stub is active (not sent).
  * @throws Error if the network request fails or the backend returns non-2xx.
  */
 
@@ -104,7 +105,7 @@ const FORCE_STUB_FAILURE = false;
 
 export async function submitPrivateMessage(
   draft: MessageDraft
-): Promise<MessageReceipt> {
+): Promise<MessageReceipt | null> {
   if (IS_STUB_API || !API_BASE) {
     await wait(STUB_DELAY_MS);
 
@@ -114,15 +115,8 @@ export async function submitPrivateMessage(
       );
     }
 
-    // Return a simulated receipt — clearly fake until backend is live.
-    const receipt: MessageReceipt = {
-      messageId: `stub-msg-${Date.now()}`,
-      ngoId: draft.ngoId,
-      eventId: draft.eventId,
-      submittedAt: new Date().toISOString(),
-      status: 'PENDING_NGO_REVIEW',
-    };
-    return receipt;
+    // No backend: the message was not sent, so there is no receipt.
+    return null;
   }
 
   // TODO: Replace stub below with real implementation once backend is ready.
