@@ -36,6 +36,7 @@ import {
   OperationalOverviewStats,
   OperationalResource,
   ReplanningRecord,
+  TaskEventType,
 } from '@/types/operations';
 
 let inMemoryIncidents: IncidentRecord[] = JSON.parse(
@@ -127,11 +128,17 @@ export async function fetchAllocationRecommendation(
   return rec ? JSON.parse(JSON.stringify(rec)) : null;
 }
 
+/** Append to a work order's history (sample mode keeps it in memory). */
+function logEvent(target: InterventionRecord, type: TaskEventType, actor: string, note?: string) {
+  target.history = [...(target.history ?? []), { type, at: new Date().toISOString(), actor, note }];
+}
+
 export async function assignIntervention(
   interventionId: string,
   teamId: string,
   equipment: string[],
-  deadlineMinutes: number
+  deadlineMinutes: number,
+  overrideReason?: string
 ): Promise<InterventionRecord> {
   await new Promise((res) => setTimeout(res, 250));
   const target = inMemoryInterventions.find((i) => i.id === interventionId);
@@ -147,6 +154,13 @@ export async function assignIntervention(
     Date.now() + deadlineMinutes * 60000
   ).toISOString();
   target.status = 'AWAITING_ACK';
+  target.overrideReason = overrideReason;
+  logEvent(
+    target,
+    'ASSIGNED',
+    'Coordinator',
+    `${target.assignedTeamName}${overrideReason ? ` (override: ${overrideReason})` : ''}`
+  );
 
   return JSON.parse(JSON.stringify(target));
 }
@@ -160,6 +174,7 @@ export async function acknowledgeTask(
 
   target.status = 'EN_ROUTE';
   target.acknowledgedAt = new Date().toISOString();
+  logEvent(target, 'ACKNOWLEDGED', target.assignedTeamName || 'Field team');
   return JSON.parse(JSON.stringify(target));
 }
 
@@ -172,6 +187,7 @@ export async function startTask(
 
   target.status = 'IN_PROGRESS';
   target.startedAt = new Date().toISOString();
+  logEvent(target, 'STARTED', target.assignedTeamName || 'Field team');
   return JSON.parse(JSON.stringify(target));
 }
 
@@ -190,6 +206,7 @@ export async function reportTaskBlocker(
     reason,
     isCritical,
   };
+  logEvent(target, 'PROBLEM_REPORTED', target.assignedTeamName || 'Field team', reason);
 
   // Create replanning entry
   const newReplan: ReplanningRecord = {
@@ -212,7 +229,8 @@ export async function reportTaskBlocker(
 
 export async function submitTaskCompletion(
   interventionId: string,
-  evidence: string
+  evidence: string,
+  photoUris: string[] = []
 ): Promise<InterventionRecord> {
   await new Promise((res) => setTimeout(res, 250));
   const target = inMemoryInterventions.find((i) => i.id === interventionId);
@@ -221,6 +239,13 @@ export async function submitTaskCompletion(
   target.status = 'AWAITING_VERIFICATION';
   target.completedAt = new Date().toISOString();
   target.completionEvidence = evidence;
+  target.completionPhotoUris = photoUris;
+  logEvent(
+    target,
+    'COMPLETED',
+    target.assignedTeamName || 'Field team',
+    photoUris.length ? `${photoUris.length} photo(s) attached` : undefined
+  );
 
   return JSON.parse(JSON.stringify(target));
 }
@@ -235,8 +260,10 @@ export async function verifyIntervention(
 
   if (approved) {
     target.status = 'VERIFIED_RESOLVED';
+    logEvent(target, 'VERIFIED', 'Coordinator');
   } else {
     target.status = 'IN_PROGRESS'; // rejected, work resumed
+    logEvent(target, 'REJECTED', 'Coordinator');
   }
 
   return JSON.parse(JSON.stringify(target));
@@ -263,6 +290,7 @@ export async function executeReplanningDecision(
   if (intTarget) {
     intTarget.status = 'AWAITING_ASSIGNMENT';
     intTarget.constraints.push(`Replanned: ${decisionNotes}`);
+    logEvent(intTarget, 'REASSIGNED', 'Coordinator', decisionNotes);
   }
 
   return JSON.parse(JSON.stringify(replan));

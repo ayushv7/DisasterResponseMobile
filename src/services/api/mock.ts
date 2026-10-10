@@ -95,19 +95,15 @@ export const mockApi: ApiClient = {
   getResources: () => simulate(ops.fetchOperationalResources),
   getRecommendation: (id) => simulate(() => ops.fetchAllocationRecommendation(id)),
   assign: (id, input) =>
-    simulate(async () => {
-      const record = await ops.assignIntervention(id, input.teamId, input.equipment, input.deadlineMinutes);
-      return input.overrideReason ? { ...record, overrideReason: input.overrideReason } : record;
-    }),
+    simulate(() =>
+      ops.assignIntervention(id, input.teamId, input.equipment, input.deadlineMinutes, input.overrideReason)
+    ),
   acknowledge: (id) => simulate(() => ops.acknowledgeTask(id)),
   start: (id) => simulate(() => ops.startTask(id)),
   reportProblem: (id, reason, isCritical) =>
     simulate(() => ops.reportTaskBlocker(id, reason, isCritical)),
   submitCompletion: (id, input) =>
-    simulate(async () => {
-      const record = await ops.submitTaskCompletion(id, input.note);
-      return { ...record, completionPhotoUris: input.photoUris };
-    }),
+    simulate(() => ops.submitTaskCompletion(id, input.note, input.photoUris)),
   verify: (id, approved) => simulate(() => ops.verifyIntervention(id, approved)),
   getReassignments: () => simulate(ops.fetchReplanningRecords),
   reassign: (id, notes) => simulate(() => ops.executeReplanningDecision(id, notes)),
