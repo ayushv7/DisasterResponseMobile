@@ -105,6 +105,10 @@ export const mockApi: ApiClient = {
   staffLogin: (email, password) => simulate(() => accounts.staffLogin(email, password)),
   workerLogin: (input) => simulate(() => accounts.workerLogin(input)),
   changeWorkerPassword: (pw) => simulate(() => accounts.changeWorkerPassword(pw)),
+  getFieldTeam: () => simulate(accounts.listWorkers),
+  createWorker: (input) => simulate(() => accounts.createWorker(input)),
+  disableWorker: (id, disabled) => simulate(() => accounts.disableWorker(id, disabled)),
+  resetWorkerPassword: (id) => simulate(() => accounts.resetWorkerPassword(id)),
 
   getOpsSummary: () => simulate(ops.fetchOperationalStats),
   getActionQueue: () =>

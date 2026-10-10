@@ -18,6 +18,7 @@ export default function NgoLayout() {
       <Stack.Screen name="organization" options={{ animation: 'fade' }} />
       <Stack.Screen name="contributions/compose" />
       <Stack.Screen name="review/[id]" />
+      <Stack.Screen name="team" />
     </Stack>
   );
 }

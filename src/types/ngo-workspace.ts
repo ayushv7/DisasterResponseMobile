@@ -24,6 +24,8 @@ export interface NgoSession {
   ngoName: string;
   verificationStatus: NgoOrgStatus;
   authorizedOfficerName: string;
+  /** Issued by the backend; field workers enter it to sign in. */
+  ngoCode?: string;
   focusAreas: string[];
   isDemoPreview: boolean;
 }

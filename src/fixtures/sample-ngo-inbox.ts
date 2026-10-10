@@ -7,6 +7,7 @@
  * Explicitly marked as sample fixtures.
  */
 
+import { SAMPLE_NGO_CODE } from '@/fixtures/sample-accounts';
 import { NgoInboxMessage, NgoSession } from '@/types/ngo-workspace';
 
 export const IS_SAMPLE_NGO_DATA = true;
@@ -16,6 +17,7 @@ export const DEFAULT_MOCK_NGO_SESSION: NgoSession = {
   ngoName: 'Disaster Relief Network India',
   verificationStatus: 'VERIFIED',
   authorizedOfficerName: 'R. Sharma (Field Lead)',
+  ngoCode: SAMPLE_NGO_CODE,
   focusAreas: ['Flood Evacuation', 'Emergency Rations', 'Medical Aid'],
   isDemoPreview: true,
 };

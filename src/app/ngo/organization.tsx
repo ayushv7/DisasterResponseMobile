@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { NgoBottomNavBar } from '@/components/NgoBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
@@ -27,7 +28,7 @@ import { fetchNgoSession } from '@/services/ngo-api';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
-import { radii, spacing } from '@/theme/spacing';
+import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { NgoSession } from '@/types/ngo-workspace';
 
@@ -244,6 +245,17 @@ export default function NgoOrganizationScreen() {
             </View>
           </View>
 
+          {/* Field team management */}
+          <Pressable
+            onPress={() => router.push('/ngo/team')}
+            style={[styles.card, styles.teamRow, { backgroundColor: colors.surface }]}
+            android_ripple={{ color: colors.surfaceMuted }}
+            accessibilityRole="button">
+            <Feather name="users" size={18} color={colors.textSecondary} />
+            <Text style={[styles.teamLabel, { color: colors.textPrimary }]}>My field team</Text>
+            <Feather name="chevron-right" size={18} color={colors.textTertiary} />
+          </Pressable>
+
           {/* Session Management / Sign Out */}
           <View style={styles.section}>
             <Pressable
@@ -284,6 +296,17 @@ export default function NgoOrganizationScreen() {
 }
 
 const styles = StyleSheet.create({
+  teamRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: touchTargets.min,
+  },
+  teamLabel: {
+    ...typography.bodyMedium,
+    fontSize: 14,
+    flex: 1,
+  },
   safeArea: {
     flex: 1,
   },

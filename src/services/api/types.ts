@@ -10,8 +10,10 @@
  * Screens should migrate to `api` one at a time as they are touched.
  */
 import {
+  CreateWorkerInput,
   NgoMember,
   StaffLoginResult,
+  WorkerCredentials,
   WorkerLoginInput,
   WorkerLoginResult,
 } from '@/types/accounts';
@@ -69,6 +71,15 @@ export interface ApiClient {
   workerLogin(input: WorkerLoginInput): Promise<ApiResult<WorkerLoginResult>>;
   /** Replaces the temporary password on first sign-in. */
   changeWorkerPassword(newPassword: string): Promise<ApiResult<NgoMember>>;
+
+  // NGO field team (PROPOSED). Credentials in responses are shown once, never stored.
+  getFieldTeam(): Promise<ApiResult<NgoMember[]>>;
+  createWorker(
+    input: CreateWorkerInput
+  ): Promise<ApiResult<{ member: NgoMember; credentials: WorkerCredentials }>>;
+  /** `disabled: false` re-enables the worker. */
+  disableWorker(memberId: string, disabled: boolean): Promise<ApiResult<NgoMember>>;
+  resetWorkerPassword(memberId: string): Promise<ApiResult<WorkerCredentials>>;
 
   // Operations
   getOpsSummary(): Promise<ApiResult<OperationalOverviewStats>>;
