@@ -91,6 +91,8 @@ export interface ApiClient {
   /** `disabled: false` re-enables the worker. */
   disableWorker(memberId: string, disabled: boolean): Promise<ApiResult<NgoMember>>;
   resetWorkerPassword(memberId: string): Promise<ApiResult<WorkerCredentials>>;
+  /** NGO assigns a task to one of its own workers. */
+  assignTask(workOrderId: string, memberId: string): Promise<ApiResult<InterventionRecord>>;
 
   // Citizen (optional public account, PROPOSED). The backend sends the OTP.
   requestOtp(contact: string): Promise<ApiResult<OtpChallenge>>;

@@ -181,6 +181,24 @@ export async function assignIntervention(
   return JSON.parse(JSON.stringify(target));
 }
 
+/** NGO assigns a task to one of its own workers (backend checks the worker belongs to it). */
+export async function assignTaskToWorker(
+  interventionId: string,
+  worker: { id: string; name: string; ngoName: string; isVolunteer: boolean },
+  actor: TaskActor
+): Promise<InterventionRecord> {
+  await new Promise((res) => setTimeout(res, 200));
+  const target = inMemoryInterventions.find((i) => i.id === interventionId);
+  if (!target) throw new Error(`Intervention ${interventionId} not found.`);
+  target.assignedWorkerId = worker.id;
+  target.assignedWorkerName = worker.name;
+  target.assignedWorkerIsVolunteer = worker.isVolunteer;
+  target.assignedNgoName = worker.ngoName;
+  if (target.status === 'AWAITING_ASSIGNMENT') target.status = 'AWAITING_ACK';
+  logEvent(target, 'ASSIGNED', actor, `To ${worker.name}${worker.isVolunteer ? ' (Volunteer)' : ''}`);
+  return JSON.parse(JSON.stringify(target));
+}
+
 export async function acknowledgeTask(
   interventionId: string,
   actor?: TaskActor

@@ -55,6 +55,8 @@ export interface InterventionRecord {
   targetLocality: string;
   instructions: string;
   requiredCapabilities: string[];
+  /** Qualification the assigned worker must hold (set by the backend plan). */
+  requiredQualification?: string;
   constraints: string[]; // e.g. 'Grid power down', 'Submerged access causeway'
   
   // Assignment state
@@ -62,6 +64,11 @@ export interface InterventionRecord {
   assignedTeamName?: string;
   /** NGO the assigned field workers belong to, when the team is NGO-run. */
   assignedNgoName?: string;
+  /** Individual field worker the NGO assigned the task to. */
+  assignedWorkerId?: string;
+  assignedWorkerName?: string;
+  /** True when the assigned worker is a volunteer (not NGO staff). */
+  assignedWorkerIsVolunteer?: boolean;
   assignedEquipment?: string[];
   assignedAt?: string;
   deadlineMinutes?: number;

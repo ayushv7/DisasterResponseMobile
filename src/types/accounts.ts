@@ -19,6 +19,8 @@ export interface NgoMember {
   status: 'ACTIVE' | 'DISABLED';
   /** True until the worker replaces the temporary password. */
   mustChangePassword: boolean;
+  /** STAFF_WORKER is NGO staff; VOLUNTEER came through an approved volunteer application. */
+  kind?: 'STAFF_WORKER' | 'VOLUNTEER';
   /** Team the worker is dispatched with (decides which tasks they see). */
   teamId?: string;
   createdAt: string;

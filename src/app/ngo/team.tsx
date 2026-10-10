@@ -14,6 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import { AuthField, PrimaryButton } from '@/components/AuthForm';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { PickerSheet } from '@/components/PickerSheet';
 import { useGoBack } from '@/navigation/use-go-back';
 import { api, IS_MOCK_API } from '@/services/api';
 import { fetchNgoSession } from '@/services/ngo-api';
@@ -21,6 +22,7 @@ import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { NgoMember, WorkerCredentials } from '@/types/accounts';
+import { InterventionRecord } from '@/types/operations';
 
 interface ShownCredentials extends WorkerCredentials {
   name: string;
@@ -63,6 +65,44 @@ export default function NgoTeamScreen() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
   }, [load]);
+
+  // Assign-task sheet: open tasks from the (backend-scoped) work orders
+  const [assignFor, setAssignFor] = useState<NgoMember | null>(null);
+  const [openTasks, setOpenTasks] = useState<InterventionRecord[] | null>(null);
+  const [assigningTaskId, setAssigningTaskId] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const openAssign = async (member: NgoMember) => {
+    setAssignFor(member);
+    setOpenTasks(null);
+    try {
+      const all = (await api.getWorkOrders()).data;
+      setOpenTasks(
+        all.filter(
+          (t) => !t.assignedWorkerId && t.status !== 'VERIFIED_RESOLVED' && t.status !== 'FAILED'
+        )
+      );
+    } catch (err: any) {
+      setAssignFor(null);
+      Alert.alert('Could not load tasks', err?.message || 'Try again.');
+    }
+  };
+
+  const assignTask = async (taskId: string) => {
+    if (!assignFor) return;
+    try {
+      setAssigningTaskId(taskId);
+      const result = await api.assignTask(taskId, assignFor.id);
+      setFeedback(
+        `${result.source === 'sample' ? 'Simulated: ' : ''}${result.data.id} assigned to ${assignFor.name}.`
+      );
+      setAssignFor(null);
+    } catch (err: any) {
+      Alert.alert('Could not assign', err?.message || 'Try again.');
+    } finally {
+      setAssigningTaskId(null);
+    }
+  };
 
   const replaceMember = (member: NgoMember) =>
     setMembers((prev) => prev.map((m) => (m.id === member.id ? member : m)));
@@ -167,6 +207,14 @@ export default function NgoTeamScreen() {
             </Text>
           )}
 
+          {feedback && (
+            <Text
+              style={[styles.caption, { color: colors.textPrimary }]}
+              accessibilityLiveRegion="polite">
+              {feedback}
+            </Text>
+          )}
+
           {ngoCode && (
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
               <Text style={[styles.caption, { color: colors.textSecondary }]}>NGO code</Text>
@@ -249,6 +297,7 @@ export default function NgoTeamScreen() {
                     />
                     <Text style={[styles.body, styles.bold, styles.flex, { color: colors.textPrimary }]}>
                       {member.name}
+                      {member.kind === 'VOLUNTEER' ? ' · Volunteer' : ''}
                     </Text>
                     <Text style={[styles.caption, { color: colors.textSecondary }]}>
                       {active ? 'Active' : 'Disabled'}
@@ -267,7 +316,19 @@ export default function NgoTeamScreen() {
                       Has not set a password yet
                     </Text>
                   )}
-                  <View style={styles.row}>
+                  <View style={[styles.row, styles.wrap]}>
+                    {active && (
+                      <Pressable
+                        onPress={() => openAssign(member)}
+                        disabled={busy}
+                        style={[styles.smallButton, { backgroundColor: colors.actionPrimary }]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Assign a task to ${member.name}`}>
+                        <Text style={[styles.caption, styles.bold, { color: colors.onActionPrimary }]}>
+                          Assign task
+                        </Text>
+                      </Pressable>
+                    )}
                     <Pressable
                       onPress={() => toggleDisabled(member)}
                       disabled={busy}
@@ -296,6 +357,23 @@ export default function NgoTeamScreen() {
           )}
         </ScrollView>
       )}
+      <PickerSheet
+        visible={!!assignFor}
+        title={`Assign a task to ${assignFor?.name ?? ''}`}
+        note="Open tasks from incidents near your NGO. The backend checks qualifications."
+        items={(openTasks ?? []).map((t) => ({
+          id: t.id,
+          title: `${t.id} · ${t.targetLocality}`,
+          subtitle: t.requiredQualification
+            ? `${t.incidentTitle} · Requires ${t.requiredQualification}`
+            : t.incidentTitle,
+        }))}
+        loading={openTasks === null}
+        busyId={assigningTaskId}
+        emptyText="No open tasks right now."
+        onPick={assignTask}
+        onClose={() => setAssignFor(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -367,6 +445,9 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
     fontSize: 16,
     letterSpacing: 0.5,
+  },
+  wrap: {
+    flexWrap: 'wrap',
   },
   smallButton: {
     minHeight: touchTargets.min,

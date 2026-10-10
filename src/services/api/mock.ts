@@ -77,10 +77,11 @@ function workerActor(): TaskActor | undefined {
 /** Stand-in for GET /work-orders?assignee=me. */
 async function fetchMyTasks(): Promise<InterventionRecord[]> {
   const worker = accounts.getCurrentWorker();
-  if (!worker?.teamId) return [];
+  if (!worker) return [];
   const all = await ops.fetchInterventions();
   return all
-    .filter((item) => item.assignedTeamId === worker.teamId)
+    .filter((item) => item.assignedWorkerId === worker.id ||
+        (!!worker.teamId && item.assignedTeamId === worker.teamId))
     .map((item) => ({ ...item, assignedNgoName: worker.ngoName }));
 }
 
@@ -174,6 +175,18 @@ export const mockApi: ApiClient = {
   createWorker: (input) => simulate(() => accounts.createWorker(input)),
   disableWorker: (id, disabled) => simulate(() => accounts.disableWorker(id, disabled)),
   resetWorkerPassword: (id) => simulate(() => accounts.resetWorkerPassword(id)),
+  assignTask: (workOrderId, memberId) =>
+    simulate(async () => {
+      const member = (await accounts.listWorkers()).find((m) => m.id === memberId);
+      if (!member) throw new Error('Worker not found in your team.');
+      if (member.status === 'DISABLED') throw new Error('This worker is disabled.');
+      const ngo = getCurrentNgoSession();
+      return ops.assignTaskToWorker(
+        workOrderId,
+        { id: member.id, name: member.name, ngoName: member.ngoName, isVolunteer: member.kind === 'VOLUNTEER' },
+        { name: ngo?.authorizedOfficerName ?? 'NGO', ngoName: ngo?.ngoName }
+      );
+    }),
   requestOtp: (contact) => simulate(() => accounts.requestOtp(contact)),
   verifyOtp: (challengeId, code) => simulate(() => accounts.verifyOtp(challengeId, code)),
   getNgoNeeds: () => simulate(offers.fetchNgoNeeds),

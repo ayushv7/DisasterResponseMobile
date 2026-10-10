@@ -27,6 +27,9 @@ import { useLocalSearchParams } from 'expo-router';
 
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
+import { PickerSheet } from '@/components/PickerSheet';
+import { useSession } from '@/session/session-context';
+import { NgoMember } from '@/types/accounts';
 import { TaskHistory } from '@/components/TaskHistory';
 import { FreshnessDot, freshnessOf } from '@/components/FreshnessDot';
 import { api } from '@/services/api';
@@ -60,6 +63,10 @@ export default function IncidentWorkspaceScreen() {
   // When the resource list was received; reference time for freshness.
   const [asOf, setAsOf] = useState<string | null>(null);
   const [overrideReason, setOverrideReason] = useState('');
+  const { role } = useSession();
+  const [showWorkerPicker, setShowWorkerPicker] = useState(false);
+  const [workers, setWorkers] = useState<NgoMember[] | null>(null);
+  const [pickingId, setPickingId] = useState<string | null>(null);
   const [showContingency, setShowContingency] = useState(false);
   const [showAllResources, setShowAllResources] = useState(false);
 
@@ -115,14 +122,44 @@ export default function IncidentWorkspaceScreen() {
   const isOverride = !!recommendation && selectedTeamId !== recommendation.recommendedTeamId;
   const canConfirmAssignment = !!selectedTeamId && (!isOverride || overrideReason.trim().length >= 5);
 
+  const openWorkerPicker = async () => {
+    setShowWorkerPicker(true);
+    try {
+      setWorkers((await api.getFieldTeam()).data.filter((m) => m.status === 'ACTIVE'));
+    } catch (err: any) {
+      setShowWorkerPicker(false);
+      Alert.alert('Could not load your team', err?.message || 'Try again.');
+    }
+  };
+
+  const assignToWorker = async (memberId: string) => {
+    if (!selectedIntervention) return;
+    try {
+      setPickingId(memberId);
+      const result = await api.assignTask(selectedIntervention.id, memberId);
+      setInterventions((prev) => prev.map((i) => (i.id === result.data.id ? result.data : i)));
+      setSelectedIntervention(result.data);
+      setShowWorkerPicker(false);
+      Alert.alert(
+        result.source === 'sample' ? 'Simulated: task assigned' : 'Task assigned',
+        `${result.data.assignedWorkerName} must acknowledge it.` +
+          (result.source === 'sample' ? '\n\nSample mode: nobody was notified.' : '')
+      );
+    } catch (err: any) {
+      Alert.alert('Could not assign', err?.message || 'Try again.');
+    } finally {
+      setPickingId(null);
+    }
+  };
+
   const confirmApprove = () => {
     if (!recommendation) return;
     Alert.alert(
-      'Approve recommendation?',
+      'Accept plan?',
       `Assign ${recommendation.recommendedTeamName}, deadline ${recommendation.suggestedDeadlineMinutes} min.`,
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Approve', onPress: () => handleExecuteAssignment(recommendation.recommendedTeamId) },
+        { text: 'Accept', onPress: () => handleExecuteAssignment(recommendation.recommendedTeamId) },
       ]
     );
   };
@@ -454,12 +491,12 @@ export default function IncidentWorkspaceScreen() {
                         { backgroundColor: pressed ? colors.actionPrimaryPressed : colors.actionPrimary },
                       ]}
                       accessibilityRole="button"
-                      accessibilityLabel={`Approve recommendation: assign ${recommendation.recommendedTeamName}`}>
+                      accessibilityLabel={`Accept plan: assign ${recommendation.recommendedTeamName}`}>
                       {assigning ? (
                         <ActivityIndicator size="small" color={colors.onActionPrimary} />
                       ) : (
                         <Text style={[styles.assignButtonText, { color: colors.onActionPrimary }]}>
-                          Approve recommendation
+                          Accept plan
                         </Text>
                       )}
                     </Pressable>
@@ -467,17 +504,38 @@ export default function IncidentWorkspaceScreen() {
                       onPress={() => setShowAssignModal(true)}
                       style={styles.overrideButton}
                       accessibilityRole="button"
-                      accessibilityLabel="Override: choose a different crew">
+                      accessibilityLabel="Adjust plan: choose a different crew">
                       <Text style={[styles.overrideText, { color: colors.actionPrimary }]}>
-                        Override…
+                        Adjust plan…
                       </Text>
                     </Pressable>
                   </>
                 )}
                 {selectedIntervention.overrideReason && (
                   <Text style={[styles.contingencyText, { color: colors.textSecondary }]}>
-                    Overridden: {selectedIntervention.overrideReason}
+                    Adjusted: {selectedIntervention.overrideReason}
                   </Text>
+                )}
+
+                {/* NGO: hand accepted work to one of its own field workers */}
+                {selectedIntervention.assignedWorkerName ? (
+                  <Text style={[styles.contingencyText, { color: colors.textSecondary }]}>
+                    Field worker: {selectedIntervention.assignedWorkerName}
+                    {selectedIntervention.assignedWorkerIsVolunteer ? ' · Volunteer' : ''}
+                  </Text>
+                ) : (
+                  role === 'ngo' &&
+                  selectedIntervention.status !== 'AWAITING_ASSIGNMENT' &&
+                  selectedIntervention.status !== 'VERIFIED_RESOLVED' && (
+                    <Pressable
+                      onPress={openWorkerPicker}
+                      style={styles.overrideButton}
+                      accessibilityRole="button">
+                      <Text style={[styles.overrideText, { color: colors.actionPrimary }]}>
+                        Assign to my field worker…
+                      </Text>
+                    </Pressable>
+                  )
                 )}
               </View>
             ) : (
@@ -665,6 +723,29 @@ export default function IncidentWorkspaceScreen() {
           </View>
         </View>
       </Modal>
+      <PickerSheet
+        visible={showWorkerPicker}
+        title="Assign to a field worker"
+        note={
+          selectedIntervention?.requiredQualification
+            ? `Required qualification: ${selectedIntervention.requiredQualification}. The backend checks eligibility.`
+            : undefined
+        }
+        items={(workers ?? []).map((m) => ({
+          id: m.id,
+          title: m.name,
+          tag: m.kind === 'VOLUNTEER' ? 'Volunteer' : undefined,
+          subtitle: m.skills.join(', ') || 'No skills listed',
+        }))}
+        loading={workers === null}
+        busyId={pickingId}
+        emptyText="No active field workers. Add them under My field team."
+        onPick={assignToWorker}
+        onClose={() => {
+          setShowWorkerPicker(false);
+          setWorkers(null);
+        }}
+      />
     </SafeAreaView>
   );
 }
