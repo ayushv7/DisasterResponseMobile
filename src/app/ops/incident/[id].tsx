@@ -23,12 +23,13 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
 import { FreshnessDot, freshnessOf } from '@/components/FreshnessDot';
 import { api } from '@/services/api';
+import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -40,6 +41,7 @@ import {
 } from '@/types/operations';
 
 export default function IncidentWorkspaceScreen() {
+  const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
 
@@ -182,7 +184,7 @@ export default function IncidentWorkspaceScreen() {
         edges={['top', 'left', 'right']}
         style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
+          <Pressable onPress={goBack} style={styles.backButton}>
             <Feather name="arrow-left" size={22} color={colors.textPrimary} />
           </Pressable>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
@@ -201,7 +203,7 @@ export default function IncidentWorkspaceScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backButton}
           accessibilityRole="button"
           accessibilityLabel="Back to operations queue">

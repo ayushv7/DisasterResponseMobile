@@ -37,12 +37,14 @@ import { NgoSelector } from '@/components/NgoSelector';
 import { IS_MOCK_API } from '@/services/api';
 import { IS_STUB_API, fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
+import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { ComposeUiState, MESSAGE_CHAR_LIMIT, MESSAGE_MIN_CHARS, MessageReceipt, VerifiedNgo } from '@/types/messaging';
 
 export default function PrivateMessageComposeScreen() {
+  const goBack = useGoBack();
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
   const { colors } = useTheme();
 
@@ -180,7 +182,7 @@ export default function PrivateMessageComposeScreen() {
       >
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backButton}
             accessibilityRole="button"
             accessibilityLabel="Back"
@@ -275,7 +277,7 @@ export default function PrivateMessageComposeScreen() {
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backButton}
           accessibilityRole="button"
           accessibilityLabel="Cancel and go back"

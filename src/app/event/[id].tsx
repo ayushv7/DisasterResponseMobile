@@ -14,12 +14,14 @@ import { Feather } from '@expo/vector-icons';
 import { InfoBar } from '@/components/InfoBar';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
 import { useSession } from '@/session/session-context';
+import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { FloodEvent, SourceObservation } from '@/types/disaster';
 
 export default function EventDetailScreen() {
+  const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
   const { role } = useSession();
@@ -78,7 +80,7 @@ export default function EventDetailScreen() {
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <View style={[styles.header, { backgroundColor: colors.surface }]}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backButton}
             accessibilityRole="button"
             accessibilityLabel="Back to alerts">
@@ -92,7 +94,7 @@ export default function EventDetailScreen() {
             Unable to locate event record with ID: {id}
           </Text>
           <Pressable
-            onPress={() => router.back()}
+            onPress={goBack}
             style={[styles.primaryBtn, { backgroundColor: colors.brandPrimary }]}>
             <Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>Return to Feed</Text>
           </Pressable>
@@ -110,7 +112,7 @@ export default function EventDetailScreen() {
       {/* 1. Header Bar (Flat surface, zero borders) */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backButton}
           accessibilityRole="button"
           accessibilityLabel="Back to alerts">

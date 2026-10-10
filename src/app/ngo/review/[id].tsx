@@ -35,6 +35,7 @@ import {
   rejectAndCloseMessage,
   requestClarification,
 } from '@/services/ngo-api';
+import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -45,6 +46,7 @@ import {
 } from '@/types/ngo-workspace';
 
 export default function NgoReviewScreen() {
+  const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
 
@@ -190,7 +192,7 @@ export default function NgoReviewScreen() {
         style={[styles.safeArea, { backgroundColor: colors.background }]}>
         <View style={styles.header}>
           <Pressable
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backButton}
             accessibilityRole="button"
             accessibilityLabel="Go back">
@@ -215,7 +217,7 @@ export default function NgoReviewScreen() {
       {/* Top Header */}
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backButton}
           accessibilityRole="button"
           accessibilityLabel="Go back">

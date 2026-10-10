@@ -31,6 +31,7 @@ import {
   publishContribution,
   saveContributionDraft,
 } from '@/services/ngo-api';
+import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -48,6 +49,7 @@ const CONTRIBUTION_TYPES: { key: ContributionType; label: string; icon: keyof ty
 ];
 
 export default function NgoContributionComposeScreen() {
+  const goBack = useGoBack();
   const { eventId: initialEventId, messageId, draftId } = useLocalSearchParams<{
     eventId?: string;
     messageId?: string;
@@ -336,7 +338,7 @@ export default function NgoContributionComposeScreen() {
       {/* Top Header */}
       <View style={styles.header}>
         <Pressable
-          onPress={() => router.back()}
+          onPress={goBack}
           style={styles.backButton}
           accessibilityRole="button"
           accessibilityLabel="Go back">

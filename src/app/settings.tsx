@@ -2,15 +2,16 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
 
 import { BottomNavBar } from '@/components/BottomNavBar';
 import { useSession } from '@/session/session-context';
+import { useGoBack } from '@/navigation/use-go-back';
 import { ThemeMode, useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
 export default function SettingsScreen() {
+  const goBack = useGoBack();
   const { colors, mode, setMode } = useTheme();
   const { role } = useSession();
   const isPublic = role === 'public';
@@ -44,7 +45,7 @@ export default function SettingsScreen() {
       <View style={[styles.header, { backgroundColor: colors.background }]}>
         {!isPublic && (
           <Pressable
-            onPress={() => router.back()}
+            onPress={goBack}
             style={styles.backButton}
             hitSlop={spacing.sm}
             accessibilityRole="button"

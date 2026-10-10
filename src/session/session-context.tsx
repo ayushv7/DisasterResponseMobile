@@ -7,7 +7,7 @@
  * __DEV__ switcher, and are marked as demo sessions.
  */
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import { Href, router } from 'expo-router';
+import { Href, router, useNavigationContainerRef } from 'expo-router';
 
 import { loginDemoSession, logoutNgo } from '@/services/ngo-api';
 import { Role } from '@/types/roles';
@@ -43,28 +43,49 @@ export function homeRouteFor(role: Role): Href {
 }
 
 /**
- * Replace the whole history with `href`, so Back can't return to screens
- * from a previous role (e.g. public screens after signing in).
+ * Replace the whole history with the role home, so Back can't return to
+ * screens from a previous role (e.g. public screens after signing in).
+ *
+ * Resets the root navigator to the index route, which redirects by role.
+ * Avoids router.dismissAll(): its POP_TO_TOP goes to the innermost stack and
+ * warns "not handled by any navigator" when that stack has nothing to pop.
  */
+function useResetToRoleHome() {
+  const navigationRef = useNavigationContainerRef();
+  return useCallback(
+    (role: Role) => {
+      if (navigationRef.isReady()) {
+        navigationRef.reset({ index: 0, routes: [{ name: 'index' }] });
+      } else {
+        router.replace(homeRouteFor(role));
+      }
+    },
+    [navigationRef]
+  );
+}
+
+/** Replace the current screen with `href`; kept for existing callers. */
 export function resetTo(href: Href) {
-  if (router.canDismiss()) router.dismissAll();
   router.replace(href);
 }
 
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
+  const resetToRoleHome = useResetToRoleHome();
 
   const signInAs = useCallback(async (role: Exclude<Role, 'public'>) => {
     if (role === 'ngo' || role === 'admin') await loginDemoSession();
+    // Same tick: the session update and the reset render together, so the
+    // index redirect sees the new role.
     setSession({ role, isDemo: true });
-    resetTo(homeRouteFor(role));
-  }, []);
+    resetToRoleHome(role);
+  }, [resetToRoleHome]);
 
   const signOut = useCallback(async () => {
     await logoutNgo();
     setSession(null);
-    resetTo(homeRouteFor('public'));
-  }, []);
+    resetToRoleHome('public');
+  }, [resetToRoleHome]);
 
   const value = useMemo(
     () => ({ role: session?.role ?? 'public', session, signInAs, signOut }),
