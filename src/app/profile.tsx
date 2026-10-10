@@ -48,6 +48,16 @@ export default function ProfileScreen() {
       icon: 'message-square',
       onPress: () => router.replace('/messages'),
     },
+    ...(citizen
+      ? [
+          {
+            label: 'My Offers',
+            desc: 'Help you offered and its status',
+            icon: 'gift' as const,
+            onPress: () => router.push('/my-offers'),
+          },
+        ]
+      : []),
   ];
 
   return (

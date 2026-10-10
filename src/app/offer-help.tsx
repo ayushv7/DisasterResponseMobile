@@ -7,6 +7,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import { AuthField, PrimaryButton } from '@/components/AuthForm';
 import { CitizenSignInPrompt } from '@/components/CitizenSignInPrompt';
@@ -140,6 +141,12 @@ export default function OfferHelpScreen() {
                 ? 'Simulated: offer saved on this device only. Nothing was sent to an NGO.'
                 : 'Offer submitted. An NGO will contact you if it is matched.'}
             </Text>
+            <Pressable
+              onPress={() => router.push('/my-offers')}
+              style={styles.textButton}
+              accessibilityRole="link">
+              <Text style={[styles.body, { color: colors.brandPrimary }]}>View my offers</Text>
+            </Pressable>
           </View>
         )}
 
@@ -274,6 +281,10 @@ const styles = StyleSheet.create({
   },
   bold: {
     fontWeight: '600',
+  },
+  textButton: {
+    minHeight: touchTargets.min,
+    justifyContent: 'center',
   },
   caption: {
     ...typography.caption,

@@ -91,6 +91,8 @@ export interface ApiClient {
   getNgoNeeds(): Promise<ApiResult<NgoNeed[]>>;
   /** Signed-in citizen only. Matching is done by the backend. */
   offerHelp(input: OfferHelpInput): Promise<ApiResult<HelpOffer>>;
+  /** The signed-in citizen's offers with their current status. */
+  getMyOffers(): Promise<ApiResult<HelpOffer[]>>;
 
   // Operations
   getOpsSummary(): Promise<ApiResult<OperationalOverviewStats>>;

@@ -26,6 +26,7 @@ export const httpApi: ApiClient = {
   verifyOtp: notImplemented('verifyOtp'),
   getNgoNeeds: notImplemented('getNgoNeeds'),
   offerHelp: notImplemented('offerHelp'),
+  getMyOffers: notImplemented('getMyOffers'),
   getOpsSummary: notImplemented('getOpsSummary'),
   getActionQueue: notImplemented('getActionQueue'),
   getIncidents: notImplemented('getIncidents'),
