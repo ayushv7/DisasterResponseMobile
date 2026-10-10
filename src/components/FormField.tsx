@@ -75,7 +75,7 @@ export function PrivacyNoticeBanner() {
     <View style={[styles.privacyBanner, { backgroundColor: colors.surfaceMuted }]}>
       <View style={[styles.privacyAccentBar, { backgroundColor: colors.brandPrimary }]} />
       <Text style={[styles.privacyText, { color: colors.textSecondary }]}>
-        Your message will be sent privately to the selected NGO. It will not appear publicly unless an authorized NGO independently reviews and publishes a separate contribution.
+        Your message, and any photos or location you attach, go privately to the selected NGO only. Nothing appears publicly unless the NGO reviews it and publishes a separate update.
       </Text>
     </View>
   );

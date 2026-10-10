@@ -1,7 +1,7 @@
 /**
  * PrivateMessageComposeScreen
  *
- * Route: /message/compose?eventId=fl-2026-081
+ * Route: /message/compose?eventId=fl-2026-081 (eventId optional: the sender picks an alert)
  *
  * Allows a public user to compose and submit a private message to a
  * verified NGO in the context of a specific flood event.
@@ -32,7 +32,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
+import { EvidencePhotoPicker } from '@/components/EvidencePhotoPicker';
 import { FormField, PrivacyNoticeBanner } from '@/components/FormField';
+import { LocationAttach } from '@/components/LocationAttach';
 import { NgoSelector } from '@/components/NgoSelector';
 import { IS_MOCK_API } from '@/services/api';
 import { IS_STUB_API, fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
@@ -41,15 +43,24 @@ import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
-import { ComposeUiState, MESSAGE_CHAR_LIMIT, MESSAGE_MIN_CHARS, MessageReceipt, VerifiedNgo } from '@/types/messaging';
+import {
+  ComposeUiState,
+  MESSAGE_CHAR_LIMIT,
+  MESSAGE_MIN_CHARS,
+  MessageReceipt,
+  SharedLocation,
+  VerifiedNgo,
+} from '@/types/messaging';
 
 export default function PrivateMessageComposeScreen() {
   const goBack = useGoBack();
   const { eventId } = useLocalSearchParams<{ eventId: string }>();
   const { colors } = useTheme();
 
-  // ── Resolve event from params ─────────────────────────────────────────────
-  const event = SAMPLE_FLOOD_EVENTS.find((e) => e.id === eventId) ?? null;
+  // ── Resolve event: from params, or picked here when opened from the Messages tab ──
+  const [selectedEventId, setSelectedEventId] = useState<string | undefined>(eventId);
+  const [eventError, setEventError] = useState<string | null>(null);
+  const event = SAMPLE_FLOOD_EVENTS.find((e) => e.id === selectedEventId) ?? null;
 
   // ── NGO list state ────────────────────────────────────────────────────────
   const [ngos, setNgos] = useState<VerifiedNgo[]>([]);
@@ -59,6 +70,8 @@ export default function PrivateMessageComposeScreen() {
   // ── Form state ────────────────────────────────────────────────────────────
   const [selectedNgo, setSelectedNgo] = useState<VerifiedNgo | null>(null);
   const [messageText, setMessageText] = useState('');
+  const [photoUris, setPhotoUris] = useState<string[]>([]);
+  const [location, setLocation] = useState<SharedLocation | null>(null);
 
   // ── Validation ────────────────────────────────────────────────────────────
   const [ngoError, setNgoError] = useState<string | null>(null);
@@ -109,6 +122,13 @@ export default function PrivateMessageComposeScreen() {
   const validate = (): boolean => {
     let valid = true;
 
+    if (!event) {
+      setEventError('Choose the flood alert this message is about.');
+      valid = false;
+    } else {
+      setEventError(null);
+    }
+
     if (!selectedNgo) {
       setNgoError('Please select a verified NGO to contact.');
       valid = false;
@@ -137,7 +157,7 @@ export default function PrivateMessageComposeScreen() {
   const handleSubmit = async () => {
     if (isSubmittingRef.current) return; // Guard against double-tap
     if (!validate()) return;
-    if (!selectedNgo || !eventId) return;
+    if (!selectedNgo || !event) return;
 
     isSubmittingRef.current = true;
     setUiState('submitting');
@@ -145,9 +165,11 @@ export default function PrivateMessageComposeScreen() {
 
     try {
       const result = await submitPrivateMessage({
-        eventId,
+        eventId: event.id,
         ngoId: selectedNgo.id,
         observationText: messageText.trim(),
+        photoUris,
+        location: location ?? undefined,
       });
       setReceipt(result);
       setUiState('success');
@@ -312,7 +334,7 @@ export default function PrivateMessageComposeScreen() {
           )}
 
           {/* ── Event context block ──────────────────────── */}
-          {event && (
+          {eventId && event && (
             <View style={[styles.eventContext, { backgroundColor: colors.surface }]}>
               <Text style={[styles.eventContextLabel, { color: colors.textTertiary }]}>
                 Regarding flood alert
@@ -329,15 +351,46 @@ export default function PrivateMessageComposeScreen() {
             </View>
           )}
 
-          {!event && (
-            <View style={[styles.eventContext, { backgroundColor: colors.surface }]}>
-              <Text style={[styles.eventContextLabel, { color: colors.textTertiary }]}>
-                Event ID
-              </Text>
-              <Text style={[styles.eventContextId, { color: colors.textPrimary }]}>
-                {eventId ?? 'Not specified'}
-              </Text>
-            </View>
+          {/* Opened from the Messages tab: pick the alert here */}
+          {!eventId && (
+            <FormField
+              label="Flood alert"
+              required
+              errorText={eventError ?? undefined}
+              hint={IS_MOCK_API ? 'SAMPLE DATA — NOT LIVE FLOOD INFORMATION' : undefined}>
+              <View style={styles.eventPicker}>
+                {SAMPLE_FLOOD_EVENTS.map((e) => {
+                  const active = e.id === selectedEventId;
+                  return (
+                    <Pressable
+                      key={e.id}
+                      onPress={() => {
+                        setSelectedEventId(e.id);
+                        setEventError(null);
+                      }}
+                      disabled={isSubmitting}
+                      style={[
+                        styles.eventOption,
+                        { backgroundColor: active ? colors.surfaceMuted : colors.surface },
+                      ]}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: active }}>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={[styles.eventContextTitle, { color: colors.textPrimary }]}
+                          numberOfLines={2}>
+                          {e.title}
+                        </Text>
+                        <Text style={[styles.eventContextLocation, { color: colors.textSecondary }]}>
+                          {e.location}
+                        </Text>
+                      </View>
+                      {active && <Feather name="check" size={18} color={colors.actionPrimary} />}
+                    </Pressable>
+                  );
+                })}
+              </View>
+            </FormField>
           )}
 
           <View style={styles.form}>
@@ -415,6 +468,18 @@ export default function PrivateMessageComposeScreen() {
                   {charCount}/{MESSAGE_CHAR_LIMIT}
                 </Text>
               </View>
+            </FormField>
+
+            {/* ── Evidence: photos and location, both optional ── */}
+            <FormField
+              label="Photos (optional)"
+              hint="Photos of water levels, damage or blocked roads help the NGO respond.">
+              <EvidencePhotoPicker photoUris={photoUris} onChange={setPhotoUris} />
+            </FormField>
+            <FormField
+              label="Location (optional)"
+              hint="Attach your GPS location so responders know where this is.">
+              <LocationAttach value={location} onChange={setLocation} disabled={isSubmitting} />
             </FormField>
 
             {/* ── Privacy disclosure ───────────────────── */}
@@ -537,6 +602,17 @@ const receiptStyles = StyleSheet.create({
 // ─── Main styles ──────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  eventPicker: {
+    gap: spacing.xs,
+  },
+  eventOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: touchTargets.min,
+    padding: spacing.md,
+    borderRadius: radii.card,
+  },
   safeArea: {
     flex: 1,
   },

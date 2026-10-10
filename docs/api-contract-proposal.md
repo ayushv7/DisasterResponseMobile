@@ -151,6 +151,14 @@ interface NgoMessage {         // private: visible only to the target NGO and ad
   senderPseudonym: string;     // never phone number or exact location
   approximateArea?: string;
   consentToContact: boolean;
+  location?: {                 // PROPOSED; only if the sender chose to attach it
+    latitude: number;
+    longitude: number;
+    accuracyMeters: number | null;
+    precision: 'approximate' | 'exact';   // approximate is rounded (~1 km) on the device
+    capturedAt: string;
+  };
+  evidenceIds?: string[];      // PROPOSED; photos uploaded via /evidence/upload-url
   status: 'RECEIVED' | 'NEEDS_REVIEW' | 'CLARIFICATION_REQUESTED' | 'REVIEWED' | 'CLOSED';
   createdAt: string;
 }

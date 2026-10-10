@@ -31,6 +31,23 @@ export interface MessageDraft {
   eventId: string;
   ngoId: string;
   observationText: string; // The user's private observation/need, max MESSAGE_CHAR_LIMIT chars
+  /** Local photo URIs the sender chose to attach (uploaded separately once the backend supports it). */
+  photoUris?: string[];
+  /** Only present when the sender explicitly chose to share it. */
+  location?: SharedLocation;
+}
+
+/**
+ * A location the sender chose to share with the selected NGO only.
+ * 'approximate' is rounded on the device (about 1 km) before it leaves the phone.
+ */
+export interface SharedLocation {
+  latitude: number;
+  longitude: number;
+  /** Device-reported accuracy radius in metres, or the rounding radius when approximate. */
+  accuracyMeters: number | null;
+  precision: 'approximate' | 'exact';
+  capturedAt: string;
 }
 
 /**

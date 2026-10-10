@@ -119,6 +119,12 @@ export async function submitPrivateMessage(
     return null;
   }
 
+  // Photo upload needs the evidence upload flow (presigned URL, see the contract).
+  // Fail clearly rather than silently dropping attached photos.
+  if (draft.photoUris?.length) {
+    throw new Error('Photo upload is not available yet. Remove the photos to send the message.');
+  }
+
   // TODO: Replace stub below with real implementation once backend is ready.
   const response = await fetch(
     `${API_BASE}/api/v1/events/${draft.eventId}/messages`,
@@ -132,6 +138,7 @@ export async function submitPrivateMessage(
       body: JSON.stringify({
         ngoId: draft.ngoId,
         observationText: draft.observationText,
+        location: draft.location,
       }),
     }
   );
