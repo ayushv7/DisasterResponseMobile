@@ -10,7 +10,8 @@
  *   Contributor ─< Instruction (issued when a plan is approved)
  *   Ngo ─< InboxMessage, Ngo ─< Update ─> Incident (via the public alert it is about)
  */
-import { SAMPLE_FIELD_TEAM, SAMPLE_NGO_CODE } from '@/fixtures/sample-accounts';
+import { SAMPLE_FIELD_TEAM, SAMPLE_NGO_CODE, SAMPLE_VOLUNTEER_APPLICATIONS } from '@/fixtures/sample-accounts';
+import { VolunteerApplication } from '@/types/volunteers';
 import { SAMPLE_NGO_CONTRIBUTIONS, SAMPLE_NGO_INBOX_MESSAGES } from '@/fixtures/sample-ngo-inbox';
 import { NgoContributionItem, NgoInboxMessage } from '@/types/ngo-workspace';
 import {
@@ -92,6 +93,7 @@ export const store = {
   resources: seedResources(),
   instructions: [] as ContributorInstruction[],
   evidence: [] as EvidenceRecord[],
+  volunteerApplications: copy(SAMPLE_VOLUNTEER_APPLICATIONS) as VolunteerApplication[],
   ngoMessages: copy(SAMPLE_NGO_INBOX_MESSAGES) as NgoInboxMessage[],
   ngoUpdates: copy(SAMPLE_NGO_CONTRIBUTIONS).map((u) => ({
     ...u,

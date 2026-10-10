@@ -3,12 +3,9 @@
  * here are fixed sample values labelled "Simulated"; the real check is the
  * backend's. Approving adds the person to the NGO team as a volunteer.
  */
-import { SAMPLE_VOLUNTEER_APPLICATIONS } from '@/fixtures/sample-accounts';
-import {
-  addVolunteerMember,
-  disableVolunteerMember,
-  getCurrentCitizen,
-} from '@/services/accounts-api';
+import { getCurrentCitizen } from '@/services/accounts-api';
+import { createVolunteerAccount, disableVolunteerAccount } from '@/services/mock/cascades';
+import { store } from '@/services/mock/store';
 import { getCurrentNgoSession } from '@/services/ngo-api';
 import { SAMPLE_VERIFIED_NGOS } from '@/fixtures/sample-ngos';
 import {
@@ -17,7 +14,7 @@ import {
   VolunteerDecision,
 } from '@/types/volunteers';
 
-let applications: VolunteerApplication[] = JSON.parse(JSON.stringify(SAMPLE_VOLUNTEER_APPLICATIONS));
+// Applications live in the shared mock store; approval side effects in mock/cascades.
 /** The signed-in citizen's own application id (mock keeps one per session). */
 let myApplicationId: string | null = null;
 
@@ -29,7 +26,7 @@ export async function applyToVolunteer(input: ApplyToVolunteerInput): Promise<Vo
   if (!input.consent) throw new Error('Consent is required to apply.');
   const ngo = SAMPLE_VERIFIED_NGOS.find((n) => n.id === input.ngoId);
   const app: VolunteerApplication = {
-    id: `vol-app-${String(applications.length + 1).padStart(3, '0')}`,
+    id: `vol-app-${String(store.volunteerApplications.length + 1).padStart(3, '0')}`,
     name: input.name,
     contact: citizen.contact,
     skills: input.skills,
@@ -46,20 +43,20 @@ export async function applyToVolunteer(input: ApplyToVolunteerInput): Promise<Vo
     },
     createdAt: new Date().toISOString(),
   };
-  applications = [app, ...applications];
+  store.volunteerApplications = [app, ...store.volunteerApplications];
   myApplicationId = app.id;
   return copy(app);
 }
 
 export async function getMyVolunteerApplication(): Promise<VolunteerApplication | null> {
   if (!getCurrentCitizen() || !myApplicationId) return null;
-  const app = applications.find((a) => a.id === myApplicationId);
+  const app = store.volunteerApplications.find((a) => a.id === myApplicationId);
   return app ? copy(app) : null;
 }
 
 export async function listVolunteerApplications(): Promise<VolunteerApplication[]> {
   const ngo = getCurrentNgoSession();
-  return copy(ngo ? applications.filter((a) => !a.ngoId || a.ngoId === ngo.ngoId) : applications);
+  return copy(ngo ? store.volunteerApplications.filter((a) => !a.ngoId || a.ngoId === ngo.ngoId) : store.volunteerApplications);
 }
 
 export async function decideVolunteerApplication(
@@ -67,16 +64,16 @@ export async function decideVolunteerApplication(
   decision: VolunteerDecision,
   reason?: string
 ): Promise<VolunteerApplication> {
-  const app = applications.find((a) => a.id === id);
+  const app = store.volunteerApplications.find((a) => a.id === id);
   if (!app) throw new Error('Application not found.');
   if (decision === 'APPROVE') {
     app.status = 'APPROVED';
     app.decisionReason = undefined;
-    addVolunteerMember(app);
+    createVolunteerAccount(app);
   } else {
     app.status = decision === 'REJECT' ? 'REJECTED' : 'REVOKED';
     app.decisionReason = reason;
-    if (decision === 'REVOKE') disableVolunteerMember(app.id);
+    if (decision === 'REVOKE') disableVolunteerAccount(app.id);
   }
   app.decidedAt = new Date().toISOString();
   return copy(app);

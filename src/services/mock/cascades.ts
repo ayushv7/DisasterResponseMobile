@@ -4,7 +4,8 @@
  * real behaviour belongs to the backend; screens never call these directly.
  */
 import { InterventionRecord } from '@/types/operations';
-import { PlanActor, ResourcePlan } from '@/types/contributors';
+import { ContributorApplication, PlanActor, ResourcePlan } from '@/types/contributors';
+import { VolunteerApplication } from '@/types/volunteers';
 
 import { ngoById, store } from './store';
 
@@ -100,5 +101,61 @@ export function publishPlan(plan: ResourcePlan, actor: PlanActor) {
         issuedAt: at,
       });
     }
+  }
+}
+
+// ── Applications → accounts ─────────────────────────────────────────────────
+
+/** Volunteer approved: they join the NGO team as a VOLUNTEER worker (credentials are the backend's job). */
+export function createVolunteerAccount(app: VolunteerApplication) {
+  const id = `mem-${app.id}`;
+  const existing = store.workers.find((m) => m.id === id);
+  if (existing) {
+    existing.status = 'ACTIVE';
+    return existing;
+  }
+  const ngo = ngoById(app.ngoId ?? 'ngo-drn-india');
+  const member = {
+    id,
+    workerId: `SAMPLE-V-${String(store.workers.length + 1).padStart(4, '0')}`,
+    ngoId: ngo?.id ?? 'ngo-drn-india',
+    ngoName: ngo?.name ?? app.ngoName ?? 'NGO',
+    name: app.name,
+    phone: app.contact,
+    skills: app.skills,
+    status: 'ACTIVE' as const,
+    kind: 'VOLUNTEER' as const,
+    mustChangePassword: true,
+    createdAt: now(),
+  };
+  store.workers = [...store.workers, member];
+  return member;
+}
+
+/** Volunteer revoked: their worker account is disabled (kept for audit). */
+export function disableVolunteerAccount(applicationId: string) {
+  const m = store.workers.find((w) => w.id === `mem-${applicationId}`);
+  if (m) m.status = 'DISABLED';
+}
+
+/** Contributor approved: an ACTIVE contributor account in the approving NGO. Returns its ID. */
+export function createContributorAccount(app: ContributorApplication): string {
+  const contributorId = `SAMPLE-C-${String(store.contributors.length + 1).padStart(4, '0')}`;
+  store.contributors = [
+    ...store.contributors,
+    { contributorId, applicationId: app.id, name: app.name, ngoId: app.ngoId, state: 'ACTIVE' },
+  ];
+  return contributorId;
+}
+
+/** Contributor revoked: account revoked, their resources leave every plan. */
+export function revokeContributorAccess(applicationId: string) {
+  const c = store.contributors.find((x) => x.applicationId === applicationId);
+  if (!c) return;
+  c.state = 'REVOKED';
+  for (const r of store.resources.filter((x) => x.contributorId === c.contributorId)) {
+    r.eligibleForAllocation = false;
+    r.statusReason = 'Simulated: contributor access revoked by the NGO.';
+    onResourceChanged(r.id);
   }
 }

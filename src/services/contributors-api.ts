@@ -5,7 +5,13 @@
  * the real rules belong to the backend.
  */
 import { SAMPLE_CONTRIBUTOR_CODE, SAMPLE_RESOURCE_POLICIES } from '@/fixtures/sample-contributors';
-import { onResourceChanged, publishPlan, sweepMissedCheckIns } from '@/services/mock/cascades';
+import {
+  createContributorAccount,
+  onResourceChanged,
+  publishPlan,
+  revokeContributorAccess,
+  sweepMissedCheckIns,
+} from '@/services/mock/cascades';
 import { addEvidence, ngoById, store, StoreContributor } from '@/services/mock/store';
 import { SAMPLE_VERIFIED_NGOS } from '@/fixtures/sample-ngos';
 import { getCurrentCitizen } from '@/services/accounts-api';
@@ -72,7 +78,7 @@ export async function getMyContributorApplication(): Promise<ContributorApplicat
 
 export async function listContributorApplications(): Promise<ContributorApplication[]> {
   const ngo = getCurrentNgoSession();
-  if (!ngo) throw new ApiError('UNAUTHORIZED', 'Only NGO staff can review store.contributorApplications.');
+  if (!ngo) throw new ApiError('UNAUTHORIZED', 'Only NGO staff can review applications.');
   return copy(store.contributorApplications.filter((a) => a.ngoId === ngo.ngoId));
 }
 
@@ -89,14 +95,10 @@ export async function decideContributorApplication(
   }
   app.decidedAt = new Date().toISOString();
   if (decision === 'APPROVE') {
-    if (app.status !== 'PENDING') throw new ApiError('INVALID_STATE', 'Only pending store.contributorApplications can be approved.');
+    if (app.status !== 'PENDING') throw new ApiError('INVALID_STATE', 'Only pending applications can be approved.');
     app.status = 'APPROVED';
     app.decisionReason = undefined;
-    const contributorId = `SAMPLE-C-${String(store.contributors.length + 1).padStart(4, '0')}`;
-    store.contributors = [
-      ...store.contributors,
-      { contributorId, applicationId: app.id, name: app.name, ngoId: app.ngoId, state: 'ACTIVE' },
-    ];
+    const contributorId = createContributorAccount(app);
     return {
       application: copy(app),
       credentials: { contributorId, signInCode: SAMPLE_CONTRIBUTOR_CODE },
@@ -104,16 +106,7 @@ export async function decideContributorApplication(
   }
   app.status = decision === 'REJECT' ? 'REJECTED' : 'REVOKED';
   app.decisionReason = reason?.trim();
-  if (decision === 'REVOKE') {
-    store.contributors = store.contributors.map((a) => (a.applicationId === app.id ? { ...a, state: 'REVOKED' } : a));
-    // Simulated cascade: a revoked contributor's resources leave every plan
-    const revoked = store.contributors.find((c) => c.applicationId === app.id);
-    for (const r of store.resources.filter((x) => x.contributorId === revoked?.contributorId)) {
-      r.eligibleForAllocation = false;
-      r.statusReason = 'Simulated: contributor access revoked by the NGO.';
-      onResourceChanged(r.id);
-    }
-  }
+  if (decision === 'REVOKE') revokeContributorAccess(app.id);
   return { application: copy(app) };
 }
 

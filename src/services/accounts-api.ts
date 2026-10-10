@@ -12,7 +12,9 @@ import {
   SAMPLE_STAFF_ACCOUNTS,
   SAMPLE_TEMP_PASSWORD,
 } from '@/fixtures/sample-accounts';
+import { createVolunteerAccount, disableVolunteerAccount } from '@/services/mock/cascades';
 import { store } from '@/services/mock/store';
+import { VolunteerApplication } from '@/types/volunteers';
 import {
   Citizen,
   CreateWorkerInput,
@@ -181,31 +183,12 @@ export async function setNotificationAreas(input: NotificationAreasInput): Promi
   return copy(currentCitizen);
 }
 
-/** Mock: an approved volunteer joins the NGO team (the backend would issue their credentials). */
-export function addVolunteerMember(app: { id: string; name: string; contact: string; skills: string[] }) {
-  if (store.workers.some((m) => m.id === `mem-${app.id}`)) {
-    store.workers = store.workers.map((m) => (m.id === `mem-${app.id}` ? { ...m, status: 'ACTIVE' } : m));
-    return;
-  }
-  store.workers = [
-    ...store.workers,
-    {
-      id: `mem-${app.id}`,
-      workerId: `SAMPLE-V-${String(nextSampleNumber++).padStart(4, '0')}`,
-      ngoId: 'ngo-drn-india',
-      ngoName: 'Disaster Relief Network India',
-      name: app.name,
-      phone: app.contact,
-      skills: app.skills,
-      status: 'ACTIVE',
-      kind: 'VOLUNTEER',
-      mustChangePassword: true,
-      createdAt: new Date().toISOString(),
-    },
-  ];
+/** Mock: an approved volunteer joins the NGO team. Kept for callers; logic lives in mock/cascades. */
+export function addVolunteerMember(app: VolunteerApplication) {
+  createVolunteerAccount(app);
 }
 
-/** Mock: revoking a volunteer disables their team membership. */
+/** Mock: revoking a volunteer disables their team membership (see mock/cascades). */
 export function disableVolunteerMember(applicationId: string) {
-  store.workers = store.workers.map((m) => (m.id === `mem-${applicationId}` ? { ...m, status: 'DISABLED' } : m));
+  disableVolunteerAccount(applicationId);
 }
