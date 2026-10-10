@@ -34,6 +34,12 @@ export const httpApi: ApiClient = {
   listContributorApplications: notImplemented('listContributorApplications'),
   decideContributorApplication: notImplemented('decideContributorApplication'),
   contributorLogin: notImplemented('contributorLogin'),
+  getResourceTypePolicies: notImplemented('getResourceTypePolicies'),
+  getMyResources: notImplemented('getMyResources'),
+  // Needs the presigned-upload contract (POST /evidence/upload-url); see the API proposal.
+  uploadEvidencePhoto: notImplemented('uploadEvidencePhoto'),
+  registerResource: notImplemented('registerResource'),
+  checkInResource: notImplemented('checkInResource'),
   applyToVolunteer: notImplemented('applyToVolunteer'),
   getMyVolunteerApplication: notImplemented('getMyVolunteerApplication'),
   listVolunteerApplications: notImplemented('listVolunteerApplications'),

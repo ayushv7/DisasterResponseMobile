@@ -26,6 +26,10 @@ import {
   ContributorApplication,
   ContributorCredentials,
   ContributorLoginInput,
+  ContributorResource,
+  CheckInInput,
+  RegisterResourceInput,
+  ResourceTypePolicy,
 } from '@/types/contributors';
 import { SentMessage } from '@/types/message-thread';
 import { HelpOffer, NgoNeed, OfferHelpInput } from '@/types/offers';
@@ -130,6 +134,15 @@ export interface ApiClient {
   ): Promise<ApiResult<{ application: ContributorApplication; credentials?: ContributorCredentials }>>;
   /** Throws ApiError INVALID_CREDENTIALS | CODE_EXPIRED | REVOKED | UNAUTHORIZED. */
   contributorLogin(input: ContributorLoginInput): Promise<ApiResult<Contributor>>;
+  /** Check-in interval per resource type, defined by the service. */
+  getResourceTypePolicies(): Promise<ApiResult<ResourceTypePolicy[]>>;
+  /** Signed-in contributor's resources with backend freshness and due times. */
+  getMyResources(): Promise<ApiResult<ContributorResource[]>>;
+  /** Uploads a camera photo; returns the URL to reference as evidence. */
+  uploadEvidencePhoto(localUri: string): Promise<ApiResult<{ photoUrl: string }>>;
+  registerResource(input: RegisterResourceInput): Promise<ApiResult<ContributorResource>>;
+  /** Confirms availability. Due time and freshness come back from the backend. */
+  checkInResource(id: string, input: CheckInInput): Promise<ApiResult<ContributorResource>>;
 
   // Volunteers (PROPOSED). Eligibility comes from the backend, never the app.
   applyToVolunteer(input: ApplyToVolunteerInput): Promise<ApiResult<VolunteerApplication>>;

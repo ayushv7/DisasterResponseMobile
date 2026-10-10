@@ -8,6 +8,8 @@ import {
   SAMPLE_CONTRIBUTOR_ACCOUNTS,
   SAMPLE_CONTRIBUTOR_APPLICATIONS,
   SAMPLE_CONTRIBUTOR_CODE,
+  SAMPLE_RESOURCE_POLICIES,
+  SAMPLE_RESOURCES,
 } from '@/fixtures/sample-contributors';
 import { SAMPLE_VERIFIED_NGOS } from '@/fixtures/sample-ngos';
 import { getCurrentCitizen } from '@/services/accounts-api';
@@ -15,10 +17,14 @@ import { getCurrentNgoSession } from '@/services/ngo-api';
 import { ApiError } from '@/services/api/types';
 import {
   ApplyToContributeInput,
+  CheckInInput,
   Contributor,
   ContributorApplication,
   ContributorCredentials,
   ContributorLoginInput,
+  ContributorResource,
+  RegisterResourceInput,
+  ResourceTypePolicy,
 } from '@/types/contributors';
 import { VolunteerDecision } from '@/types/volunteers';
 
@@ -137,4 +143,123 @@ export function getCurrentContributor(): Contributor | null {
 
 export function signOutContributor() {
   current = null;
+}
+
+// ── Resources and check-ins ─────────────────────────────────────────────────
+// Freshness, due times and eligibility below are a simulation of what the
+// backend would return. Screens only display them.
+
+const HOUR = 3600_000;
+
+function hoursFromNow(h: number) {
+  return new Date(Date.now() + h * HOUR).toISOString();
+}
+
+let resources: ContributorResource[] = SAMPLE_RESOURCES.map(
+  ({ lastCheckInHoursAgo, dueInHours, ...r }) => ({
+    ...r,
+    lastCheckInAt: lastCheckInHoursAgo != null ? hoursFromNow(-lastCheckInHoursAgo) : undefined,
+    checkInDueAt: dueInHours != null ? hoursFromNow(dueInHours) : undefined,
+    evidence: r.evidence
+      ? { ...r.evidence, capturedAt: hoursFromNow(-(lastCheckInHoursAgo ?? 0)) }
+      : undefined,
+  })
+);
+
+function requireContributor(): Contributor {
+  if (!current) throw new ApiError('UNAUTHORIZED', 'Sign in as a contributor.');
+  return current;
+}
+
+export async function getResourceTypePolicies(): Promise<ResourceTypePolicy[]> {
+  return copy(SAMPLE_RESOURCE_POLICIES);
+}
+
+export async function getMyResources(): Promise<ContributorResource[]> {
+  const c = requireContributor();
+  return copy(resources.filter((r) => r.contributorId === c.contributorId));
+}
+
+/** Mock upload: nothing leaves the device; returns a labelled placeholder URL. */
+export async function uploadEvidencePhoto(localUri: string): Promise<{ photoUrl: string }> {
+  requireContributor();
+  if (!localUri) throw new ApiError('UPLOAD_FAILED', 'No photo to upload.');
+  return { photoUrl: `simulated-upload://${localUri.split('/').pop()}` };
+}
+
+/** Simulated backend verdict on submitted evidence. */
+function verdict(evidence: { gps?: unknown; photoUrl?: string }): Pick<
+  ContributorResource,
+  'freshness' | 'eligibleForAllocation' | 'statusReason'
+> {
+  const verified = !!evidence.gps && !!evidence.photoUrl;
+  return verified
+    ? { freshness: 'FRESH', eligibleForAllocation: true, statusReason: 'Simulated: live GPS and photo received.' }
+    : {
+        freshness: 'UNVERIFIED',
+        eligibleForAllocation: false,
+        statusReason: 'Simulated: no live GPS or photo; the NGO must review before allocation.',
+      };
+}
+
+export async function registerResource(input: RegisterResourceInput): Promise<ContributorResource> {
+  const c = requireContributor();
+  const policy = SAMPLE_RESOURCE_POLICIES.find((p) => p.type === input.type);
+  if (!policy) throw new ApiError('INVALID_TYPE', 'Unknown resource type.');
+  if (!Number.isInteger(input.quantity) || input.quantity < 1) {
+    throw new ApiError('INVALID_QUANTITY', 'Quantity must be a whole number of at least 1.');
+  }
+  const { note: _note, ...evidence } = input.evidence;
+  const resource: ContributorResource = {
+    id: `res-${Date.now()}`,
+    contributorId: c.contributorId,
+    ngoId: c.ngoId,
+    type: policy.type,
+    typeLabel: policy.label,
+    quantity: input.quantity,
+    unit: policy.unit,
+    condition: input.condition,
+    availability: 'AVAILABLE',
+    ...verdict(evidence),
+    lastCheckInAt: new Date().toISOString(),
+    checkInDueAt: hoursFromNow(policy.checkInIntervalHours),
+    checkInIntervalHours: policy.checkInIntervalHours,
+    evidence: { ...evidence, unverified: !(evidence.gps && evidence.photoUrl) },
+  };
+  resources = [resource, ...resources];
+  return copy(resource);
+}
+
+export async function checkInResource(id: string, input: CheckInInput): Promise<ContributorResource> {
+  const c = requireContributor();
+  const r = resources.find((x) => x.id === id && x.contributorId === c.contributorId);
+  if (!r) throw new ApiError('NOT_FOUND', 'Resource not found.');
+  const now = new Date().toISOString();
+  r.lastCheckInAt = now;
+  r.checkInDueAt = hoursFromNow(r.checkInIntervalHours ?? 24);
+  if (!input.available) {
+    Object.assign(r, {
+      availability: 'UNAVAILABLE',
+      freshness: 'FRESH',
+      eligibleForAllocation: false,
+      statusReason: 'Simulated: you reported it unavailable.',
+    });
+  } else if (input.evidence) {
+    const { note: _note, ...evidence } = input.evidence;
+    Object.assign(r, { availability: 'AVAILABLE', ...verdict(evidence) });
+    r.evidence = { ...evidence, unverified: !(evidence.gps && evidence.photoUrl) };
+  } else {
+    Object.assign(r, {
+      availability: 'AVAILABLE',
+      freshness: 'FRESH',
+      eligibleForAllocation: r.freshness !== 'UNVERIFIED',
+      statusReason: 'Simulated: availability confirmed without new evidence.',
+    });
+  }
+  return copy(r);
+}
+
+/** Pool the plan mock allocates from (all contributors of the NGO). */
+export function allResourcesForNgo(ngoId: string): ContributorResource[] {
+  return copy(resources.filter((r) => r.ngoId === ngoId));
 }

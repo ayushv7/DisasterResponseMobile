@@ -201,6 +201,11 @@ export const mockApi: ApiClient = {
   decideContributorApplication: (id, decision, reason) =>
     simulate(() => contributors.decideContributorApplication(id, decision, reason)),
   contributorLogin: (input) => simulate(() => contributors.contributorLogin(input)),
+  getResourceTypePolicies: () => simulate(contributors.getResourceTypePolicies),
+  getMyResources: () => simulate(contributors.getMyResources),
+  uploadEvidencePhoto: (uri) => simulate(() => contributors.uploadEvidencePhoto(uri)),
+  registerResource: (input) => simulate(() => contributors.registerResource(input)),
+  checkInResource: (id, input) => simulate(() => contributors.checkInResource(id, input)),
   applyToVolunteer: (input) => simulate(() => volunteers.applyToVolunteer(input)),
   getMyVolunteerApplication: () => simulate(volunteers.getMyVolunteerApplication),
   listVolunteerApplications: () => simulate(volunteers.listVolunteerApplications),

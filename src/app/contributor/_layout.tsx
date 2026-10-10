@@ -12,7 +12,10 @@ export default function ContributorLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+      <Stack.Screen name="resources" options={{ animation: 'fade', gestureEnabled: false }} />
       <Stack.Screen name="more" options={{ animation: 'fade', gestureEnabled: false }} />
+      <Stack.Screen name="add-resource" />
+      <Stack.Screen name="check-in/[id]" />
     </Stack>
   );
 }

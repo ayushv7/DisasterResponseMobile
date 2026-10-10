@@ -59,7 +59,7 @@ export function homeRouteFor(role: Role): Href {
     case 'field_worker':
       return '/ops/tasks';
     case 'contributor':
-      return '/contributor/more';
+      return '/contributor/resources';
     case 'ngo':
       return '/ngo/inbox';
     default:

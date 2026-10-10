@@ -12,19 +12,31 @@ const MAX_PHOTOS = 4;
 interface EvidencePhotoPickerProps {
   photoUris: string[];
   onChange: (uris: string[]) => void;
+  /** Live capture only (launchCameraAsync); hides gallery selection. */
+  cameraOnly?: boolean;
+  /** Overrides the default limit of 4 photos. */
+  maxPhotos?: number;
+  /** Called when the camera can't be used, so the caller can offer a fallback. */
+  onCameraUnavailable?: (reason: string) => void;
 }
 
 /**
  * Take or pick completion photos. If permission is denied the user is told
  * they can still submit a text note, so evidence never blocks on photos.
  */
-export function EvidencePhotoPicker({ photoUris, onChange }: EvidencePhotoPickerProps) {
+export function EvidencePhotoPicker({
+  photoUris,
+  onChange,
+  cameraOnly,
+  maxPhotos = MAX_PHOTOS,
+  onCameraUnavailable,
+}: EvidencePhotoPickerProps) {
   const { colors } = useTheme();
-  const remaining = MAX_PHOTOS - photoUris.length;
+  const remaining = maxPhotos - photoUris.length;
 
   const add = (result: ImagePicker.ImagePickerResult) => {
     if (result.canceled) return;
-    onChange([...photoUris, ...result.assets.map((a) => a.uri)].slice(0, MAX_PHOTOS));
+    onChange([...photoUris, ...result.assets.map((a) => a.uri)].slice(0, maxPhotos));
   };
 
   const permissionDenied = () =>
@@ -34,9 +46,19 @@ export function EvidencePhotoPicker({ photoUris, onChange }: EvidencePhotoPicker
     );
 
   const takePhoto = async () => {
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (!perm.granted) return permissionDenied();
-    add(await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.6 }));
+    try {
+      const perm = await ImagePicker.requestCameraPermissionsAsync();
+      if (!perm.granted) {
+        onCameraUnavailable?.(
+          perm.canAskAgain ? 'Camera permission was not granted.' : 'Camera access is off in system settings.'
+        );
+        return permissionDenied();
+      }
+      add(await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.6 }));
+    } catch {
+      onCameraUnavailable?.('The camera could not be opened on this device.');
+      Alert.alert('Camera unavailable', 'The camera could not be opened on this device.');
+    }
   };
 
   const pickPhoto = async () => {
@@ -80,13 +102,15 @@ export function EvidencePhotoPicker({ photoUris, onChange }: EvidencePhotoPicker
             <Feather name="camera" size={16} color={colors.textPrimary} />
             <Text style={[styles.buttonText, { color: colors.textPrimary }]}>Take photo</Text>
           </Pressable>
-          <Pressable
-            onPress={pickPhoto}
-            style={[styles.button, { backgroundColor: colors.surfaceMuted }]}
-            accessibilityRole="button">
-            <Feather name="image" size={16} color={colors.textPrimary} />
-            <Text style={[styles.buttonText, { color: colors.textPrimary }]}>Choose</Text>
-          </Pressable>
+          {!cameraOnly && (
+            <Pressable
+              onPress={pickPhoto}
+              style={[styles.button, { backgroundColor: colors.surfaceMuted }]}
+              accessibilityRole="button">
+              <Feather name="image" size={16} color={colors.textPrimary} />
+              <Text style={[styles.buttonText, { color: colors.textPrimary }]}>Choose</Text>
+            </Pressable>
+          )}
         </View>
       )}
     </View>
