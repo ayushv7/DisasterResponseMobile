@@ -1,7 +1,7 @@
 /**
  * PrivateMessageComposeScreen
  *
- * Route: /message/compose?eventId=EVT-001
+ * Route: /message/compose?eventId=fl-2026-081
  *
  * Allows a public user to compose and submit a private message to a
  * verified NGO in the context of a specific flood event.

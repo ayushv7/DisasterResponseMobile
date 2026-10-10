@@ -14,8 +14,8 @@ export const IS_SAMPLE_MESSAGES = true;
 export const SAMPLE_SENT_MESSAGES: SentMessage[] = [
   {
     messageId: 'stub-msg-1001',
-    eventId: 'EVT-001',
-    eventTitle: 'Brahmaputra Embankment Breach — Dibrugarh Sector',
+    eventId: 'fl-2026-081',
+    eventTitle: 'Brahmaputra River Inundation Warning — Majuli Basin',
     ngoId: 'ngo-001',
     ngoName: 'Bharat Flood Response Network',
     observationExcerpt:
@@ -26,36 +26,36 @@ export const SAMPLE_SENT_MESSAGES: SentMessage[] = [
   },
   {
     messageId: 'stub-msg-1002',
-    eventId: 'EVT-002',
-    eventTitle: 'Gujarat Flash Flood — Kutch District Warning',
+    eventId: 'fl-2026-082',
+    eventTitle: 'Yamuna Floodplain Water Rise Alert',
     ngoId: 'ngo-003',
     ngoName: 'Assam Relief Collective',
     observationExcerpt:
-      'Requesting information about relief distribution schedule for displaced families in the Bhuj temporary shelter. Food and water supply is running low…',
+      'Requesting information about relief distribution schedule for displaced families in the floodplain relief camp. Food and water supply is running low…',
     sentAt: '2026-10-09T18:30:00Z',
     status: 'SENT',
     lastUpdatedAt: '2026-10-09T18:30:00Z',
   },
   {
     messageId: 'stub-msg-1003',
-    eventId: 'EVT-001',
-    eventTitle: 'Brahmaputra Embankment Breach — Dibrugarh Sector',
+    eventId: 'fl-2026-081',
+    eventTitle: 'Brahmaputra River Inundation Warning — Majuli Basin',
     ngoId: 'ngo-002',
     ngoName: 'Himalayan Aid Initiative',
     observationExcerpt:
-      'Medical supplies urgently needed in Naharkatia area. The primary health centre has been overwhelmed since yesterday. At least 12 people need treatment for waterborne illness symptoms…',
+      'Medical supplies urgently needed near Kamalabari ghat. The primary health centre has been overwhelmed since yesterday. At least 12 people need treatment for waterborne illness symptoms…',
     sentAt: '2026-10-08T14:45:00Z',
     status: 'CLARIFICATION_REQUESTED',
     lastUpdatedAt: '2026-10-09T10:20:00Z',
   },
   {
     messageId: 'stub-msg-1004',
-    eventId: 'EVT-003',
-    eventTitle: 'Kerala IMD Red Alert — Wayanad Landslide Risk',
+    eventId: 'fl-2026-083',
+    eventTitle: 'Ganga Tributary Flash Flood & Landslip Blockage',
     ngoId: 'ngo-004',
     ngoName: 'Kerala Disaster Management Foundation',
     observationExcerpt:
-      'Multiple landslide warning signs observed near Meppadi. Cracks on hillside visible from the road. Local community members are hesitant to evacuate without official guidance…',
+      'Multiple landslide warning signs observed near the blocked hill road. Cracks on hillside visible from the road. Local community members are hesitant to evacuate without official guidance…',
     sentAt: '2026-10-07T09:15:00Z',
     status: 'CLOSED',
     lastUpdatedAt: '2026-10-08T16:00:00Z',

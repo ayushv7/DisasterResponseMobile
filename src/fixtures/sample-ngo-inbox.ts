@@ -91,7 +91,7 @@ export const SAMPLE_NGO_INBOX_MESSAGES: NgoInboxMessage[] = [
   {
     messageId: 'msg-rec-2026-903',
     eventId: 'fl-2026-082',
-    eventTitle: 'Godavari Estuary Backwater Overflow — East Godavari',
+    eventTitle: 'Yamuna Floodplain Water Rise Alert',
     senderPseudonym: 'Citizen-Obs-519',
     receivedAt: '2026-10-09T16:20:00Z',
     status: 'REVIEWED',
@@ -131,7 +131,7 @@ export const SAMPLE_NGO_INBOX_MESSAGES: NgoInboxMessage[] = [
   {
     messageId: 'msg-rec-2026-904',
     eventId: 'fl-2026-083',
-    eventTitle: 'Kosi River Flash Surge — Supaul Lowland Sector',
+    eventTitle: 'Ganga Tributary Flash Flood & Landslip Blockage',
     senderPseudonym: 'Citizen-Obs-112',
     receivedAt: '2026-10-09T14:05:00Z',
     status: 'PREPARED_FOR_PUBLICATION',
