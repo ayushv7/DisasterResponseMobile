@@ -8,7 +8,9 @@ import { useSession } from '@/session/session-context';
  */
 export default function OpsLayout() {
   const { role } = useSession();
-  if (role !== 'coordinator' && role !== 'field_worker') return <Redirect href="/" />;
+  if (role !== 'coordinator' && role !== 'admin' && role !== 'field_worker') {
+    return <Redirect href="/" />;
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
@@ -18,6 +20,7 @@ export default function OpsLayout() {
       <Stack.Screen name="replanning" options={{ animation: 'fade' }} />
       <Stack.Screen name="more" options={{ animation: 'fade' }} />
       <Stack.Screen name="incident/[id]" />
+      <Stack.Screen name="approve-ngos" />
     </Stack>
   );
 }

@@ -30,6 +30,15 @@ export default function OpsMoreScreen() {
   };
 
   const rows: { icon: keyof typeof Feather.glyphMap; label: string; onPress: () => void }[] = [
+    ...(role !== 'field_worker'
+      ? [
+          {
+            icon: 'check-circle' as const,
+            label: 'Approve NGOs',
+            onPress: () => router.push('/ops/approve-ngos'),
+          },
+        ]
+      : []),
     { icon: 'sliders', label: 'Settings', onPress: () => router.push('/settings') },
     ...(__DEV__
       ? [{ icon: 'code' as const, label: 'Developer role switcher', onPress: () => router.push('/dev') }]

@@ -105,3 +105,15 @@ export interface NgoContributionItem {
   createdAt: string;
   publishedAt?: string;
 }
+
+/** An NGO's registration as seen by staff deciding whether to approve it. */
+export interface NgoApplication {
+  id: string;
+  name: string;
+  status: 'PENDING' | 'APPROVED' | 'SUSPENDED';
+  focusAreas: string[];
+  registeredAt: string;
+  /** Registration or licence reference supplied by the NGO; checked by the backend/admin. */
+  registrationRef?: string;
+  decidedAt?: string;
+}

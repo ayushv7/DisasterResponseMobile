@@ -34,7 +34,7 @@ const ROLE_LAUNCHERS: { role: Role; icon: keyof typeof Feather.glyphMap; tabs: s
   { role: 'coordinator', icon: 'activity', tabs: 'Ops · Incidents · Tasks · Replan · More' },
   { role: 'field_worker', icon: 'tool', tabs: 'Tasks · Profile' },
   { role: 'ngo', icon: 'shield', tabs: 'Inbox · Publish · Evidence · Organization' },
-  { role: 'admin', icon: 'key', tabs: 'NGO approval (NGO workspace for now)' },
+  { role: 'admin', icon: 'key', tabs: 'Same staff console as coordinator · Approve NGOs' },
 ];
 
 /** Development builds only; production builds redirect away. */

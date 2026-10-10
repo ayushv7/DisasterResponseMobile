@@ -23,7 +23,12 @@ import {
 import { SentMessage } from '@/types/message-thread';
 import { HelpOffer, NgoNeed, OfferHelpInput } from '@/types/offers';
 import { MessageDraft, MessageReceipt, VerifiedNgo } from '@/types/messaging';
-import { NgoContributionItem, NgoInboxFilter, NgoInboxMessage } from '@/types/ngo-workspace';
+import {
+  NgoApplication,
+  NgoContributionItem,
+  NgoInboxFilter,
+  NgoInboxMessage,
+} from '@/types/ngo-workspace';
 import {
   ActionQueueItem,
   AllocationRecommendation,
@@ -133,6 +138,11 @@ export interface ApiClient {
   getSentMessages(): Promise<ApiResult<SentMessage[]>>;
   getNgoInbox(filter?: NgoInboxFilter): Promise<ApiResult<NgoInboxMessage[]>>;
   publishUpdate(input: PublishUpdateInput): Promise<ApiResult<NgoContributionItem>>;
+
+  // Staff (coordinator/admin share one UI; the backend allows approval for admin only)
+  getNgoApplications(): Promise<ApiResult<NgoApplication[]>>;
+  /** Approve, or decline/suspend when `approved` is false. */
+  approveNgo(ngoId: string, approved: boolean): Promise<ApiResult<NgoApplication>>;
 }
 
 export class NotImplementedError extends Error {

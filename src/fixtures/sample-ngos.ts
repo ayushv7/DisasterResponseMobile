@@ -7,6 +7,7 @@
  */
 
 import { VerifiedNgo } from '@/types/messaging';
+import { NgoApplication } from '@/types/ngo-workspace';
 
 export const IS_SAMPLE_NGOS = true;
 
@@ -45,5 +46,24 @@ export const SAMPLE_VERIFIED_NGOS: VerifiedNgo[] = [
     focusAreas: ['Multi-agency Coordination', 'Logistics', 'Aerial Survey'],
     isVerified: true,
     verifiedAt: '2026-05-07T00:00:00Z',
+  },
+];
+
+/** SAMPLE DATA — NGO registrations awaiting a staff decision. Not real organizations. */
+export const SAMPLE_NGO_APPLICATIONS: NgoApplication[] = [
+  {
+    id: 'ngo-app-101',
+    name: 'Sample Riverbank Relief Trust',
+    status: 'PENDING',
+    focusAreas: ['Boat Rescue', 'Food Distribution'],
+    registeredAt: '2026-10-09T06:30:00Z',
+    registrationRef: 'SAMPLE-REG-0101',
+  },
+  {
+    id: 'ngo-app-102',
+    name: 'Sample Hill Medical Volunteers',
+    status: 'PENDING',
+    focusAreas: ['Medical Aid'],
+    registeredAt: '2026-10-09T11:10:00Z',
   },
 ];

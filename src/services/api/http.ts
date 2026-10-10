@@ -50,4 +50,6 @@ export const httpApi: ApiClient = {
   getSentMessages: notImplemented('getSentMessages'),
   getNgoInbox: notImplemented('getNgoInbox'),
   publishUpdate: notImplemented('publishUpdate'),
+  getNgoApplications: notImplemented('getNgoApplications'),
+  approveNgo: notImplemented('approveNgo'),
 };

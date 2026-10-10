@@ -52,11 +52,12 @@ const SessionContext = createContext<SessionContextValue | null>(null);
 export function homeRouteFor(role: Role): Href {
   switch (role) {
     case 'coordinator':
+    case 'admin':
+      // Coordinator and admin share one staff console for now
       return '/ops/home';
     case 'field_worker':
       return '/ops/tasks';
     case 'ngo':
-    case 'admin':
       return '/ngo/inbox';
     default:
       return '/alerts';

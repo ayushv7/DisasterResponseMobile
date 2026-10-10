@@ -5,6 +5,7 @@
  */
 import * as accounts from '@/services/accounts-api';
 import * as offers from '@/services/offers-api';
+import { decideNgo, fetchNgoApplications } from '@/services/ngo-approval-api';
 import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
 import { fetchNgoInbox, publishContribution } from '@/services/ngo-api';
@@ -164,4 +165,7 @@ export const mockApi: ApiClient = {
   getSentMessages: () => simulate(fetchSentMessages),
   getNgoInbox: (filter) => simulate(() => fetchNgoInbox(filter)),
   publishUpdate: (input) => simulate(() => publishContribution(input)),
+
+  getNgoApplications: () => simulate(fetchNgoApplications),
+  approveNgo: (id, approved) => simulate(() => decideNgo(id, approved)),
 };
