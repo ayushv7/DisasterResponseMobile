@@ -12,6 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { InfoBar } from '@/components/InfoBar';
+import { useApiQuery } from '@/hooks/use-api-query';
+import { api } from '@/services/api';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
 import { useSession } from '@/session/session-context';
 import { useGoBack } from '@/navigation/use-go-back';
@@ -27,6 +29,8 @@ export default function EventDetailScreen() {
   const { role } = useSession();
 
   const event = SAMPLE_FLOOD_EVENTS.find((e) => e.id === id);
+  // Public NGO updates for this alert, read from the service (never copied locally)
+  const updates = useApiQuery(() => api.getUpdatesForEvent(id ?? ''), [id]);
 
   const getSeverityDotColor = (currentEvent: FloodEvent) => {
     if (currentEvent.severityLevel === 'CRITICAL' || currentEvent.severityLevel === 'HIGH') {
@@ -245,6 +249,35 @@ export default function EventDetailScreen() {
             <Feather name="arrow-right" size={15} color={colors.brandPrimary} />
           </Pressable>
         </View>
+        )}
+
+        {/* 2c. Updates published by verified NGOs for this alert / its incident */}
+        {(updates.data ?? []).length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                Updates from NGOs ({updates.data!.length})
+              </Text>
+              <Text style={[styles.sectionNote, { color: colors.textTertiary }]}>
+                {updates.source === 'sample'
+                  ? 'Simulated: sample NGO updates, not live information'
+                  : 'Published by verified NGOs'}
+              </Text>
+            </View>
+            {updates.data!.map((u) => (
+              <View key={u.id} style={[styles.observationCard, { backgroundColor: colors.surface }]}>
+                <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>{u.ngoName}</Text>
+                <Text style={[styles.sectionNote, { color: colors.textPrimary, fontSize: 14 }]}>{u.summary}</Text>
+                {u.needs && (
+                  <Text style={[styles.sectionNote, { color: colors.textSecondary }]}>Needs: {u.needs}</Text>
+                )}
+                <Text style={[styles.sectionNote, { color: colors.textTertiary }]}>
+                  {u.locality}
+                  {u.publishedAt ? ` · ${new Date(u.publishedAt).toLocaleString()}` : ''}
+                </Text>
+              </View>
+            ))}
+          </>
         )}
 
         {/* 3. Section: Source Observations */}

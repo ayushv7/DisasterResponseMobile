@@ -226,6 +226,8 @@ export interface ApiClient {
   /** Published NGO updates, for authority review and takedown. */
   getPublishedUpdates(): Promise<ApiResult<NgoContributionItem[]>>;
   takedownUpdate(updateId: string, reason: string): Promise<ApiResult<NgoContributionItem>>;
+  /** Public: NGO-published updates for an alert (by alert or its linked incident). */
+  getUpdatesForEvent(eventId: string): Promise<ApiResult<NgoContributionItem[]>>;
 }
 
 /**

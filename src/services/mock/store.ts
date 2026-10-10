@@ -8,8 +8,11 @@
  *   Ngo ─< Contributor ─< Resource
  *   Task / Resource ─< Evidence
  *   Contributor ─< Instruction (issued when a plan is approved)
+ *   Ngo ─< InboxMessage, Ngo ─< Update ─> Incident (via the public alert it is about)
  */
 import { SAMPLE_FIELD_TEAM, SAMPLE_NGO_CODE } from '@/fixtures/sample-accounts';
+import { SAMPLE_NGO_CONTRIBUTIONS, SAMPLE_NGO_INBOX_MESSAGES } from '@/fixtures/sample-ngo-inbox';
+import { NgoContributionItem, NgoInboxMessage } from '@/types/ngo-workspace';
 import {
   SAMPLE_CONTRIBUTOR_ACCOUNTS,
   SAMPLE_CONTRIBUTOR_APPLICATIONS,
@@ -60,6 +63,18 @@ function seedResources(): ContributorResource[] {
   }));
 }
 
+/**
+ * Public alert (FloodEvent) -> ops Incident. Sample data only links the
+ * Majuli alert; other alerts have no ops incident in the sample set.
+ */
+export const EVENT_INCIDENT_LINKS: Record<string, string> = {
+  'fl-2026-081': 'INC-2026-081',
+};
+
+export function incidentForEvent(eventId?: string): string | undefined {
+  return eventId ? EVENT_INCIDENT_LINKS[eventId] : undefined;
+}
+
 export const store = {
   ngos: [
     { id: 'ngo-drn-india', name: 'Disaster Relief Network India', code: SAMPLE_NGO_CODE, serviceArea: 'Assam' },
@@ -77,6 +92,11 @@ export const store = {
   resources: seedResources(),
   instructions: [] as ContributorInstruction[],
   evidence: [] as EvidenceRecord[],
+  ngoMessages: copy(SAMPLE_NGO_INBOX_MESSAGES) as NgoInboxMessage[],
+  ngoUpdates: copy(SAMPLE_NGO_CONTRIBUTIONS).map((u) => ({
+    ...u,
+    incidentId: u.incidentId ?? incidentForEvent(u.eventId),
+  })) as NgoContributionItem[],
 };
 
 export function ngoById(id: string): StoreNgo | undefined {

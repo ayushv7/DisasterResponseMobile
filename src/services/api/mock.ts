@@ -15,6 +15,7 @@ import {
   fetchNgoInbox,
   getCurrentNgoSession,
   fetchPublishedContributions,
+  fetchPublishedUpdatesForEvent,
   publishContribution,
   takedownContribution,
 } from '@/services/ngo-api';
@@ -282,4 +283,5 @@ export const mockApi: ApiClient = {
   createNgo: (input) => simulate(() => createNgo(input)),
   getPublishedUpdates: () => simulate(fetchPublishedContributions),
   takedownUpdate: (id, reason) => simulate(() => takedownContribution(id, reason)),
+  getUpdatesForEvent: (eventId) => simulate(() => fetchPublishedUpdatesForEvent(eventId)),
 };

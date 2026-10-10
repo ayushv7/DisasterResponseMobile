@@ -54,6 +54,7 @@ export default function TakedownScreen() {
       setFeedback(`${result.source === 'sample' ? 'Simulated: ' : ''}update from ${item.ngoName} taken down.`);
       setTargetId(null);
       setReason('');
+      load();
     } catch (err: any) {
       Alert.alert('Could not take down', err?.message || 'Try again.');
     }

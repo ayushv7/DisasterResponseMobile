@@ -18,10 +18,8 @@
  *   POST  /api/v1/ngo/contributions/publish  → NgoContributionItem
  */
 
-import {
-  DEFAULT_MOCK_NGO_SESSION,
-  SAMPLE_NGO_INBOX_MESSAGES,
-} from '@/fixtures/sample-ngo-inbox';
+import { DEFAULT_MOCK_NGO_SESSION } from '@/fixtures/sample-ngo-inbox';
+import { incidentForEvent, store } from '@/services/mock/store';
 import {
   NgoContributionItem,
   NgoInboxFilter,
@@ -35,64 +33,8 @@ export const IS_STUB_NGO_API = true;
 // Active session state. Starts with null (unauthenticated) by default
 let currentSession: NgoSession | null = null;
 
-let inMemoryMessages: NgoInboxMessage[] = JSON.parse(
-  JSON.stringify(SAMPLE_NGO_INBOX_MESSAGES)
-);
+// Inbox messages and updates live in the shared mock store (src/services/mock/store.ts).
 
-let inMemoryContributions: NgoContributionItem[] = [
-  {
-    id: 'contrib-seed-01',
-    eventId: 'fl-2026-081',
-    eventTitle: 'Brahmaputra River Inundation Warning — Majuli Basin',
-    contributionType: 'RELIEF_DISTRIBUTION',
-    summary:
-      'Dispatched 2 motorized rescue boats and 400 clean drinking water sachets to Kamalabari Ghat sector 3.',
-    locality: 'Kamalabari Ghat, Majuli District',
-    needs: 'Dry food rations and temporary tarpaulin sheets',
-    availableResources: '2 rubber craft, 4 volunteers',
-    evidenceReferences: 'Local field team report ref ASDMA-SEC-3',
-    verificationMethod: 'Field coordinator on-site physical inspection',
-    authorOfficer: 'R. Sharma (Field Lead)',
-    ngoId: 'ngo-drn-india',
-    ngoName: 'Disaster Relief Network India',
-    status: 'PUBLISHED',
-    createdAt: '2026-10-09T20:00:00Z',
-    publishedAt: '2026-10-09T20:15:00Z',
-  },
-  {
-    id: 'contrib-seed-02',
-    eventId: 'fl-2026-082',
-    eventTitle: 'Godavari Estuary Backwater Overflow — East Godavari',
-    contributionType: 'EVACUATION_ROUTE',
-    summary:
-      'Secondary bypass road via Mukteswaram is navigable for light commercial relief vehicles. Causeway remains closed.',
-    locality: 'Ainavilli Mandal, Konaseema',
-    needs: 'Traffic diversion signage',
-    availableResources: 'Route scouting vehicle',
-    evidenceReferences: 'Traffic police coordination log #409',
-    verificationMethod: 'Joint verification with circle traffic inspector',
-    authorOfficer: 'R. Sharma (Field Lead)',
-    ngoId: 'ngo-drn-india',
-    ngoName: 'Disaster Relief Network India',
-    status: 'DRAFT',
-    createdAt: '2026-10-09T18:00:00Z',
-  },
-  {
-    id: 'contrib-seed-03',
-    eventId: 'fl-2026-083',
-    eventTitle: 'Kosi River Flash Surge — Supaul Lowland Sector',
-    contributionType: 'RELIEF_DISTRIBUTION',
-    summary:
-      'Shelter dispatch duplicate report. Handled via direct SDRF regional pipeline.',
-    locality: 'Nirmali Block, Supaul',
-    verificationMethod: 'Cross-agency ledger reconciliation',
-    authorOfficer: 'R. Sharma (Field Lead)',
-    ngoId: 'ngo-drn-india',
-    ngoName: 'Disaster Relief Network India',
-    status: 'REJECTED_OR_CLOSED',
-    createdAt: '2026-10-09T15:00:00Z',
-  },
-];
 
 export async function loginNgo(
   _email: string,
@@ -149,7 +91,7 @@ export async function fetchNgoInbox(
   await new Promise((res) => setTimeout(res, 250));
   assertAuthenticatedAndVerified();
 
-  let list = [...inMemoryMessages];
+  let list = [...store.ngoMessages];
   if (filter === 'NEEDS_REVIEW') {
     list = list.filter((m) => m.status === 'NEEDS_REVIEW');
   } else if (filter === 'CLARIFICATION') {
@@ -172,7 +114,7 @@ export async function fetchNgoMessageDetail(
   await new Promise((res) => setTimeout(res, 200));
   assertAuthenticatedAndVerified();
 
-  const found = inMemoryMessages.find((m) => m.messageId === messageId);
+  const found = store.ngoMessages.find((m) => m.messageId === messageId);
   if (!found) {
     throw new Error(`Message ${messageId} not found.`);
   }
@@ -188,7 +130,7 @@ export async function requestClarification(
   await new Promise((res) => setTimeout(res, 300));
   assertAuthenticatedAndVerified();
 
-  const msg = inMemoryMessages.find((m) => m.messageId === messageId);
+  const msg = store.ngoMessages.find((m) => m.messageId === messageId);
   if (!msg) throw new Error('Message not found.');
 
   msg.status = 'CLARIFICATION_REQUESTED';
@@ -211,7 +153,7 @@ export async function rejectAndCloseMessage(
   await new Promise((res) => setTimeout(res, 300));
   assertAuthenticatedAndVerified();
 
-  const msg = inMemoryMessages.find((m) => m.messageId === messageId);
+  const msg = store.ngoMessages.find((m) => m.messageId === messageId);
   if (!msg) throw new Error('Message not found.');
 
   msg.status = 'REJECTED';
@@ -233,7 +175,7 @@ export async function prepareContributionForPublication(
   await new Promise((res) => setTimeout(res, 300));
   assertAuthenticatedAndVerified();
 
-  const msg = inMemoryMessages.find((m) => m.messageId === messageId);
+  const msg = store.ngoMessages.find((m) => m.messageId === messageId);
   if (!msg) throw new Error('Message not found.');
 
   msg.status = 'PREPARED_FOR_PUBLICATION';
@@ -253,19 +195,32 @@ export async function prepareContributionForPublication(
 export async function fetchNgoContributions(): Promise<NgoContributionItem[]> {
   await new Promise((res) => setTimeout(res, 250));
   assertAuthenticatedAndVerified();
-  return JSON.parse(JSON.stringify(inMemoryContributions));
+  return JSON.parse(JSON.stringify(store.ngoUpdates));
 }
 
 /** Public view: published contributions only (GET /incidents/{id}/updates). No NGO session needed. */
 export async function fetchPublishedContributions(): Promise<NgoContributionItem[]> {
   await new Promise((res) => setTimeout(res, 150));
-  return JSON.parse(JSON.stringify(inMemoryContributions.filter((c) => c.status === 'PUBLISHED')));
+  return JSON.parse(JSON.stringify(store.ngoUpdates.filter((c) => c.status === 'PUBLISHED')));
 }
 
 /** Authority takedown of a published update (POST /admin/updates/{id}/takedown). */
+/** Public: published updates for an alert, matched by alert or by its linked incident. */
+export async function fetchPublishedUpdatesForEvent(eventId: string): Promise<NgoContributionItem[]> {
+  await new Promise((res) => setTimeout(res, 150));
+  const incidentId = incidentForEvent(eventId);
+  return JSON.parse(
+    JSON.stringify(
+      store.ngoUpdates.filter(
+        (c) => c.status === 'PUBLISHED' && (c.eventId === eventId || (!!incidentId && c.incidentId === incidentId))
+      )
+    )
+  );
+}
+
 export async function takedownContribution(id: string, reason: string): Promise<NgoContributionItem> {
   await new Promise((res) => setTimeout(res, 150));
-  const item = inMemoryContributions.find((c) => c.id === id);
+  const item = store.ngoUpdates.find((c) => c.id === id);
   if (!item) throw new Error('Update not found.');
   item.status = 'TAKEN_DOWN';
   item.takenDownReason = reason;
@@ -276,7 +231,7 @@ export async function fetchContributionById(
   id: string
 ): Promise<NgoContributionItem | null> {
   await new Promise((res) => setTimeout(res, 100));
-  const found = inMemoryContributions.find((c) => c.id === id);
+  const found = store.ngoUpdates.find((c) => c.id === id);
   return found ? JSON.parse(JSON.stringify(found)) : null;
 }
 
@@ -287,9 +242,10 @@ export async function saveContributionDraft(
   assertAuthenticatedAndVerified();
 
   if (draftInput.draftId) {
-    const existing = inMemoryContributions.find((c) => c.id === draftInput.draftId);
+    const existing = store.ngoUpdates.find((c) => c.id === draftInput.draftId);
     if (existing) {
       existing.eventId = draftInput.eventId;
+      existing.incidentId = incidentForEvent(draftInput.eventId);
       existing.eventTitle = draftInput.eventTitle;
       existing.citizenMessageRef = draftInput.citizenMessageRef;
       existing.contributionType = draftInput.contributionType;
@@ -307,6 +263,7 @@ export async function saveContributionDraft(
   const newItem: NgoContributionItem = {
     ...draftInput,
     id: `draft-${Date.now()}`,
+    incidentId: incidentForEvent(draftInput.eventId),
     status: 'DRAFT',
     authorOfficer: currentSession!.authorizedOfficerName,
     ngoId: currentSession!.ngoId,
@@ -314,7 +271,7 @@ export async function saveContributionDraft(
     createdAt: new Date().toISOString(),
   };
 
-  inMemoryContributions.unshift(newItem);
+  store.ngoUpdates.unshift(newItem);
   return JSON.parse(JSON.stringify(newItem));
 }
 

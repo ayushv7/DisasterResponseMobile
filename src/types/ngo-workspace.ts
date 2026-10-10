@@ -106,6 +106,8 @@ export interface NgoContributionItem {
   status: ContributionStatus;
   createdAt: string;
   publishedAt?: string;
+  /** Ops incident this update is about (Update -> Incident), when the alert maps to one. */
+  incidentId?: string;
   /** Set by the authority when the update is taken down. */
   takenDownReason?: string;
 }

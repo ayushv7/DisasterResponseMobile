@@ -8,7 +8,7 @@
  */
 
 import { SAMPLE_NGO_CODE } from '@/fixtures/sample-accounts';
-import { NgoInboxMessage, NgoSession } from '@/types/ngo-workspace';
+import { NgoContributionItem, NgoInboxMessage, NgoSession } from '@/types/ngo-workspace';
 
 export const IS_SAMPLE_NGO_DATA = true;
 
@@ -170,5 +170,61 @@ export const SAMPLE_NGO_INBOX_MESSAGES: NgoInboxMessage[] = [
         notes: 'Ready for inclusion into public NGO relief bulletin.',
       },
     ],
+  },
+];
+
+/** SAMPLE published/draft NGO updates (moved here from ngo-api so the mock store can seed them). */
+export const SAMPLE_NGO_CONTRIBUTIONS: NgoContributionItem[] = [
+  {
+    id: 'contrib-seed-01',
+    eventId: 'fl-2026-081',
+    eventTitle: 'Brahmaputra River Inundation Warning — Majuli Basin',
+    contributionType: 'RELIEF_DISTRIBUTION',
+    summary:
+      'Dispatched 2 motorized rescue boats and 400 clean drinking water sachets to Kamalabari Ghat sector 3.',
+    locality: 'Kamalabari Ghat, Majuli District',
+    needs: 'Dry food rations and temporary tarpaulin sheets',
+    availableResources: '2 rubber craft, 4 volunteers',
+    evidenceReferences: 'Local field team report ref ASDMA-SEC-3',
+    verificationMethod: 'Field coordinator on-site physical inspection',
+    authorOfficer: 'R. Sharma (Field Lead)',
+    ngoId: 'ngo-drn-india',
+    ngoName: 'Disaster Relief Network India',
+    status: 'PUBLISHED',
+    createdAt: '2026-10-09T20:00:00Z',
+    publishedAt: '2026-10-09T20:15:00Z',
+  },
+  {
+    id: 'contrib-seed-02',
+    eventId: 'fl-2026-082',
+    eventTitle: 'Godavari Estuary Backwater Overflow — East Godavari',
+    contributionType: 'EVACUATION_ROUTE',
+    summary:
+      'Secondary bypass road via Mukteswaram is navigable for light commercial relief vehicles. Causeway remains closed.',
+    locality: 'Ainavilli Mandal, Konaseema',
+    needs: 'Traffic diversion signage',
+    availableResources: 'Route scouting vehicle',
+    evidenceReferences: 'Traffic police coordination log #409',
+    verificationMethod: 'Joint verification with circle traffic inspector',
+    authorOfficer: 'R. Sharma (Field Lead)',
+    ngoId: 'ngo-drn-india',
+    ngoName: 'Disaster Relief Network India',
+    status: 'DRAFT',
+    createdAt: '2026-10-09T18:00:00Z',
+  },
+  {
+    id: 'contrib-seed-03',
+    eventId: 'fl-2026-083',
+    eventTitle: 'Kosi River Flash Surge — Supaul Lowland Sector',
+    contributionType: 'RELIEF_DISTRIBUTION',
+    summary:
+      'Shelter dispatch duplicate report. Handled via direct SDRF regional pipeline.',
+    locality: 'Nirmali Block, Supaul',
+    verificationMethod: 'Cross-agency ledger reconciliation',
+    authorOfficer: 'R. Sharma (Field Lead)',
+    ngoId: 'ngo-drn-india',
+    ngoName: 'Disaster Relief Network India',
+    status: 'REJECTED_OR_CLOSED',
+    createdAt: '2026-10-09T15:00:00Z',
   },
 ];
