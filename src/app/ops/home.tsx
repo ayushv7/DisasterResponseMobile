@@ -32,7 +32,7 @@ import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { api } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
-import { typography } from '@/theme/typography';
+import { textScale, typography } from '@/theme/typography';
 import {
   ActionQueueItem,
   InterventionPriority,
@@ -207,76 +207,25 @@ export default function OperationsHomeScreen() {
                 </Pressable>
               )}
 
-              {/* 4. Counts by state */}
-              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Work by state</Text>
-        {/* 3. Operational State Ribbon */}
-        {stats && (
-          <View style={[styles.readinessRibbon, { backgroundColor: colors.surface }]}>
-            <View style={styles.readinessItem}>
-                <Text style={[styles.readinessCount, typography.tabular, { color: colors.textPrimary }]}>
-                  {stats.activeIncidents}
-                </Text>
-                <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
-                  Incidents
-                </Text>
-            </View>
-
-            <View style={[styles.ribbonDivider, { backgroundColor: colors.divider }]} />
-
-            <View style={styles.readinessItem}>
-                <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusActive }]}>
-                  {stats.immediateInterventions}
-                </Text>
-                <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
-                  Immediate
-                </Text>
-            </View>
-
-            <View style={[styles.ribbonDivider, { backgroundColor: colors.divider }]} />
-
-            <View style={styles.readinessItem}>
-                <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusWatch }]}>
-                  {stats.pendingAcknowledgement}
-                </Text>
-                <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
-                  Pending Ack
-                </Text>
-            </View>
-
-            <View style={[styles.ribbonDivider, { backgroundColor: colors.divider }]} />
-
-            <View style={styles.readinessItem}>
-                <Text style={[styles.readinessCount, typography.tabular, { color: colors.brandTeal }]}>
-                  {stats.inProgressTasks}
-                </Text>
-                <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
-                  In Field
-                </Text>
-            </View>
-
-            <View style={[styles.ribbonDivider, { backgroundColor: colors.divider }]} />
-
-            <View style={styles.readinessItem}>
-                <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusActive }]}>
-                  {stats.blockedOrFailedInterventions}
-                </Text>
-                <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
-                  Blocked
-                </Text>
-            </View>
-          </View>
-        )}
-
-
               {/* 5. Full list, collapsed by default */}
               <Pressable
                 onPress={() => setShowAllWork((v) => !v)}
                 style={styles.disclosureRow}
                 accessibilityRole="button"
                 accessibilityState={{ expanded: showAllWork }}>
-                <Text style={[styles.sectionTitle, styles.disclosureTitle, { color: colors.textPrimary }]}>
-                  All work orders ({interventions.length})
-                </Text>
+                <View style={styles.disclosureText}>
+                  <Text style={[styles.sectionTitle, styles.disclosureTitle, { color: colors.textPrimary }]}>
+                    All work orders ({interventions.length})
+                  </Text>
+                  {/* One-line counts summary (replaces the separate counts ribbon) */}
+                  {stats && (
+                    <Text style={[styles.summaryLine, { color: colors.textSecondary }]} numberOfLines={2}>
+                      {stats.activeIncidents} incidents · {stats.immediateInterventions} immediate ·{' '}
+                      {stats.pendingAcknowledgement} awaiting ack · {stats.inProgressTasks} in field ·{' '}
+                      {stats.blockedOrFailedInterventions} blocked
+                    </Text>
+                  )}
+                </View>
                 <Feather
                   name={showAllWork ? 'chevron-up' : 'chevron-down'}
                   size={18}
@@ -491,11 +440,11 @@ export default function OperationsHomeScreen() {
 const styles = StyleSheet.create({
   updatedText: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
   },
   sectionTitle: {
     ...typography.bodyMedium,
-    fontSize: 15,
+    ...textScale.subtitle,
     fontWeight: '700',
     paddingHorizontal: spacing.screenPadding,
     marginTop: spacing.lg,
@@ -503,7 +452,7 @@ const styles = StyleSheet.create({
   },
   sectionNote: {
     ...typography.body,
-    fontSize: 15,
+    ...textScale.body,
     paddingHorizontal: spacing.screenPadding,
     marginBottom: spacing.sm,
   },
@@ -519,7 +468,7 @@ const styles = StyleSheet.create({
   },
   linkRowText: {
     ...typography.body,
-    fontSize: 15,
+    ...textScale.body,
     flex: 1,
   },
   disclosureRow: {
@@ -527,11 +476,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: touchTargets.min,
+    paddingVertical: spacing.sm,
     paddingRight: spacing.screenPadding,
+    marginTop: spacing.sm,
+  },
+  disclosureText: {
+    flex: 1,
+    paddingLeft: spacing.screenPadding,
+    gap: spacing.xxs,
+  },
+  summaryLine: {
+    ...typography.caption,
+    ...textScale.caption,
   },
   disclosureTitle: {
     marginTop: 0,
     marginBottom: 0,
+    paddingHorizontal: 0,
   },
   safeArea: {
     flex: 1,
@@ -545,63 +506,32 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.sm,
   },
   headerTitleWrap: {
-    gap: 2,
+    gap: spacing.xxs,
     flex: 1,
   },
   headerOverline: {
     ...typography.overline,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
   headerTitle: {
     ...typography.title,
-    fontSize: 22,
-    lineHeight: 28,
+    ...textScale.title,
     flexShrink: 1,
   },
   roleChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: spacing.sm + 2,
-    paddingVertical: spacing.xs + 2,
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
     borderRadius: radii.chip,
   },
   roleChipText: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '600',
-  },
-  readinessRibbon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginHorizontal: spacing.screenPadding,
-    marginTop: spacing.xs,
-    marginBottom: spacing.sm,
-    paddingVertical: spacing.sm + 2,
-    paddingHorizontal: spacing.md,
-    borderRadius: radii.card,
-  },
-  readinessItem: {
-    alignItems: 'center',
-    flex: 1,
-    gap: 2,
-  },
-  readinessCount: {
-    ...typography.caption,
-    fontSize: 15,
-    fontWeight: '800',
-  },
-  readinessLabel: {
-    ...typography.caption,
-    fontSize: 12,
-    fontWeight: '500',
-  },
-  ribbonDivider: {
-    width: 1,
-    height: 24,
   },
   filterRow: {
     flexDirection: 'row',
@@ -612,12 +542,12 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs + 2,
+    paddingVertical: spacing.sm,
     borderRadius: radii.chip,
   },
   filterChipText: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
   },
   skeletonWrap: {
     paddingHorizontal: spacing.screenPadding,
@@ -631,7 +561,7 @@ const styles = StyleSheet.create({
   interventionCard: {
     borderRadius: radii.card,
     padding: spacing.cardPadding,
-    gap: 6,
+    gap: spacing.sm,
   },
   cardTopRow: {
     flexDirection: 'row',
@@ -641,59 +571,57 @@ const styles = StyleSheet.create({
   priorityGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
   },
   priorityDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: radii.xs,
   },
   priorityText: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '700',
     letterSpacing: 0.4,
   },
   statusPill: {
-    paddingHorizontal: 7,
-    paddingVertical: 3,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     borderRadius: radii.xs,
   },
   statusPillText: {
     ...typography.overline,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
   targetLocality: {
     ...typography.bodyMedium,
-    fontSize: 15,
+    ...textScale.body,
     fontWeight: '700',
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   incidentSubtitle: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
   },
   instructionsText: {
     ...typography.body,
-    fontSize: 12,
-    lineHeight: 18,
+    ...textScale.caption,
   },
   blockerBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
     padding: spacing.sm,
     borderRadius: radii.xs,
-    marginTop: 2,
+    marginTop: spacing.xxs,
   },
   blockerText: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '600',
     flex: 1,
-    lineHeight: 16,
   },
   assignmentRow: {
     flexDirection: 'row',
@@ -702,22 +630,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radii.sm,
-    marginTop: 4,
+    marginTop: spacing.xs,
   },
   assignmentInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: spacing.sm,
     flex: 1,
   },
   assignmentText: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '600',
   },
   deadlineCountdown: {
     ...typography.caption,
-    fontSize: 12,
+    ...textScale.caption,
     fontWeight: '700',
   },
 });

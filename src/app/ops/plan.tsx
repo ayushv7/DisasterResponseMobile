@@ -20,7 +20,7 @@ import { useGoBack } from '@/navigation/use-go-back';
 import { api, ApiError } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
-import { typography } from '@/theme/typography';
+import { textScale, typography } from '@/theme/typography';
 import { ContributorResource, PlanAllocation, PlanStatus } from '@/types/contributors';
 import { InterventionRecord } from '@/types/operations';
 
@@ -241,29 +241,37 @@ export default function ResourcePlanScreen() {
             {plan.status === 'PROPOSED' && (
               <PrimaryButton label="Approve and publish" onPress={approve} busy={approving} disabled={busy && !approving} />
             )}
-            <View style={styles.row}>
-              <Pressable
-                onPress={replan}
-                disabled={busy}
-                style={[styles.button, styles.flex, { backgroundColor: colors.actionPrimary, opacity: busy ? 0.6 : 1 }]}
-                accessibilityRole="button"
-                accessibilityState={{ busy: replanning }}>
-                {replanning ? (
-                  <ActivityIndicator size="small" color={colors.onActionPrimary} />
-                ) : (
-                  <Text style={[styles.buttonText, { color: colors.onActionPrimary }]}>Replan</Text>
-                )}
-              </Pressable>
-              <Pressable
-                onPress={() => (showManual ? setShowManual(false) : openManual())}
-                disabled={busy}
-                style={[styles.button, styles.flex, { backgroundColor: colors.surfaceMuted }]}
-                accessibilityRole="button">
-                <Text style={[styles.buttonText, { color: colors.textPrimary }]}>
-                  {showManual ? 'Cancel manual' : 'Allocate manually'}
+            <Pressable
+              onPress={replan}
+              disabled={busy}
+              style={[styles.button, { backgroundColor: colors.surfaceMuted, opacity: busy && !replanning ? 0.6 : 1 }]}
+              accessibilityRole="button"
+              accessibilityState={{ busy: replanning }}>
+              {replanning ? (
+                <ActivityIndicator size="small" color={colors.textPrimary} />
+              ) : (
+                <View style={styles.row}>
+                  <Feather name="refresh-cw" size={16} color={colors.textPrimary} />
+                  <Text style={[styles.buttonText, { color: colors.textPrimary }]}>Replan</Text>
+                </View>
+              )}
+            </Pressable>
+
+            {/* Manual allocation: collapsed by default */}
+            <Pressable
+              onPress={() => (showManual ? setShowManual(false) : openManual())}
+              disabled={busy}
+              style={[styles.disclosure, { backgroundColor: colors.surface }]}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: showManual }}>
+              <View style={styles.flex}>
+                <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>Allocate manually</Text>
+                <Text style={[styles.caption, { color: colors.textSecondary }]}>
+                  Override the plan for one resource, with a reason
                 </Text>
-              </Pressable>
-            </View>
+              </View>
+              <Feather name={showManual ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textSecondary} />
+            </Pressable>
 
             {showManual && (
               <View style={[styles.card, styles.form, { backgroundColor: colors.surface }]}>
@@ -378,7 +386,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   iconButton: { width: touchTargets.min, height: touchTargets.min, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { ...typography.title, fontSize: 20, lineHeight: 24, flex: 1 },
+  headerTitle: { ...typography.title, ...textScale.title, flex: 1 },
   content: { paddingHorizontal: spacing.screenPadding, paddingBottom: spacing.xxl, gap: spacing.sm },
   card: { borderRadius: radii.card, padding: spacing.cardPadding, gap: spacing.xs },
   form: { gap: spacing.sm },
@@ -387,11 +395,20 @@ const styles = StyleSheet.create({
   chip: { minHeight: touchTargets.min, paddingHorizontal: spacing.md, borderRadius: radii.button, justifyContent: 'center' },
   option: { borderRadius: radii.sm, padding: spacing.sm, minHeight: touchTargets.min, justifyContent: 'center' },
   button: { minHeight: touchTargets.min, borderRadius: radii.button, alignItems: 'center', justifyContent: 'center' },
-  buttonText: { ...typography.bodyMedium, fontWeight: '700', fontSize: 14 },
-  input: { minHeight: touchTargets.min, borderRadius: radii.sm, paddingHorizontal: spacing.md, fontSize: 15 },
-  multiline: { minHeight: 72, paddingTop: spacing.sm, textAlignVertical: 'top' },
-  label: { ...typography.caption, fontSize: 12, fontWeight: '600', marginTop: spacing.xs },
-  body: { ...typography.body, fontSize: 14, lineHeight: 20 },
+  disclosure: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: touchTargets.min,
+    borderRadius: radii.card,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  buttonText: { ...typography.bodyMedium, fontWeight: '700', ...textScale.body },
+  input: { minHeight: touchTargets.min, borderRadius: radii.sm, paddingHorizontal: spacing.md, ...textScale.body },
+  multiline: { minHeight: touchTargets.min * 1.5, paddingTop: spacing.sm, textAlignVertical: 'top' },
+  label: { ...typography.caption, ...textScale.caption, fontWeight: '600', marginTop: spacing.xs },
+  body: { ...typography.body, ...textScale.body },
   bold: { fontWeight: '600' },
-  caption: { ...typography.caption, fontSize: 12, lineHeight: 17 },
+  caption: { ...typography.caption, ...textScale.caption },
 });
