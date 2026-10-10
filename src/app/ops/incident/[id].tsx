@@ -384,6 +384,12 @@ export default function IncidentWorkspaceScreen() {
                   </View>
                 )}
 
+                {item.requiredQualification && (
+                  <Text style={[styles.currentTeamText, { color: colors.textSecondary }]}>
+                    Requires: {item.requiredQualification}
+                  </Text>
+                )}
+
                 {/* Current assignment status */}
                 {item.assignedTeamName && (
                   <View style={styles.currentTeamRow}>

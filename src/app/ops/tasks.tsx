@@ -361,6 +361,17 @@ export default function FieldWorkerTasksScreen() {
                     </Text>
                   </View>
                 )}
+                {item.assignedWorkerName && (
+                  <Text style={[styles.crewText, { color: colors.textSecondary }]}>
+                    Worker: {item.assignedWorkerName}
+                    {item.assignedWorkerIsVolunteer ? ' · Volunteer' : ''}
+                  </Text>
+                )}
+                {item.requiredQualification && (
+                  <Text style={[styles.crewText, { color: colors.textSecondary }]}>
+                    Requires: {item.requiredQualification}
+                  </Text>
+                )}
                 <VerificationStatus item={item} />
                 <TaskHistory history={item.history} />
 
