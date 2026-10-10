@@ -9,7 +9,7 @@
  * - Live operational readiness state
  */
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   FlatList,
   Pressable,
@@ -20,24 +20,21 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 
-import { EmptyState } from '@/components/EmptyState';
-import { ErrorState } from '@/components/ErrorState';
+import { ActionQueueCard } from '@/components/ActionQueueCard';
 import { InfoBar } from '@/components/InfoBar';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
-import { SkeletonCard } from '@/components/SkeletonCard';
-import {
-  fetchInterventions,
-  fetchOperationalStats,
-} from '@/services/operations-api';
+import { StateView } from '@/components/StateView';
+import { useApiQuery } from '@/hooks/use-api-query';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
+import { api } from '@/services/api';
 import { useTheme } from '@/theme';
-import { radii, spacing } from '@/theme/spacing';
+import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import {
+  ActionQueueItem,
   InterventionPriority,
-  InterventionRecord,
   InterventionStatus,
   OperationalOverviewStats,
 } from '@/types/operations';
@@ -48,40 +45,57 @@ export default function OperationsHomeScreen() {
   const { colors } = useTheme();
   useConfirmExitAtRoot();
 
-  const [stats, setStats] = useState<OperationalOverviewStats | null>(null);
-  const [interventions, setInterventions] = useState<InterventionRecord[]>([]);
   const [activeFilter, setActiveFilter] = useState<QueueFilter>('ALL');
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showAllWork, setShowAllWork] = useState(false);
 
-  const loadData = useCallback(async (isRefresh = false) => {
-    try {
-      if (isRefresh) {
-        setRefreshing(true);
-        setErrorMsg(null);
-      }
-      const [s, items] = await Promise.all([
-        fetchOperationalStats(),
-        fetchInterventions(),
+  const query = useApiQuery(
+    async () => {
+      const [summary, queue, orders, incidents] = await Promise.all([
+        api.getOpsSummary(),
+        api.getActionQueue(),
+        api.getWorkOrders(),
+        api.getIncidents(),
       ]);
-      setStats(s);
-      setInterventions(items);
-    } catch (err: any) {
-      setErrorMsg(err?.message || 'Failed to sync operational queue.');
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
+      return {
+        data: {
+          stats: summary.data,
+          queue: queue.data,
+          orders: orders.data,
+          criticalIncidents: incidents.data.filter(
+            (i) => i.severity === 'CRITICAL' && i.status !== 'RESOLVED'
+          ),
+        },
+        source: summary.source,
+        receivedAt: summary.receivedAt,
+      };
+    },
+    [],
+    () => false
+  );
+
+  // Reload when coming back from the incident workspace or replanning.
+  const hasFocusedOnce = useRef(false);
+  const { refresh } = query;
+  useFocusEffect(
+    useCallback(() => {
+      if (hasFocusedOnce.current) refresh();
+      hasFocusedOnce.current = true;
+    }, [refresh])
+  );
+
+  const stats: OperationalOverviewStats | null = query.data?.stats ?? null;
+  const interventions = query.data?.orders ?? [];
+  const actionQueue = query.data?.queue ?? [];
+  const criticalIncidents = query.data?.criticalIncidents ?? [];
+  const refreshing = query.refreshing;
+  const onRefresh = query.refresh;
+
+  const openQueueItem = (item: ActionQueueItem) => {
+    if (item.reason === 'FAILED' || item.reason === 'BLOCKED' || item.reason === 'NEEDS_VERIFICATION') {
+      router.navigate('/ops/replanning');
+    } else {
+      router.push({ pathname: '/ops/incident/[id]', params: { id: item.incidentId } });
     }
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadData();
-  }, [loadData]);
-
-  const onRefresh = () => {
-    loadData(true);
   };
 
   const filteredItems = interventions.filter((item) => {
@@ -123,161 +137,197 @@ export default function OperationsHomeScreen() {
     <SafeAreaView
       edges={['top', 'left', 'right']}
       style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      {/* 1. Header */}
+      {/* 1. Header: title + when the data was loaded */}
       <View style={styles.header}>
-        <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerOverline, { color: colors.brandTeal }]}>
-            DISASTER RESPONSE NETWORK
+        <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Operations</Text>
+        {query.receivedAt && (
+          <Text style={[styles.updatedText, typography.tabular, { color: colors.textTertiary }]}>
+            Loaded{' '}
+            {new Date(query.receivedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
-          <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
-            Operations Console
-          </Text>
-        </View>
-
-        {/* Profile / Role Exit */}
-        <Pressable
-          onPress={() => router.navigate('/ops/more')}
-          style={[styles.roleChip, { backgroundColor: colors.surfaceMuted }]}
-          accessibilityRole="button"
-          accessibilityLabel="Coordinator identity">
-          <Feather name="shield" size={13} color={colors.brandTeal} />
-          <Text style={[styles.roleChipText, { color: colors.textSecondary }]}>
-            Coordinator
-          </Text>
-        </Pressable>
+        )}
       </View>
+      <InfoBar isSampleData={true} persistent={true} />
 
-      {/* 2. Persistent Operational Simulation Banner */}
-      <InfoBar
-        isSampleData={true}
-        persistent={true}
-        customMessage="SAMPLE DATA — OPERATIONAL SIMULATION — NOT LIVE OPERATIONS"
-      />
-
-      {/* 3. Operational State Ribbon */}
-      {stats && (
-        <View style={[styles.readinessRibbon, { backgroundColor: colors.surface }]}>
-          <View style={styles.readinessItem}>
-            <Text style={[styles.readinessCount, typography.tabular, { color: colors.textPrimary }]}>
-              {stats.activeIncidents}
-            </Text>
-            <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
-              Incidents
-            </Text>
-          </View>
-
-          <View style={styles.ribbonDivider} />
-
-          <View style={styles.readinessItem}>
-            <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusActive }]}>
-              {stats.immediateInterventions}
-            </Text>
-            <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
-              Immediate
-            </Text>
-          </View>
-
-          <View style={styles.ribbonDivider} />
-
-          <View style={styles.readinessItem}>
-            <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusWatch }]}>
-              {stats.pendingAcknowledgement}
-            </Text>
-            <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
-              Pending Ack
-            </Text>
-          </View>
-
-          <View style={styles.ribbonDivider} />
-
-          <View style={styles.readinessItem}>
-            <Text style={[styles.readinessCount, typography.tabular, { color: colors.brandTeal }]}>
-              {stats.inProgressTasks}
-            </Text>
-            <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
-              In Field
-            </Text>
-          </View>
-
-          <View style={styles.ribbonDivider} />
-
-          <View style={styles.readinessItem}>
-            <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusActive }]}>
-              {stats.blockedOrFailedInterventions}
-            </Text>
-            <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
-              Blocked
-            </Text>
-          </View>
-        </View>
-      )}
-
-      {/* 4. Action Queue Filter Chips */}
-      <View style={styles.filterRow}>
-        {(
-          [
-            { key: 'ALL', label: 'All Tasks' },
-            { key: 'IMMEDIATE', label: 'Immediate' },
-            { key: 'AWAITING_ASSIGNMENT', label: 'Unassigned' },
-            { key: 'AWAITING_ACK', label: 'Awaiting Ack' },
-            { key: 'FAILED_OR_BLOCKED', label: 'Blocked / Failed' },
-          ] as { key: QueueFilter; label: string }[]
-        ).map((f) => {
-          const isSelected = activeFilter === f.key;
-          return (
-            <Pressable
-              key={f.key}
-              onPress={() => setActiveFilter(f.key)}
-              style={[
-                styles.filterChip,
-                {
-                  backgroundColor: isSelected
-                    ? colors.surfaceMuted
-                    : colors.surface,
-                },
-              ]}>
-              <Text
-                style={[
-                  styles.filterChipText,
-                  {
-                    color: isSelected ? colors.textPrimary : colors.textTertiary,
-                    fontWeight: isSelected ? '700' : '500',
-                  },
-                ]}>
-                {f.label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {/* 5. Main Content: Task & Intervention Queue */}
-      {loading && !refreshing ? (
-        <View style={styles.skeletonWrap}>
-          <SkeletonCard />
-          <SkeletonCard />
-          <SkeletonCard />
-        </View>
-      ) : errorMsg ? (
-        <ErrorState message={errorMsg} onRetry={() => loadData()} />
-      ) : filteredItems.length === 0 ? (
-        <EmptyState
-          title="No Operational Tasks in Queue"
-          description="All interventions matching this operational filter have been completed or reallocated."
-          actionLabel="Refresh Operational Queue"
-          onAction={() => loadData(true)}
-        />
-      ) : (
+      <StateView
+        state={query.state}
+        error={query.error}
+        onRetry={onRefresh}
+        receivedAt={query.receivedAt}>
         <FlatList
-          data={filteredItems}
+          data={showAllWork ? filteredItems : []}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
               onRefresh={onRefresh}
-              tintColor={colors.brandTeal}
+              tintColor={colors.actionPrimary}
+              colors={[colors.actionPrimary]}
             />
+          }
+          ListHeaderComponent={
+            <>
+              {/* 2. What needs me now */}
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>
+                Needs action now{actionQueue.length > 0 ? ` (${actionQueue.length})` : ''}
+              </Text>
+              {actionQueue.length === 0 ? (
+                <Text style={[styles.sectionNote, { color: colors.textSecondary }]}>
+                  Nothing needs your action right now.
+                </Text>
+              ) : (
+                actionQueue.map((item, index) => (
+                  <ActionQueueCard
+                    key={`${item.workOrderId}-${item.reason}`}
+                    item={item}
+                    isTop={index === 0}
+                    onAction={() => openQueueItem(item)}
+                  />
+                ))
+              )}
+
+              {/* 3. Critical incidents (one line) */}
+              {criticalIncidents.length > 0 && (
+                <Pressable
+                  onPress={() => router.navigate('/ops/incidents')}
+                  style={[styles.linkRow, { backgroundColor: colors.surface }]}
+                  android_ripple={{ color: colors.surfaceMuted }}
+                  accessibilityRole="button">
+                  <View style={[styles.priorityDot, { backgroundColor: colors.statusActive }]} />
+                  <Text style={[styles.linkRowText, { color: colors.textPrimary }]} numberOfLines={1}>
+                    {criticalIncidents.length} critical{' '}
+                    {criticalIncidents.length === 1 ? 'incident' : 'incidents'}:{' '}
+                    {criticalIncidents.map((i) => i.location).join(', ')}
+                  </Text>
+                  <Feather name="chevron-right" size={18} color={colors.textTertiary} />
+                </Pressable>
+              )}
+
+              {/* 4. Counts by state */}
+              <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>Work by state</Text>
+        {/* 3. Operational State Ribbon */}
+        {stats && (
+          <View style={[styles.readinessRibbon, { backgroundColor: colors.surface }]}>
+            <View style={styles.readinessItem}>
+                <Text style={[styles.readinessCount, typography.tabular, { color: colors.textPrimary }]}>
+                  {stats.activeIncidents}
+                </Text>
+                <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
+                  Incidents
+                </Text>
+            </View>
+
+            <View style={styles.ribbonDivider} />
+
+            <View style={styles.readinessItem}>
+                <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusActive }]}>
+                  {stats.immediateInterventions}
+                </Text>
+                <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
+                  Immediate
+                </Text>
+            </View>
+
+            <View style={styles.ribbonDivider} />
+
+            <View style={styles.readinessItem}>
+                <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusWatch }]}>
+                  {stats.pendingAcknowledgement}
+                </Text>
+                <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
+                  Pending Ack
+                </Text>
+            </View>
+
+            <View style={styles.ribbonDivider} />
+
+            <View style={styles.readinessItem}>
+                <Text style={[styles.readinessCount, typography.tabular, { color: colors.brandTeal }]}>
+                  {stats.inProgressTasks}
+                </Text>
+                <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
+                  In Field
+                </Text>
+            </View>
+
+            <View style={styles.ribbonDivider} />
+
+            <View style={styles.readinessItem}>
+                <Text style={[styles.readinessCount, typography.tabular, { color: colors.statusActive }]}>
+                  {stats.blockedOrFailedInterventions}
+                </Text>
+                <Text style={[styles.readinessLabel, { color: colors.textTertiary }]}>
+                  Blocked
+                </Text>
+            </View>
+          </View>
+        )}
+
+
+              {/* 5. Full list, collapsed by default */}
+              <Pressable
+                onPress={() => setShowAllWork((v) => !v)}
+                style={styles.disclosureRow}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showAllWork }}>
+                <Text style={[styles.sectionTitle, styles.disclosureTitle, { color: colors.textPrimary }]}>
+                  All work orders ({interventions.length})
+                </Text>
+                <Feather
+                  name={showAllWork ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              </Pressable>
+              {showAllWork && (
+          <View style={styles.filterRow}>
+            {(
+              [
+                    { key: 'ALL', label: 'All Tasks' },
+                    { key: 'IMMEDIATE', label: 'Immediate' },
+                    { key: 'AWAITING_ASSIGNMENT', label: 'Unassigned' },
+                    { key: 'AWAITING_ACK', label: 'Awaiting Ack' },
+                    { key: 'FAILED_OR_BLOCKED', label: 'Blocked / Failed' },
+              ] as { key: QueueFilter; label: string }[]
+            ).map((f) => {
+              const isSelected = activeFilter === f.key;
+              return (
+                    <Pressable
+                      key={f.key}
+                      onPress={() => setActiveFilter(f.key)}
+                      style={[
+                        styles.filterChip,
+                        {
+                              backgroundColor: isSelected
+                                ? colors.surfaceMuted
+                                : colors.surface,
+                        },
+                      ]}>
+                      <Text
+                        style={[
+                              styles.filterChipText,
+                              {
+                                color: isSelected ? colors.textPrimary : colors.textTertiary,
+                                fontWeight: isSelected ? '700' : '500',
+                              },
+                        ]}>
+                        {f.label}
+                      </Text>
+                    </Pressable>
+              );
+            })}
+          </View>
+
+              )}
+            </>
+          }
+          ListEmptyComponent={
+            showAllWork ? (
+              <Text style={[styles.sectionNote, { color: colors.textSecondary }]}>
+                No work orders match this filter.
+              </Text>
+            ) : null
           }
           renderItem={({ item }) => {
             const badge = getStatusBadge(item.status);
@@ -427,7 +477,7 @@ export default function OperationsHomeScreen() {
             );
           }}
         />
-      )}
+      </StateView>
 
       {/* 6. Coordinator Operational Bottom Navigation */}
       <OpsBottomNavBar activeTab="operations" />
@@ -436,6 +486,50 @@ export default function OperationsHomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  updatedText: {
+    ...typography.caption,
+    fontSize: 12,
+  },
+  sectionTitle: {
+    ...typography.bodyMedium,
+    fontSize: 15,
+    fontWeight: '700',
+    paddingHorizontal: spacing.screenPadding,
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  sectionNote: {
+    ...typography.body,
+    fontSize: 15,
+    paddingHorizontal: spacing.screenPadding,
+    marginBottom: spacing.sm,
+  },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    minHeight: touchTargets.min,
+    borderRadius: radii.card,
+    paddingHorizontal: spacing.cardPadding,
+    marginHorizontal: spacing.screenPadding,
+    marginTop: spacing.sm,
+  },
+  linkRowText: {
+    ...typography.body,
+    fontSize: 15,
+    flex: 1,
+  },
+  disclosureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: touchTargets.min,
+    paddingRight: spacing.screenPadding,
+  },
+  disclosureTitle: {
+    marginTop: 0,
+    marginBottom: 0,
+  },
   safeArea: {
     flex: 1,
   },
@@ -453,7 +547,7 @@ const styles = StyleSheet.create({
   },
   headerOverline: {
     ...typography.overline,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '800',
     letterSpacing: 0.8,
   },
@@ -472,7 +566,7 @@ const styles = StyleSheet.create({
   },
   roleChipText: {
     ...typography.caption,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
   },
   readinessRibbon: {
@@ -493,12 +587,12 @@ const styles = StyleSheet.create({
   },
   readinessCount: {
     ...typography.caption,
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
   },
   readinessLabel: {
     ...typography.caption,
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: '500',
   },
   ribbonDivider: {
@@ -520,7 +614,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     ...typography.caption,
-    fontSize: 11,
+    fontSize: 12,
   },
   skeletonWrap: {
     paddingHorizontal: spacing.screenPadding,
@@ -553,7 +647,7 @@ const styles = StyleSheet.create({
   },
   priorityText: {
     ...typography.caption,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.4,
   },
@@ -564,7 +658,7 @@ const styles = StyleSheet.create({
   },
   statusPillText: {
     ...typography.overline,
-    fontSize: 9,
+    fontSize: 12,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
@@ -576,11 +670,11 @@ const styles = StyleSheet.create({
   },
   incidentSubtitle: {
     ...typography.caption,
-    fontSize: 11,
+    fontSize: 12,
   },
   instructionsText: {
     ...typography.body,
-    fontSize: 13,
+    fontSize: 12,
     lineHeight: 18,
   },
   blockerBanner: {
@@ -620,7 +714,7 @@ const styles = StyleSheet.create({
   },
   deadlineCountdown: {
     ...typography.caption,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
   },
 });

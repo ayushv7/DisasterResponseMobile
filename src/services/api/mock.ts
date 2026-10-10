@@ -16,7 +16,7 @@ const MIN_DELAY_MS = 300;
 const MAX_DELAY_MS = 800;
 
 /** Probability (0–1) that a call fails. Adjustable from the dev screen. */
-let failureRate = 0.05;
+let failureRate = 0.02;
 
 export function setMockFailureRate(rate: number) {
   failureRate = Math.min(1, Math.max(0, rate));
