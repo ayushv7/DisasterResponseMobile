@@ -6,9 +6,15 @@
 import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
 import { fetchNgoInbox, publishContribution } from '@/services/ngo-api';
+import { SAMPLE_REFERENCE_TIME } from '@/fixtures/sample-operations';
 import * as ops from '@/services/operations-api';
 
-import { ActionQueueItem, ActionQueueReason, InterventionRecord } from '@/types/operations';
+import {
+  ActionQueueItem,
+  ActionQueueReason,
+  InterventionRecord,
+  OperationalResource,
+} from '@/types/operations';
 
 import { ApiClient, ApiResult } from './types';
 
@@ -82,6 +88,16 @@ function deriveActionQueue(items: InterventionRecord[], now: number): ActionQueu
   );
 }
 
+/** Keep sample report ages relative to now (see SAMPLE_REFERENCE_TIME). */
+function rebaseReportTimes(resources: OperationalResource[]): OperationalResource[] {
+  const shift = Date.now() - new Date(SAMPLE_REFERENCE_TIME).getTime();
+  return resources.map((r) =>
+    r.statusReportedAt
+      ? { ...r, statusReportedAt: new Date(new Date(r.statusReportedAt).getTime() + shift).toISOString() }
+      : r
+  );
+}
+
 export const mockApi: ApiClient = {
   mode: 'mock',
 
@@ -92,7 +108,8 @@ export const mockApi: ApiClient = {
   getIncident: (id) => simulate(() => ops.fetchIncidentDetail(id)),
   getWorkOrders: (status) => simulate(() => ops.fetchInterventions(status)),
   getWorkOrder: (id) => simulate(() => ops.fetchInterventionDetail(id)),
-  getResources: () => simulate(ops.fetchOperationalResources),
+  getResources: () =>
+    simulate(async () => rebaseReportTimes(await ops.fetchOperationalResources())),
   getRecommendation: (id) => simulate(() => ops.fetchAllocationRecommendation(id)),
   assign: (id, input) =>
     simulate(() =>

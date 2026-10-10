@@ -80,6 +80,12 @@ export const SAMPLE_INCIDENTS: IncidentRecord[] = [
   },
 ];
 
+/**
+ * The moment the sample timestamps were written against. Mock mode shifts
+ * resource report times by (now - this) so freshness colors stay meaningful.
+ */
+export const SAMPLE_REFERENCE_TIME = '2026-10-10T01:00:00Z';
+
 export const SAMPLE_RESOURCES: OperationalResource[] = [
   {
     id: 'RES-PUMP-01',
@@ -88,6 +94,7 @@ export const SAMPLE_RESOURCES: OperationalResource[] = [
     capabilities: ['Heavy Dewatering', 'Turbid Water Discharge', 'Continuous Run'],
     operationalCondition: 'OPERATIONAL',
     availabilityStatus: 'AVAILABLE',
+    statusReportedAt: '2026-10-10T00:40:00Z',
     currentBaseLocation: 'Jorhat Central SDRF Depot',
     proximityKm: 4.8,
     specifications: 'Diesel self-priming 6-inch suction with 150m discharge layflat hoses',
@@ -99,6 +106,7 @@ export const SAMPLE_RESOURCES: OperationalResource[] = [
     capabilities: ['Silt Removal', 'Heavy Slurry Pumping'],
     operationalCondition: 'MAINTENANCE_REQUIRED',
     availabilityStatus: 'RESERVED',
+    statusReportedAt: '2026-10-08T09:00:00Z',
     currentBaseLocation: 'North Lakhimpur Workshop',
     proximityKm: 18.5,
     specifications: 'Impeller wear detected during inspection. Requires 3-phase generator.',
@@ -110,6 +118,7 @@ export const SAMPLE_RESOURCES: OperationalResource[] = [
     capabilities: ['Heavy Dewatering', 'High-Head Pressure Discharge'],
     operationalCondition: 'OPERATIONAL',
     availabilityStatus: 'AVAILABLE',
+    statusReportedAt: '2026-10-09T20:15:00Z',
     currentBaseLocation: 'Majuli Civil Defense Hub',
     proximityKm: 7.2,
     specifications: 'Trailer-mounted 4-inch pump with diesel engine drive',
@@ -121,6 +130,7 @@ export const SAMPLE_RESOURCES: OperationalResource[] = [
     capabilities: ['Embankment Reinforcement', 'Heavy Pump Rigging', 'Hazard Assessment'],
     operationalCondition: 'OPERATIONAL',
     availabilityStatus: 'AVAILABLE',
+    statusReportedAt: '2026-10-10T00:52:00Z',
     currentBaseLocation: 'Garmur Relief Staging Area',
     proximityKm: 3.5,
     specifications: '6 hydraulic engineers and 8 trained emergency technicians',
@@ -132,6 +142,7 @@ export const SAMPLE_RESOURCES: OperationalResource[] = [
     capabilities: ['Boat Rescue', 'Shallow Water Evacuation', 'First Aid'],
     operationalCondition: 'OPERATIONAL',
     availabilityStatus: 'DEPLOYED',
+    statusReportedAt: '2026-10-10T00:30:00Z',
     currentBaseLocation: 'Kamalabari Ghat',
     proximityKm: 1.2,
     specifications: '10 swimmers with swift-water rescue technician certifications',
@@ -144,6 +155,7 @@ export const SAMPLE_RESOURCES: OperationalResource[] = [
     capabilities: ['Swiftwater Evacuation', 'Shallow River Navigation'],
     operationalCondition: 'OPERATIONAL',
     availabilityStatus: 'AVAILABLE',
+    statusReportedAt: '2026-10-09T14:00:00Z',
     currentBaseLocation: 'Garmur Jetty',
     proximityKm: 5.1,
     specifications: 'Capacity 10 adults with life vests and trauma kit',
@@ -155,6 +167,7 @@ export const SAMPLE_RESOURCES: OperationalResource[] = [
     capabilities: ['Heavy Cargo Logistics', 'Livestock Transport'],
     operationalCondition: 'DEGRADED',
     availabilityStatus: 'AVAILABLE',
+    statusReportedAt: '2026-10-07T18:00:00Z',
     currentBaseLocation: 'Dhunaguri Outpost',
     proximityKm: 11.0,
     specifications: 'Outboard motor throttle issue; restricted to calm inland backwaters',
