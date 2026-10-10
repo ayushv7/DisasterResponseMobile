@@ -80,7 +80,8 @@ export interface ApiClient {
   submitCompletion(workOrderId: string, input: CompletionInput): Promise<ApiResult<InterventionRecord>>;
   verify(workOrderId: string, approved: boolean): Promise<ApiResult<InterventionRecord>>;
   getReassignments(): Promise<ApiResult<ReplanningRecord[]>>;
-  reassign(reassignmentId: string, notes: string): Promise<ApiResult<ReplanningRecord>>;
+  /** `actualAssignment` describes what was actually assigned (may differ from the recommendation). */
+  reassign(reassignmentId: string, actualAssignment: string): Promise<ApiResult<ReplanningRecord>>;
 
   // Public ↔ NGO
   getVerifiedNgos(): Promise<ApiResult<VerifiedNgo[]>>;

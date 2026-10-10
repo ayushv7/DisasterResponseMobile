@@ -285,7 +285,9 @@ export async function executeReplanningDecision(
   if (!replan) throw new Error(`Replanning record ${replanningId} not found.`);
 
   replan.status = 'REASSIGNED';
-  replan.recommendedAlternative += ` (Supervisor Action: ${decisionNotes})`;
+  // Keep the recommendation as-is so recommended vs actual can be compared.
+  replan.actualAssignment = decisionNotes;
+  replan.decidedAt = new Date().toISOString();
 
   // Update underlying intervention to AWAITING_ASSIGNMENT with note
   const intTarget = inMemoryInterventions.find((i) => i.id === replan.interventionId);

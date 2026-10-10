@@ -16,6 +16,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  Image,
   TextInput,
   View,
 } from 'react-native';
@@ -28,17 +29,14 @@ import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
-import {
-  executeReplanningDecision,
-  fetchInterventions,
-  fetchReplanningRecords,
-  verifyIntervention,
-} from '@/services/operations-api';
+import { StatusChip } from '@/components/StatusChip';
+import { TaskHistory } from '@/components/TaskHistory';
+import { api } from '@/services/api';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
-import { InterventionRecord, ReplanningRecord } from '@/types/operations';
+import { InterventionRecord, OperationalResource, ReplanningRecord } from '@/types/operations';
 
 type TabView = 'VERIFICATION' | 'REPLANNING';
 
@@ -49,6 +47,8 @@ export default function VerificationAndReplanningScreen() {
   const [activeTab, setActiveTab] = useState<TabView>('VERIFICATION');
   const [verificationItems, setVerificationItems] = useState<InterventionRecord[]>([]);
   const [replanningItems, setReplanningItems] = useState<ReplanningRecord[]>([]);
+  const [unavailableResources, setUnavailableResources] = useState<OperationalResource[]>([]);
+  const [showDecided, setShowDecided] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -68,10 +68,16 @@ export default function VerificationAndReplanningScreen() {
         setRefreshing(true);
         setErrorMsg(null);
       }
-      const [allInterventions, replanRecords] = await Promise.all([
-        fetchInterventions(),
-        fetchReplanningRecords(),
+      const [ordersRes, replanRes, resourcesRes] = await Promise.all([
+        api.getWorkOrders(),
+        api.getReassignments(),
+        api.getResources(),
       ]);
+      const allInterventions = ordersRes.data;
+      const replanRecords = replanRes.data;
+      setUnavailableResources(
+        resourcesRes.data.filter((r) => r.operationalCondition !== 'OPERATIONAL')
+      );
       setVerificationItems(
         allInterventions.filter((i) => i.status === 'AWAITING_VERIFICATION')
       );
@@ -97,12 +103,13 @@ export default function VerificationAndReplanningScreen() {
     if (!selectedVerification) return;
     try {
       setActionLoading(true);
-      await verifyIntervention(selectedVerification.id, approved);
+      const result = await api.verify(selectedVerification.id, approved);
+      const prefix = result.source === 'sample' ? 'Simulated: ' : '';
       Alert.alert(
-        approved ? 'Verification Staged' : 'Work Resumed',
+        approved ? `${prefix}Verified` : `${prefix}Reopened`,
         approved
-          ? `Intervention ${selectedVerification.id} verified as resolved in local simulation. FastAPI endpoint POST /api/v1/ops/verification/{id}/sign-off required for audit sign-off.`
-          : `Intervention ${selectedVerification.id} returned to in-progress status for remediation.`
+          ? `${selectedVerification.id} is marked verified.`
+          : `${selectedVerification.id} is back in progress for the field team.`
       );
       setSelectedVerification(null);
       setSignOffNotes('');
@@ -118,13 +125,12 @@ export default function VerificationAndReplanningScreen() {
     if (!selectedReplanning) return;
     try {
       setActionLoading(true);
-      await executeReplanningDecision(
-        selectedReplanning.id,
-        replanInstructions.trim() || 'Alternative route & asset reassignment dispatched'
-      );
+      const actual = replanInstructions.trim() || selectedReplanning.recommendedAlternative;
+      const result = await api.reassign(selectedReplanning.id, actual);
       Alert.alert(
-        'Replanning Staged',
-        `Alternative allocation staged for incident ${selectedReplanning.incidentId}. Local state updated; requires backend confirmation via POST /api/v1/ops/replanning/{id}/execute.`
+        result.source === 'sample' ? 'Simulated: reassignment recorded' : 'Reassignment recorded',
+        `${selectedReplanning.interventionId} goes back to the assignment queue.` +
+          (result.source === 'sample' ? '\n\nSample mode: no crew was notified.' : '')
       );
       setSelectedReplanning(null);
       setReplanInstructions('');
@@ -136,20 +142,15 @@ export default function VerificationAndReplanningScreen() {
     }
   };
 
+  const pendingReplans = replanningItems.filter((r) => r.status !== 'REASSIGNED');
+  const decidedReplans = replanningItems.filter((r) => r.status === 'REASSIGNED');
+
   const renderVerificationCard = ({ item }: { item: InterventionRecord }) => {
     return (
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
         <View style={styles.cardHeader}>
           <View style={styles.badgeRow}>
-            <View
-              style={[
-                styles.badge,
-                { backgroundColor: colors.brandTealBg, borderColor: colors.brandTeal },
-              ]}>
-              <Text style={[styles.badgeText, { color: colors.brandTeal }]}>
-                AWAITING SIGN-OFF
-              </Text>
-            </View>
+            <StatusChip label="Awaiting sign-off" tone="info" />
             <Text style={[styles.timeText, { color: colors.textTertiary }]}>
               Completed {item.completedAt ? new Date(item.completedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'recently'}
             </Text>
@@ -171,9 +172,17 @@ export default function VerificationAndReplanningScreen() {
             </Text>
           </View>
           <Text style={[styles.evidenceText, { color: colors.textPrimary }]}>
-            {item.completionEvidence || 'Field observation logged. Awaiting telemetry validation.'}
+            {item.completionEvidence || 'No note submitted.'}
           </Text>
+          {item.completionPhotoUris && item.completionPhotoUris.length > 0 && (
+            <View style={styles.photoRow}>
+              {item.completionPhotoUris.map((uri) => (
+                <Image key={uri} source={{ uri }} style={styles.photo} accessibilityLabel="Evidence photo" />
+              ))}
+            </View>
+          )}
         </View>
+        <TaskHistory history={item.history} />
 
         {/* Team attribution */}
         <View style={styles.teamMeta}>
@@ -189,17 +198,16 @@ export default function VerificationAndReplanningScreen() {
             onPress={() => setSelectedVerification(item)}
             accessibilityRole="button"
             accessibilityLabel={`Audit evidence and sign off ${item.id}`}
-            style={[styles.primaryButton, { backgroundColor: colors.brandTeal }]}>
-            <Feather name="check-circle" size={15} color="#FFFFFF" />
-            <Text style={styles.primaryButtonText}>Verify & Sign Off</Text>
+            style={[styles.primaryButton, { backgroundColor: colors.actionPrimary }]}>
+            <Text style={[styles.primaryButtonText, { color: colors.onActionPrimary }]}>Verify</Text>
           </Pressable>
           <Pressable
-            onPress={() => router.push(`/ops/incident/${item.incidentId}` as any)}
+            onPress={() => router.push({ pathname: '/ops/incident/[id]', params: { id: item.incidentId } })}
             accessibilityRole="button"
-            accessibilityLabel="View full incident telemetry"
-            style={[styles.outlineButton, { borderColor: colors.border }]}>
-            <Text style={[styles.outlineButtonText, { color: colors.textSecondary }]}>
-              View Telemetry
+            accessibilityLabel="Open incident"
+            style={styles.outlineButton}>
+            <Text style={[styles.outlineButtonText, { color: colors.actionPrimary }]}>
+              Open incident
             </Text>
           </Pressable>
         </View>
@@ -213,22 +221,10 @@ export default function VerificationAndReplanningScreen() {
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
         <View style={styles.cardHeader}>
           <View style={styles.badgeRow}>
-            <View
-              style={[
-                styles.badge,
-                {
-                  backgroundColor: isResolved ? colors.surfaceMuted : colors.statusWatchBg,
-                  borderColor: isResolved ? colors.border : colors.statusWatch,
-                },
-              ]}>
-              <Text
-                style={[
-                  styles.badgeText,
-                  { color: isResolved ? colors.textTertiary : colors.statusWatch },
-                ]}>
-                {item.triggerReason.replace(/_/g, ' ')}
-              </Text>
-            </View>
+            <StatusChip
+              label={item.triggerReason.replace(/_/g, ' ').toLowerCase().replace(/^\w/, (c) => c.toUpperCase())}
+              tone={isResolved ? 'neutral' : 'critical'}
+            />
             <Text style={[styles.timeText, { color: colors.textTertiary }]}>
               Status: {item.status.replace(/_/g, ' ')}
             </Text>
@@ -261,32 +257,44 @@ export default function VerificationAndReplanningScreen() {
         <View style={[styles.contingencyBox, { backgroundColor: colors.surfaceMuted }]}>
           <View style={styles.evidenceHeader}>
             <Feather name="compass" size={13} color={colors.brandTeal} />
-            <Text style={[styles.evidenceTitle, { color: colors.brandTeal }]}>
-              RECOMMENDED ALTERNATIVE ALLOCATION
+            <Text style={[styles.evidenceTitle, { color: colors.textSecondary }]}>
+              RECOMMENDED (BACKEND)
             </Text>
           </View>
           <Text style={[styles.contingencyText, { color: colors.textPrimary }]}>
             {item.recommendedAlternative}
           </Text>
+          {item.actualAssignment && (
+            <>
+              <Text style={[styles.evidenceTitle, styles.actualTitle, { color: colors.textSecondary }]}>
+                ACTUAL{item.actualAssignment !== item.recommendedAlternative ? ' (DIFFERS)' : ''}
+              </Text>
+              <Text style={[styles.contingencyText, { color: colors.textPrimary }]}>
+                {item.actualAssignment}
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Dispatch Action */}
         {!isResolved ? (
           <View style={styles.actionRow}>
             <Pressable
-              onPress={() => setSelectedReplanning(item)}
+              onPress={() => {
+                setSelectedReplanning(item);
+                setReplanInstructions(item.recommendedAlternative);
+              }}
               accessibilityRole="button"
-              accessibilityLabel={`Execute alternative allocation for ${item.id}`}
-              style={[styles.primaryButton, { backgroundColor: colors.brandNavy }]}>
-              <Feather name="refresh-cw" size={14} color="#FFFFFF" />
-              <Text style={styles.primaryButtonText}>Execute Alternative Reassignment</Text>
+              accessibilityLabel={`Reassign ${item.interventionId}`}
+              style={[styles.primaryButton, { backgroundColor: colors.actionPrimary }]}>
+              <Text style={[styles.primaryButtonText, { color: colors.onActionPrimary }]}>Reassign</Text>
             </Pressable>
           </View>
         ) : (
           <View style={styles.resolvedRow}>
             <Feather name="check" size={14} color={colors.brandTeal} />
             <Text style={[styles.resolvedText, { color: colors.brandTeal }]}>
-              Replanning decision logged. Staged in local state.
+              Decided{item.decidedAt ? ` ${new Date(item.decidedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : ''}
             </Text>
           </View>
         )}
@@ -301,12 +309,7 @@ export default function VerificationAndReplanningScreen() {
       {/* Top Header */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
-          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>
-            Replanning & Sign-Off
-          </Text>
-          <Text style={[styles.screenSubtitle, { color: colors.textTertiary }]}>
-            Supervisory verification and adaptive assignment loop
-          </Text>
+          <Text style={[styles.screenTitle, { color: colors.textPrimary }]}>Replan & verify</Text>
         </View>
         <Pressable
           onPress={() => loadData(true)}
@@ -360,7 +363,7 @@ export default function VerificationAndReplanningScreen() {
                 fontWeight: activeTab === 'REPLANNING' ? '700' : '500',
               },
             ]}>
-            Contingencies ({replanningItems.length})
+            Replan ({pendingReplans.length})
           </Text>
         </Pressable>
       </View>
@@ -389,16 +392,48 @@ export default function VerificationAndReplanningScreen() {
           }
           ListEmptyComponent={
             <EmptyState
-              title="No Pending Sign-Offs"
-              description="No field teams have submitted completions awaiting supervisory sign-off."
+              title="Nothing to verify"
+              description="No completed work is waiting for sign-off."
             />
           }
         />
       ) : (
         <FlatList
-          data={replanningItems}
+          data={showDecided ? [...pendingReplans, ...decidedReplans] : pendingReplans}
           keyExtractor={(item) => item.id}
           renderItem={renderReplanningCard}
+          ListFooterComponent={
+            <View style={styles.footer}>
+              {unavailableResources.length > 0 && (
+                <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.evidenceTitle, { color: colors.textSecondary }]}>
+                    RESOURCES OUT OF ACTION ({unavailableResources.length})
+                  </Text>
+                  {unavailableResources.map((r) => (
+                    <Text key={r.id} style={[styles.localityText, { color: colors.textPrimary }]}>
+                      {r.name} · {r.operationalCondition.replace(/_/g, ' ').toLowerCase()}
+                    </Text>
+                  ))}
+                </View>
+              )}
+              {decidedReplans.length > 0 && (
+                <Pressable
+                  onPress={() => setShowDecided((v) => !v)}
+                  style={styles.disclosureRow}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: showDecided }}>
+                  <Text style={[styles.localityText, { color: colors.textSecondary }]}>
+                    {showDecided ? 'Hide' : 'Show'} decided ({decidedReplans.length})
+                  </Text>
+                  <Feather
+                    name={showDecided ? 'chevron-up' : 'chevron-down'}
+                    size={16}
+                    color={colors.textTertiary}
+                  />
+                </Pressable>
+              )}
+            </View>
+          }
           contentContainerStyle={styles.listContent}
           refreshControl={
             <RefreshControl
@@ -409,8 +444,8 @@ export default function VerificationAndReplanningScreen() {
           }
           ListEmptyComponent={
             <EmptyState
-              title="No Active Impasses"
-              description="All assigned interventions are operating normally without reported equipment failures or blocked routes."
+              title="Nothing to replan"
+              description="No failed work, blocked routes or equipment failures are waiting for a decision."
             />
           }
         />
@@ -426,7 +461,7 @@ export default function VerificationAndReplanningScreen() {
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                Supervisor Sign-Off Audit
+                Verify completion
               </Text>
               <Pressable
                 onPress={() => setSelectedVerification(null)}
@@ -445,7 +480,7 @@ export default function VerificationAndReplanningScreen() {
                 FIELD OUTCOME SUBMISSION:
               </Text>
               <Text style={[styles.evidenceText, { color: colors.textPrimary }]}>
-                {selectedVerification?.completionEvidence || 'Field observation logged.'}
+                {selectedVerification?.completionEvidence || 'No note submitted.'}
               </Text>
             </View>
 
@@ -481,9 +516,9 @@ export default function VerificationAndReplanningScreen() {
               <Pressable
                 onPress={() => handleSignOff(true)}
                 disabled={actionLoading}
-                style={[styles.modalApproveButton, { backgroundColor: colors.brandTeal }]}>
-                <Text style={styles.modalApproveText}>
-                  {actionLoading ? 'Staging...' : 'Approve & Mark Resolved'}
+                style={[styles.modalApproveButton, { backgroundColor: colors.actionPrimary }]}>
+                <Text style={[styles.modalApproveText, { color: colors.onActionPrimary }]}>
+                  {actionLoading ? 'Saving…' : 'Verify'}
                 </Text>
               </Pressable>
             </View>
@@ -501,7 +536,7 @@ export default function VerificationAndReplanningScreen() {
           <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.textPrimary }]}>
-                Execute Contingency Reassignment
+                Reassign
               </Text>
               <Pressable
                 onPress={() => setSelectedReplanning(null)}
@@ -516,7 +551,7 @@ export default function VerificationAndReplanningScreen() {
 
             <View style={[styles.modalEvidenceBox, { backgroundColor: colors.surfaceMuted }]}>
               <Text style={[styles.evidenceTitle, { color: colors.brandTeal }]}>
-                RECOMMENDED CONTINGENCY:
+                RECOMMENDED (BACKEND):
               </Text>
               <Text style={[styles.evidenceText, { color: colors.textPrimary }]}>
                 {selectedReplanning?.recommendedAlternative}
@@ -524,7 +559,7 @@ export default function VerificationAndReplanningScreen() {
             </View>
 
             <Text style={[styles.inputLabel, { color: colors.textTertiary }]}>
-              OVERRIDE OR OPERATIONAL INSTRUCTIONS
+              ACTUAL ASSIGNMENT (EDIT IF DIFFERENT)
             </Text>
             <TextInput
               style={[
@@ -554,9 +589,9 @@ export default function VerificationAndReplanningScreen() {
               <Pressable
                 onPress={handleExecuteReplanning}
                 disabled={actionLoading}
-                style={[styles.modalApproveButton, { backgroundColor: colors.brandNavy }]}>
-                <Text style={styles.modalApproveText}>
-                  {actionLoading ? 'Staging...' : 'Confirm Reassignment'}
+                style={[styles.modalApproveButton, { backgroundColor: colors.actionPrimary }]}>
+                <Text style={[styles.modalApproveText, { color: colors.onActionPrimary }]}>
+                  {actionLoading ? 'Saving…' : 'Confirm reassignment'}
                 </Text>
               </Pressable>
             </View>
@@ -571,6 +606,30 @@ export default function VerificationAndReplanningScreen() {
 }
 
 const styles = StyleSheet.create({
+  photoRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  photo: {
+    width: 64,
+    height: 64,
+    borderRadius: radii.sm,
+  },
+  actualTitle: {
+    marginTop: spacing.sm,
+  },
+  footer: {
+    gap: spacing.sm,
+  },
+  disclosureRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: touchTargets.min,
+    paddingHorizontal: spacing.xs,
+  },
   safeArea: {
     flex: 1,
   },
