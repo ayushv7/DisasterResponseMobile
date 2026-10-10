@@ -48,7 +48,6 @@ function RootLayoutContent() {
         <Stack.Screen name="event/[id]" />
         <Stack.Screen name="message/compose" />
         <Stack.Screen name="settings" />
-        <Stack.Screen name="orchestration/[id]" />
         {/* Role areas: no swipe-back out of them into public screens */}
         <Stack.Screen name="ops" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="ngo" options={{ animation: 'fade', gestureEnabled: false }} />

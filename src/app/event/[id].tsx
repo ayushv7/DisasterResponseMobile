@@ -13,7 +13,6 @@ import { Feather } from '@expo/vector-icons';
 
 import { InfoBar } from '@/components/InfoBar';
 import { LocationBlock } from '@/components/LocationBlock';
-import { SHOW_LEGACY_ORCHESTRATION } from '@/constants/features';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { api } from '@/services/api';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
@@ -230,49 +229,13 @@ export default function EventDetailScreen() {
             onPress={() =>
               router.push({ pathname: '/ops/incident/[id]', params: { id: linked.data!.incidentId } })
             }
-            style={[styles.orchestrationBtn, { backgroundColor: colors.surfaceMuted, marginHorizontal: spacing.screenPadding }]}
+            style={[styles.incidentLinkBtn, { backgroundColor: colors.surfaceMuted, marginHorizontal: spacing.screenPadding }]}
             accessibilityRole="button">
-            <Text style={[styles.orchestrationBtnText, { color: colors.brandPrimary }]}>
+            <Text style={[styles.incidentLinkText, { color: colors.brandPrimary }]}>
               Open incident {linked.data.incidentId} in Ops
             </Text>
             <Feather name="arrow-right" size={15} color={colors.brandPrimary} />
           </Pressable>
-        )}
-
-        {/* 2b. Legacy decision support. Hidden: it runs on its own fixtures, not the shared
-            store. Kept (not deleted); see src/constants/features.ts. */}
-        {SHOW_LEGACY_ORCHESTRATION && role !== 'public' && (
-        <View style={[styles.orchestrationBanner, { backgroundColor: colors.surface }]}>
-          <View style={styles.orchestrationHeader}>
-            <View style={[styles.orchestrationIcon, { backgroundColor: colors.surfaceMuted }]}>
-              <Feather name="compass" size={20} color={colors.brandPrimary} />
-            </View>
-            <View style={styles.orchestrationInfo}>
-              <Text style={[styles.orchestrationTitle, { color: colors.textPrimary }]}>
-                Response Orchestration
-              </Text>
-              <Text style={[styles.orchestrationDesc, { color: colors.textSecondary }]}>
-                Multi-source situation assessment, prioritized needs, and evidence-traced action recommendations.
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            onPress={() =>
-              router.push({
-                pathname: '/orchestration/[id]',
-                params: { id: event.id },
-              })
-            }
-            style={[styles.orchestrationBtn, { backgroundColor: colors.surfaceMuted }]}
-            android_ripple={{ color: colors.surface }}
-            accessibilityRole="button"
-            accessibilityLabel="View Decision Support & Recommendations">
-            <Text style={[styles.orchestrationBtnText, { color: colors.brandPrimary }]}>
-              View Decision Support & Actions
-            </Text>
-            <Feather name="arrow-right" size={15} color={colors.brandPrimary} />
-          </Pressable>
-        </View>
         )}
 
         {/* 2c. Updates published by verified NGOs for this alert / its incident */}
@@ -783,40 +746,7 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
     fontWeight: '600',
   },
-  orchestrationBanner: {
-    borderRadius: radii.card,
-    padding: spacing.cardPadding,
-    marginHorizontal: spacing.screenPadding,
-    marginBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  orchestrationHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: spacing.sm,
-  },
-  orchestrationIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radii.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  orchestrationInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  orchestrationTitle: {
-    ...typography.bodyMedium,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  orchestrationDesc: {
-    ...typography.caption,
-    fontSize: 12,
-    lineHeight: 16,
-  },
-  orchestrationBtn: {
+  incidentLinkBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -824,7 +754,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2,
     borderRadius: radii.button,
   },
-  orchestrationBtnText: {
+  incidentLinkText: {
     ...typography.bodyMedium,
     fontSize: 13,
     fontWeight: '700',
