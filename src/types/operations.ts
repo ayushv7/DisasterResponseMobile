@@ -94,6 +94,16 @@ export interface InterventionRecord {
   overrideReason?: string;
   /** Append-only action history. */
   history?: TaskEvent[];
+  /** Step 1: the NGO checks its field worker's evidence. */
+  ngoVerification?: VerificationStep;
+  /** Step 2: the authority gives final verification (backend-recorded). */
+  authorityVerification?: VerificationStep;
+}
+
+export interface VerificationStep {
+  status: 'PENDING' | 'VERIFIED' | 'REJECTED';
+  by?: string;
+  at?: string;
 }
 
 export type ResourceCategory = 'EQUIPMENT' | 'CREW' | 'VEHICLE';

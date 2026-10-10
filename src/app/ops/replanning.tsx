@@ -32,6 +32,7 @@ import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { StatusChip } from '@/components/StatusChip';
 import { TaskHistory } from '@/components/TaskHistory';
+import { VerificationStatus } from '@/components/VerificationStatus';
 import { api } from '@/services/api';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
@@ -109,7 +110,7 @@ export default function VerificationAndReplanningScreen() {
       Alert.alert(
         approved ? `${prefix}Verified` : `${prefix}Reopened`,
         approved
-          ? `${selectedVerification.id} is marked verified.`
+          ? `${selectedVerification.id}: your check is recorded. Final verification is up to the authority.`
           : `${selectedVerification.id} is back in progress for the field team.`
       );
       setSelectedVerification(null);
@@ -183,25 +184,29 @@ export default function VerificationAndReplanningScreen() {
             </View>
           )}
         </View>
+        <VerificationStatus item={item} />
         <TaskHistory history={item.history} />
 
         {/* Team attribution */}
         <View style={styles.teamMeta}>
           <Feather name="users" size={13} color={colors.textTertiary} />
           <Text style={[styles.teamMetaText, { color: colors.textTertiary }]}>
-            Assigned: {item.assignedTeamName || 'Field Unit'} • Equipment: {item.assignedEquipment?.join(', ') || 'Standard kit'}
+            Assigned: {item.assignedWorkerName ?? item.assignedTeamName ?? 'Field Unit'}
+            {item.assignedWorkerIsVolunteer ? ' (Volunteer)' : ''} • Equipment: {item.assignedEquipment?.join(', ') || 'Standard kit'}
           </Text>
         </View>
 
         {/* Actions */}
         <View style={styles.actionRow}>
-          <Pressable
-            onPress={() => setSelectedVerification(item)}
-            accessibilityRole="button"
-            accessibilityLabel={`Audit evidence and sign off ${item.id}`}
-            style={[styles.primaryButton, { backgroundColor: colors.actionPrimary }]}>
-            <Text style={[styles.primaryButtonText, { color: colors.onActionPrimary }]}>Verify</Text>
-          </Pressable>
+          {item.ngoVerification?.status !== 'VERIFIED' && (
+            <Pressable
+              onPress={() => setSelectedVerification(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`Audit evidence and sign off ${item.id}`}
+              style={[styles.primaryButton, { backgroundColor: colors.actionPrimary }]}>
+              <Text style={[styles.primaryButtonText, { color: colors.onActionPrimary }]}>Verify</Text>
+            </Pressable>
+          )}
           <Pressable
             onPress={() => router.push({ pathname: '/ops/incident/[id]', params: { id: item.incidentId } })}
             accessibilityRole="button"

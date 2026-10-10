@@ -279,6 +279,8 @@ export async function submitTaskCompletion(
   target.completedAt = new Date().toISOString();
   target.completionEvidence = evidence;
   target.completionPhotoUris = photoUris;
+  target.ngoVerification = { status: 'PENDING' };
+  target.authorityVerification = { status: 'PENDING' };
   logEvent(
     target,
     'COMPLETED',
@@ -286,6 +288,32 @@ export async function submitTaskCompletion(
     photoUris.length ? `${photoUris.length} photo(s) attached` : undefined
   );
 
+  return JSON.parse(JSON.stringify(target));
+}
+
+/**
+ * Step 1 of verification: the NGO signs off its worker's evidence. Approval
+ * keeps the task awaiting the authority's final verification; rejection
+ * reopens it for the worker.
+ */
+export async function ngoVerifyIntervention(
+  interventionId: string,
+  approved: boolean,
+  actor: TaskActor
+): Promise<InterventionRecord> {
+  await new Promise((res) => setTimeout(res, 250));
+  const target = inMemoryInterventions.find((i) => i.id === interventionId);
+  if (!target) throw new Error(`Intervention ${interventionId} not found.`);
+  const step = { by: actor.ngoName ?? actor.name, at: new Date().toISOString() };
+  if (approved) {
+    target.ngoVerification = { status: 'VERIFIED', ...step };
+    target.authorityVerification = target.authorityVerification ?? { status: 'PENDING' };
+    logEvent(target, 'VERIFIED', actor, 'NGO check passed; awaiting authority');
+  } else {
+    target.ngoVerification = { status: 'REJECTED', ...step };
+    target.status = 'IN_PROGRESS';
+    logEvent(target, 'REJECTED', actor, 'NGO sent it back to the worker');
+  }
   return JSON.parse(JSON.stringify(target));
 }
 

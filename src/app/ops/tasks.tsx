@@ -29,6 +29,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
 import { TaskHistory } from '@/components/TaskHistory';
+import { VerificationStatus } from '@/components/VerificationStatus';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { EvidencePhotoPicker } from '@/components/EvidencePhotoPicker';
@@ -360,6 +361,7 @@ export default function FieldWorkerTasksScreen() {
                     </Text>
                   </View>
                 )}
+                <VerificationStatus item={item} />
                 <TaskHistory history={item.history} />
 
                 {/* Blocker details if blocked */}

@@ -215,7 +215,14 @@ export const mockApi: ApiClient = {
     simulate(() => ops.reportTaskBlocker(id, reason, isCritical, kind, workerActor())),
   submitCompletion: (id, input) =>
     simulate(() => ops.submitTaskCompletion(id, input.note, input.photoUris, workerActor())),
-  verify: (id, approved) => simulate(() => ops.verifyIntervention(id, approved)),
+  // NGO users verify step 1; the authority's final step is backend-only for now
+  verify: (id, approved) =>
+    simulate(() => {
+      const ngo = getCurrentNgoSession();
+      return ngo
+        ? ops.ngoVerifyIntervention(id, approved, { name: ngo.authorizedOfficerName, ngoName: ngo.ngoName })
+        : ops.verifyIntervention(id, approved);
+    }),
   getReassignments: () =>
     simulate(async () => {
       const records = await ops.fetchReplanningRecords();
