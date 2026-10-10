@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
+import { SampleDataBadge } from '@/components/SampleDataBadge';
+import { IS_MOCK_API } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -22,6 +24,15 @@ export function InfoBar({
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   if (!isSampleData || (!persistent && isDismissed)) return null;
+
+  // The global BackendBanner already explains sample mode; keep only a small tag here.
+  if (IS_MOCK_API) {
+    return (
+      <View style={styles.badgeRow}>
+        <SampleDataBadge source="sample" />
+      </View>
+    );
+  }
 
   const displayMessage =
     customMessage || 'SAMPLE DATA — NOT LIVE FLOOD INFORMATION';
@@ -101,6 +112,10 @@ export function InfoBar({
 }
 
 const styles = StyleSheet.create({
+  badgeRow: {
+    paddingHorizontal: spacing.screenPadding,
+    paddingBottom: spacing.xs,
+  },
   container: {
     flexDirection: 'row',
     alignItems: 'center',

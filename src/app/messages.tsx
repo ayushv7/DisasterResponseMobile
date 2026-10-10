@@ -23,6 +23,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { BottomNavBar } from '@/components/BottomNavBar';
+import { SampleDataBadge } from '@/components/SampleDataBadge';
 import { IS_MESSAGES_STUB, fetchSentMessages } from '@/services/messages-list-api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -276,13 +277,7 @@ export default function MessagesScreen() {
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>
           Messages
         </Text>
-        {IS_MESSAGES_STUB && (
-          <View style={[styles.stubChip, { backgroundColor: colors.statusWatchBg }]}>
-            <Text style={[styles.stubChipText, { color: colors.statusWatch }]}>
-              Sample
-            </Text>
-          </View>
-        )}
+        {IS_MESSAGES_STUB && <SampleDataBadge source="sample" />}
       </View>
 
       <ScrollView

@@ -1,21 +1,26 @@
 import React from 'react';
+import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
+import { BackendBanner } from '@/components/BackendBanner';
+import { IS_MOCK_API } from '@/services/api';
 import { SessionProvider } from '@/session/session-context';
 import { ThemeProvider, useTheme } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
 function RootLayoutContent() {
-  const { isDark } = useTheme();
+  const { colors, isDark } = useTheme();
 
   return (
-    <>
-      <StatusBar style={isDark ? 'light' : 'dark'} />
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      {/* Navy banner sits under the status bar in sample mode, so use light icons */}
+      <StatusBar style={isDark || IS_MOCK_API ? 'light' : 'dark'} />
       <AnimatedSplashOverlay />
+      <BackendBanner />
       <Stack
         screenOptions={{
           headerShown: false,
@@ -36,7 +41,7 @@ function RootLayoutContent() {
         <Stack.Screen name="ngo" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="dev/index" />
       </Stack>
-    </>
+    </View>
   );
 }
 

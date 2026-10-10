@@ -34,6 +34,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { FormField, PrivacyNoticeBanner } from '@/components/FormField';
 import { NgoSelector } from '@/components/NgoSelector';
+import { IS_MOCK_API } from '@/services/api';
 import { IS_STUB_API, fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
 import { useTheme } from '@/theme';
@@ -298,8 +299,8 @@ export default function PrivateMessageComposeScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* ── Stub notice ─────────────────────────────── */}
-          {IS_STUB_API && (
+          {/* ── Stub notice (only if the rest of the app is live) ── */}
+          {IS_STUB_API && !IS_MOCK_API && (
             <View style={[styles.stubBanner, styles.stubBannerPage, { backgroundColor: colors.statusWatchBg }]}>
               <Feather name="alert-triangle" size={13} color={colors.statusWatch} />
               <Text style={[styles.stubBannerText, { color: colors.statusWatch }]}>
