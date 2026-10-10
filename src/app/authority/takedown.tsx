@@ -3,14 +3,15 @@
  * The backend enforces who may take content down.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { AuthField } from '@/components/AuthForm';
 import { AuthorityTabBar } from '@/components/AuthorityTabBar';
 import { EmptyState } from '@/components/EmptyState';
-import { ErrorState } from '@/components/ErrorState';
+import { StateView } from '@/components/StateView';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
+import { deriveQueryState } from '@/hooks/use-api-query';
 import { api, IS_MOCK_API } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -23,14 +24,18 @@ export default function TakedownScreen() {
   const [updates, setUpdates] = useState<NgoContributionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  /** Last successful load; earlier data stays visible if a refresh fails. */
+  const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [targetId, setTargetId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setErrorMsg(null);
       setUpdates((await api.getPublishedUpdates()).data);
+      setLastLoadedAt(new Date().toISOString());
     } catch (err: any) {
       setErrorMsg(err?.message || 'Could not load published updates.');
     } finally {
@@ -48,7 +53,9 @@ export default function TakedownScreen() {
       Alert.alert('Reason required', 'Say why this update is being taken down.');
       return;
     }
+    if (pendingId) return;
     try {
+      setPendingId(item.id);
       const result = await api.takedownUpdate(item.id, reason.trim());
       setUpdates((prev) => prev.filter((u) => u.id !== item.id));
       setFeedback(`${result.source === 'sample' ? 'Simulated: ' : ''}update from ${item.ngoName} taken down.`);
@@ -57,17 +64,19 @@ export default function TakedownScreen() {
       load();
     } catch (err: any) {
       Alert.alert('Could not take down', err?.message || 'Try again.');
+    } finally {
+      setPendingId(null);
     }
   };
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <Text style={[styles.title, { color: colors.textPrimary }]}>Takedown</Text>
-      {loading ? (
-        <ActivityIndicator color={colors.brandPrimary} />
-      ) : errorMsg ? (
-        <ErrorState message={errorMsg} onRetry={load} />
-      ) : (
+      <StateView
+        state={deriveQueryState({ loading, error: errorMsg, hasData: lastLoadedAt !== null, isEmpty: false })}
+        error={errorMsg}
+        onRetry={load}
+        receivedAt={lastLoadedAt}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {IS_MOCK_API && (
             <Text style={[styles.caption, { color: colors.textTertiary }]}>SAMPLE DATA — published NGO updates</Text>
@@ -89,9 +98,16 @@ export default function TakedownScreen() {
                     <View style={styles.row}>
                       <Pressable
                         onPress={() => takedown(item)}
-                        style={[styles.button, { backgroundColor: colors.statusActive }]}
-                        accessibilityRole="button">
-                        <Text style={[styles.caption, styles.bold, { color: colors.onPrimary }]}>Take down</Text>
+                        disabled={pendingId === item.id}
+                        style={[
+                          styles.button,
+                          { backgroundColor: colors.statusActive, opacity: pendingId === item.id ? 0.6 : 1 },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityState={{ disabled: pendingId === item.id, busy: pendingId === item.id }}>
+                        <Text style={[styles.caption, styles.bold, { color: colors.onPrimary }]}>
+                          {pendingId === item.id ? 'Taking down…' : 'Take down'}
+                        </Text>
                       </Pressable>
                       <Pressable
                         onPress={() => setTargetId(null)}
@@ -117,7 +133,7 @@ export default function TakedownScreen() {
             ))
           )}
         </ScrollView>
-      )}
+      </StateView>
       <AuthorityTabBar activeTab="takedown" />
     </SafeAreaView>
   );

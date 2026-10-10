@@ -13,8 +13,9 @@ import { Feather } from '@expo/vector-icons';
 
 import { AuthField, PrimaryButton } from '@/components/AuthForm';
 import { EmptyState } from '@/components/EmptyState';
-import { ErrorState } from '@/components/ErrorState';
+import { StateView } from '@/components/StateView';
 import { PickerSheet } from '@/components/PickerSheet';
+import { deriveQueryState } from '@/hooks/use-api-query';
 import { useGoBack } from '@/navigation/use-go-back';
 import { api, IS_MOCK_API } from '@/services/api';
 import { fetchNgoSession } from '@/services/ngo-api';
@@ -39,6 +40,8 @@ export default function NgoTeamScreen() {
   const [ngoCode, setNgoCode] = useState<string | undefined>();
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  /** Last successful load; earlier data stays visible if a refresh fails. */
+  const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
   const [showForm, setShowForm] = useState(false);
@@ -67,6 +70,7 @@ export default function NgoTeamScreen() {
       setApplications(apps.data);
       setAppsSimulated(apps.source === 'sample');
       setNgoCode(ngo?.ngoCode);
+      setLastLoadedAt(new Date().toISOString());
     } catch (err: any) {
       setErrorMsg(err?.message || 'Could not load your field team.');
     } finally {
@@ -231,11 +235,11 @@ export default function NgoTeamScreen() {
         <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>My field team</Text>
       </View>
 
-      {loading ? (
-        <ActivityIndicator style={styles.loader} color={colors.brandPrimary} />
-      ) : errorMsg ? (
-        <ErrorState message={errorMsg} onRetry={load} />
-      ) : (
+      <StateView
+        state={deriveQueryState({ loading, error: errorMsg, hasData: lastLoadedAt !== null, isEmpty: false })}
+        error={errorMsg}
+        onRetry={load}
+        receivedAt={lastLoadedAt}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           {IS_MOCK_API && (
             <Text style={[styles.caption, { color: colors.textTertiary }]}>
@@ -507,7 +511,7 @@ export default function NgoTeamScreen() {
             })
           )}
         </ScrollView>
-      )}
+      </StateView>
       <PickerSheet
         visible={!!assignFor}
         title={`Assign a task to ${assignFor?.name ?? ''}`}

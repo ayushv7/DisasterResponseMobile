@@ -5,7 +5,8 @@ import { ApiResult, DataSource } from '@/services/api';
 /** Data older than this is shown with a "stale" note. */
 export const STALE_AFTER_MS = 5 * 60 * 1000;
 
-export type QueryState = 'loading' | 'ready' | 'empty' | 'error' | 'stale';
+/** 'offline': a refresh failed but earlier data is still shown (with its time). */
+export type QueryState = 'loading' | 'ready' | 'empty' | 'error' | 'stale' | 'offline';
 
 interface QueryResult<T> {
   data: T | null;
@@ -90,6 +91,7 @@ export function useApiQuery<T>(
   let state: QueryState;
   if (loading && !result) state = 'loading';
   else if (error && !result) state = 'error';
+  else if (error && result) state = 'offline';
   else if (!result || isEmpty(result.data)) state = 'empty';
   else if (staleFor === result.receivedAt) state = 'stale';
   else state = 'ready';
@@ -104,4 +106,21 @@ export function useApiQuery<T>(
     refresh,
     setData,
   };
+}
+
+/**
+ * Same states for screens that load by hand: keeps showing earlier data when
+ * a refresh fails ('offline') instead of replacing it with an error.
+ */
+export function deriveQueryState(opts: {
+  loading: boolean;
+  error: string | null;
+  hasData: boolean;
+  isEmpty: boolean;
+}): QueryState {
+  if (opts.loading && !opts.hasData) return 'loading';
+  if (opts.error && !opts.hasData) return 'error';
+  if (opts.error) return 'offline';
+  if (opts.isEmpty) return 'empty';
+  return 'ready';
 }

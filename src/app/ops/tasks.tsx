@@ -30,6 +30,7 @@ import { ErrorState } from '@/components/ErrorState';
 import { AssignmentSummary } from '@/components/AssignmentSummary';
 import { LocationBlock } from '@/components/LocationBlock';
 import { InfoBar } from '@/components/InfoBar';
+import { OfflineNotice } from '@/components/StateView';
 import { TaskHistory } from '@/components/TaskHistory';
 import { VerificationStatus } from '@/components/VerificationStatus';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
@@ -85,6 +86,8 @@ export default function FieldWorkerTasksScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  /** Last successful load; earlier tasks stay visible if a refresh fails. */
+  const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
 
   // Modals state
   const [blockerTarget, setBlockerTarget] = useState<InterventionRecord | null>(null);
@@ -117,6 +120,7 @@ export default function FieldWorkerTasksScreen() {
         (i) => i.status !== 'AWAITING_ASSIGNMENT'
       );
       setTasks(fieldTasks);
+      setLastLoadedAt(new Date().toISOString());
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to load field tasks.');
     } finally {
@@ -298,7 +302,7 @@ export default function FieldWorkerTasksScreen() {
           <SkeletonCard />
           <SkeletonCard />
         </View>
-      ) : errorMsg ? (
+      ) : errorMsg && !lastLoadedAt ? (
         <ErrorState message={errorMsg} onRetry={() => loadData()} />
       ) : filteredTasks.length === 0 ? (
         <EmptyState
@@ -309,6 +313,9 @@ export default function FieldWorkerTasksScreen() {
         />
       ) : (
         <FlatList
+          ListHeaderComponent={
+            errorMsg ? <OfflineNotice receivedAt={lastLoadedAt} onRetry={() => loadData(true)} /> : null
+          }
           data={filteredTasks}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
@@ -431,8 +438,10 @@ export default function FieldWorkerTasksScreen() {
                             setBlockerReason('');
                             setProblemKind('ROUTE_BLOCKED');
                           }}
+                          disabled={busy}
                           style={styles.secondaryAction}
                           accessibilityRole="button"
+                          accessibilityState={{ disabled: busy }}
                           accessibilityLabel={`Report a problem: ${item.id}`}>
                           <Text style={[styles.secondaryActionText, { color: colors.statusActive }]}>
                             Report problem

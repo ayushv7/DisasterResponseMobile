@@ -8,9 +8,10 @@ import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { EmptyState } from '@/components/EmptyState';
-import { ErrorState } from '@/components/ErrorState';
+import { StateView } from '@/components/StateView';
 import { AuthorityTabBar } from '@/components/AuthorityTabBar';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
+import { deriveQueryState } from '@/hooks/use-api-query';
 import { api, IS_MOCK_API } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -30,6 +31,8 @@ export default function ApproveNgosScreen() {
   const [applications, setApplications] = useState<NgoApplication[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  /** Last successful load; earlier data stays visible if a refresh fails. */
+  const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -37,6 +40,7 @@ export default function ApproveNgosScreen() {
     try {
       setErrorMsg(null);
       setApplications((await api.getNgoApplications()).data);
+      setLastLoadedAt(new Date().toISOString());
     } catch (err: any) {
       setErrorMsg(err?.message || 'Could not load NGO registrations.');
     } finally {
@@ -167,11 +171,11 @@ export default function ApproveNgosScreen() {
         <Text numberOfLines={1} style={[styles.headerTitle, { color: colors.textPrimary }]}>NGOs</Text>
       </View>
 
-      {loading ? (
-        <ActivityIndicator style={styles.loader} color={colors.brandPrimary} />
-      ) : errorMsg ? (
-        <ErrorState message={errorMsg} onRetry={load} />
-      ) : (
+      <StateView
+        state={deriveQueryState({ loading, error: errorMsg, hasData: lastLoadedAt !== null, isEmpty: false })}
+        error={errorMsg}
+        onRetry={load}
+        receivedAt={lastLoadedAt}>
         <ScrollView contentContainerStyle={styles.content}>
           <Text style={[styles.caption, { color: colors.textTertiary }]}>
             {IS_MOCK_API ? 'SAMPLE DATA — not real organizations. ' : ''}
@@ -201,7 +205,7 @@ export default function ApproveNgosScreen() {
             </>
           )}
         </ScrollView>
-      )}
+      </StateView>
       <AuthorityTabBar activeTab="ngos" />
     </SafeAreaView>
   );

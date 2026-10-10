@@ -3,7 +3,7 @@
  * returned by the backend. Private messages stay on the My Messages screen.
  */
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
@@ -11,6 +11,8 @@ import { router } from 'expo-router';
 import { CitizenSignInPrompt } from '@/components/CitizenSignInPrompt';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
+import { SkeletonCard } from '@/components/SkeletonCard';
+import { OfflineNotice } from '@/components/StateView';
 import { useGoBack } from '@/navigation/use-go-back';
 import { api } from '@/services/api';
 import { useSession } from '@/session/session-context';
@@ -28,6 +30,7 @@ export default function MyOffersScreen() {
   const [simulated, setSimulated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!citizen) {
@@ -39,6 +42,7 @@ export default function MyOffersScreen() {
       const result = await api.getMyOffers();
       setOffers(result.data);
       setSimulated(result.source === 'sample');
+      setLastLoadedAt(new Date().toISOString());
     } catch (err: any) {
       setErrorMsg(err?.message || 'Could not load your offers.');
     } finally {
@@ -76,9 +80,12 @@ export default function MyOffersScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {!citizen ? (
           <CitizenSignInPrompt />
-        ) : loading ? (
-          <ActivityIndicator color={colors.brandPrimary} />
-        ) : errorMsg ? (
+        ) : loading && !lastLoadedAt ? (
+          <View>
+            <SkeletonCard />
+            <SkeletonCard />
+          </View>
+        ) : errorMsg && !lastLoadedAt ? (
           <ErrorState message={errorMsg} onRetry={load} />
         ) : offers.length === 0 ? (
           <EmptyState
@@ -89,6 +96,7 @@ export default function MyOffersScreen() {
           />
         ) : (
           <>
+            {errorMsg && <OfflineNotice receivedAt={lastLoadedAt} onRetry={load} />}
             {simulated && (
               <Text style={[styles.caption, { color: colors.textTertiary }]}>
                 Simulated: saved on this device only. No NGO has received these offers.
