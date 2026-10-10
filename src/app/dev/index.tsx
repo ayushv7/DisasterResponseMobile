@@ -59,7 +59,7 @@ export default function DevHarnessRoute() {
 
 function DevHarnessScreen() {
   const { colors } = useTheme();
-  const { role, citizen, signInAs, signOut, setCitizen, signOutCitizen } = useSession();
+  const { role, citizen, signInAs, signOut, setCitizen, signOutCitizen, setWelcomeSeen } = useSession();
   const [busy, setBusy] = useState(false);
 
   /** Switches role. Sign-in/out reset navigation to the role's home (replace, no back to old role). */
@@ -95,7 +95,7 @@ function DevHarnessScreen() {
   const confirmReset = () =>
     Alert.alert(
       'Reset sample data?',
-      'Restores every sample record (plans, tasks, resources, applications, messages) and signs you out.',
+      'Restores every sample record (plans, tasks, resources, applications, messages), signs you out and shows the start screen again.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -104,6 +104,7 @@ function DevHarnessScreen() {
           onPress: async () => {
             resetStore();
             signOutCitizen();
+            setWelcomeSeen(false); // show the first-run start screen again
             await signOut();
           },
         },

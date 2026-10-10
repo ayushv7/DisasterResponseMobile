@@ -6,7 +6,8 @@
  * Until backend auth exists, non-public roles can only be entered from the
  * __DEV__ switcher, and are marked as demo sessions.
  */
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Href, router, useNavigationContainerRef } from 'expo-router';
 
 import { selectSampleWorker, signOutAccounts, signOutCitizen } from '@/services/accounts-api';
@@ -46,9 +47,14 @@ interface SessionContextValue {
   /** Set after verifyOtp, or after the backend returns an updated Citizen. */
   setCitizen: (citizen: Citizen) => void;
   signOutCitizen: () => void;
+  /** Whether the first-run start screen was seen (null while loading from storage). */
+  welcomeSeen: boolean | null;
+  setWelcomeSeen: (seen: boolean) => void;
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null);
+
+const WELCOME_STORAGE_KEY = 'welcome-seen-v1';
 
 export function homeRouteFor(role: Role): Href {
   switch (role) {
@@ -97,6 +103,20 @@ export function resetTo(href: Href) {
 export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [citizen, setCitizenState] = useState<Citizen | null>(null);
+  const [welcomeSeen, setWelcomeSeenState] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(WELCOME_STORAGE_KEY)
+      .then((v) => setWelcomeSeenState(v === '1'))
+      .catch(() => setWelcomeSeenState(true));
+  }, []);
+
+  const setWelcomeSeen = useCallback((seen: boolean) => {
+    setWelcomeSeenState(seen);
+    (seen ? AsyncStorage.setItem(WELCOME_STORAGE_KEY, '1') : AsyncStorage.removeItem(WELCOME_STORAGE_KEY)).catch(
+      () => {}
+    );
+  }, []);
   const resetToRoleHome = useResetToRoleHome();
 
   const signInAs = useCallback(async (role: Exclude<Role, 'public'>, options?: SignInOptions) => {
@@ -142,8 +162,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       citizen,
       setCitizen,
       signOutCitizen: endCitizenSession,
+      welcomeSeen,
+      setWelcomeSeen,
     }),
-    [session, signInAs, signOut, citizen, setCitizen, endCitizenSession]
+    [session, signInAs, signOut, citizen, setCitizen, endCitizenSession, welcomeSeen, setWelcomeSeen]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;
