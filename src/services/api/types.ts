@@ -22,6 +22,11 @@ import {
 } from '@/types/accounts';
 import { SentMessage } from '@/types/message-thread';
 import { HelpOffer, NgoNeed, OfferHelpInput } from '@/types/offers';
+import {
+  ApplyToVolunteerInput,
+  VolunteerApplication,
+  VolunteerDecision,
+} from '@/types/volunteers';
 import { MessageDraft, MessageReceipt, VerifiedNgo } from '@/types/messaging';
 import {
   CreateNgoInput,
@@ -105,6 +110,18 @@ export interface ApiClient {
   getMyOffers(): Promise<ApiResult<HelpOffer[]>>;
   /** Saves alert areas and the push preference. Does not mean push is delivered. */
   setNotificationAreas(input: NotificationAreasInput): Promise<ApiResult<Citizen>>;
+
+  // Volunteers (PROPOSED). Eligibility comes from the backend, never the app.
+  applyToVolunteer(input: ApplyToVolunteerInput): Promise<ApiResult<VolunteerApplication>>;
+  /** The signed-in citizen's application, or null if none. */
+  getMyVolunteerApplication(): Promise<ApiResult<VolunteerApplication | null>>;
+  /** NGO: applications and invitations for its team, with eligibility results. */
+  listVolunteerApplications(): Promise<ApiResult<VolunteerApplication[]>>;
+  decideVolunteerApplication(
+    id: string,
+    decision: VolunteerDecision,
+    reason?: string
+  ): Promise<ApiResult<VolunteerApplication>>;
 
   // Operations
   getOpsSummary(): Promise<ApiResult<OperationalOverviewStats>>;

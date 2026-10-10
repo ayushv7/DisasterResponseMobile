@@ -5,6 +5,7 @@
  */
 import * as accounts from '@/services/accounts-api';
 import * as offers from '@/services/offers-api';
+import * as volunteers from '@/services/volunteers-api';
 import { createNgo, decideNgo, fetchNgoApplications } from '@/services/ngo-approval-api';
 import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
@@ -193,6 +194,11 @@ export const mockApi: ApiClient = {
   offerHelp: (input) => simulate(() => offers.offerHelp(input)),
   getMyOffers: () => simulate(offers.fetchMyOffers),
   setNotificationAreas: (input) => simulate(() => accounts.setNotificationAreas(input)),
+  applyToVolunteer: (input) => simulate(() => volunteers.applyToVolunteer(input)),
+  getMyVolunteerApplication: () => simulate(volunteers.getMyVolunteerApplication),
+  listVolunteerApplications: () => simulate(volunteers.listVolunteerApplications),
+  decideVolunteerApplication: (id, decision, reason) =>
+    simulate(() => volunteers.decideVolunteerApplication(id, decision, reason)),
 
   getOpsSummary: () => simulate(scopedStats),
   getActionQueue: () =>

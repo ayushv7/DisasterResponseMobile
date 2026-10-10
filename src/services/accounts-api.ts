@@ -176,3 +176,32 @@ export async function setNotificationAreas(input: NotificationAreasInput): Promi
   currentCitizen.pushEnabled = input.pushEnabled;
   return copy(currentCitizen);
 }
+
+/** Mock: an approved volunteer joins the NGO team (the backend would issue their credentials). */
+export function addVolunteerMember(app: { id: string; name: string; contact: string; skills: string[] }) {
+  if (team.some((m) => m.id === `mem-${app.id}`)) {
+    team = team.map((m) => (m.id === `mem-${app.id}` ? { ...m, status: 'ACTIVE' } : m));
+    return;
+  }
+  team = [
+    ...team,
+    {
+      id: `mem-${app.id}`,
+      workerId: `SAMPLE-V-${String(nextSampleNumber++).padStart(4, '0')}`,
+      ngoId: 'ngo-drn-india',
+      ngoName: 'Disaster Relief Network India',
+      name: app.name,
+      phone: app.contact,
+      skills: app.skills,
+      status: 'ACTIVE',
+      kind: 'VOLUNTEER',
+      mustChangePassword: true,
+      createdAt: new Date().toISOString(),
+    },
+  ];
+}
+
+/** Mock: revoking a volunteer disables their team membership. */
+export function disableVolunteerMember(applicationId: string) {
+  team = team.map((m) => (m.id === `mem-${applicationId}` ? { ...m, status: 'DISABLED' } : m));
+}

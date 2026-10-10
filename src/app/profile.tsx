@@ -57,6 +57,12 @@ export default function ProfileScreen() {
             onPress: () => router.push('/my-offers'),
           },
           {
+            label: 'Volunteer',
+            desc: 'Apply to help an NGO and see your status',
+            icon: 'user-plus' as const,
+            onPress: () => router.push('/volunteer'),
+          },
+          {
             label: 'Alert areas',
             desc: 'Areas to get alerts for',
             icon: 'bell' as const,
