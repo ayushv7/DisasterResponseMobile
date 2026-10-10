@@ -145,7 +145,7 @@ export default function MessagesScreen() {
         No messages yet
       </Text>
       <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>
-        When you send a private message to a verified NGO from a flood alert, it will appear here.
+        Messages you send to verified NGOs, with photos or location, will appear here.
       </Text>
       <Pressable
         onPress={() => router.replace('/alerts')}
@@ -292,6 +292,21 @@ export default function MessagesScreen() {
             colors={[colors.brandPrimary]}
           />
         }>
+        {/* Always available, even if the sent list fails to load */}
+        <Pressable
+          onPress={() => router.push('/message/compose')}
+          style={({ pressed }) => [
+            styles.newMessageBtn,
+            { backgroundColor: pressed ? colors.actionPrimaryPressed : colors.actionPrimary },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Write a new message to a verified NGO">
+          <Feather name="send" size={16} color={colors.onActionPrimary} />
+          <Text style={[styles.newMessageText, { color: colors.onActionPrimary }]}>
+            New message to an NGO
+          </Text>
+        </Pressable>
+
         {uiState === 'loading' ? (
           renderLoading()
         ) : uiState === 'error' || uiState === 'offline' ? (
@@ -315,6 +330,20 @@ export default function MessagesScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
+  },
+  newMessageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    minHeight: touchTargets.min,
+    borderRadius: radii.button,
+    marginBottom: spacing.md,
+  },
+  newMessageText: {
+    ...typography.bodyMedium,
+    fontWeight: '700',
+    fontSize: 15,
   },
   header: {
     flexDirection: 'row',
