@@ -4,14 +4,9 @@
  * decisions here are simple simulations so the flows can be demonstrated;
  * the real rules belong to the backend.
  */
-import {
-  SAMPLE_CONTRIBUTOR_ACCOUNTS,
-  SAMPLE_CONTRIBUTOR_APPLICATIONS,
-  SAMPLE_CONTRIBUTOR_CODE,
-  SAMPLE_RESOURCE_POLICIES,
-  SAMPLE_PLAN,
-  SAMPLE_RESOURCES,
-} from '@/fixtures/sample-contributors';
+import { SAMPLE_CONTRIBUTOR_CODE, SAMPLE_RESOURCE_POLICIES } from '@/fixtures/sample-contributors';
+import { onResourceChanged, publishPlan, sweepMissedCheckIns } from '@/services/mock/cascades';
+import { addEvidence, ngoById, store, StoreContributor } from '@/services/mock/store';
 import { SAMPLE_VERIFIED_NGOS } from '@/fixtures/sample-ngos';
 import { getCurrentCitizen } from '@/services/accounts-api';
 import { getCurrentNgoSession } from '@/services/ngo-api';
@@ -23,8 +18,10 @@ import {
   ContributorApplication,
   ContributorCredentials,
   ContributorLoginInput,
+  ContributorInstruction,
   ContributorResource,
   ManualAllocationInput,
+  PlanActor,
   RegisterResourceInput,
   ResourcePlan,
   ResourceTypePolicy,
@@ -33,10 +30,14 @@ import { VolunteerDecision } from '@/types/volunteers';
 
 const copy = <T>(v: T): T => JSON.parse(JSON.stringify(v));
 
-let applications: ContributorApplication[] = copy(SAMPLE_CONTRIBUTOR_APPLICATIONS);
-let accounts = copy(SAMPLE_CONTRIBUTOR_ACCOUNTS);
+// Applications, contributors, resources and plans live in the shared mock store.
 let myApplicationId: string | null = null;
-let current: Contributor | null = null;
+let currentId: string | null = null;
+
+function toContributor(c: StoreContributor): Contributor {
+  const ngo = ngoById(c.ngoId);
+  return { contributorId: c.contributorId, name: c.name, ngoId: c.ngoId, ngoName: ngo?.name ?? c.ngoId };
+}
 
 // ── Applications ────────────────────────────────────────────────────────────
 
@@ -47,7 +48,7 @@ export async function applyToContribute(input: ApplyToContributeInput): Promise<
   const ngo = SAMPLE_VERIFIED_NGOS.find((n) => n.id === input.ngoId);
   if (!ngo) throw new ApiError('NGO_NOT_FOUND', 'Choose a verified NGO.');
   const app: ContributorApplication = {
-    id: `con-app-${String(applications.length + 101)}`,
+    id: `con-app-${String(store.contributorApplications.length + 101)}`,
     name: input.name,
     contact: citizen.contact,
     // Mock: route to the sample NGO so it appears in its review list
@@ -58,21 +59,21 @@ export async function applyToContribute(input: ApplyToContributeInput): Promise<
     status: 'PENDING',
     createdAt: new Date().toISOString(),
   };
-  applications = [app, ...applications];
+  store.contributorApplications = [app, ...store.contributorApplications];
   myApplicationId = app.id;
   return copy(app);
 }
 
 export async function getMyContributorApplication(): Promise<ContributorApplication | null> {
   if (!getCurrentCitizen() || !myApplicationId) return null;
-  const app = applications.find((a) => a.id === myApplicationId);
+  const app = store.contributorApplications.find((a) => a.id === myApplicationId);
   return app ? copy(app) : null;
 }
 
 export async function listContributorApplications(): Promise<ContributorApplication[]> {
   const ngo = getCurrentNgoSession();
-  if (!ngo) throw new ApiError('UNAUTHORIZED', 'Only NGO staff can review applications.');
-  return copy(applications.filter((a) => a.ngoId === ngo.ngoId));
+  if (!ngo) throw new ApiError('UNAUTHORIZED', 'Only NGO staff can review store.contributorApplications.');
+  return copy(store.contributorApplications.filter((a) => a.ngoId === ngo.ngoId));
 }
 
 export async function decideContributorApplication(
@@ -81,18 +82,21 @@ export async function decideContributorApplication(
   reason?: string
 ): Promise<{ application: ContributorApplication; credentials?: ContributorCredentials }> {
   if (!getCurrentNgoSession()) throw new ApiError('UNAUTHORIZED', 'Only NGO staff can decide.');
-  const app = applications.find((a) => a.id === id);
+  const app = store.contributorApplications.find((a) => a.id === id);
   if (!app) throw new ApiError('NOT_FOUND', 'Application not found.');
   if (decision !== 'APPROVE' && !reason?.trim()) {
     throw new ApiError('REASON_REQUIRED', 'Give a reason for rejecting or revoking.');
   }
   app.decidedAt = new Date().toISOString();
   if (decision === 'APPROVE') {
-    if (app.status !== 'PENDING') throw new ApiError('INVALID_STATE', 'Only pending applications can be approved.');
+    if (app.status !== 'PENDING') throw new ApiError('INVALID_STATE', 'Only pending store.contributorApplications can be approved.');
     app.status = 'APPROVED';
     app.decisionReason = undefined;
-    const contributorId = `SAMPLE-C-${String(accounts.length + 1).padStart(4, '0')}`;
-    accounts = [...accounts, { contributorId, applicationId: app.id, name: app.name, state: 'ACTIVE' }];
+    const contributorId = `SAMPLE-C-${String(store.contributors.length + 1).padStart(4, '0')}`;
+    store.contributors = [
+      ...store.contributors,
+      { contributorId, applicationId: app.id, name: app.name, ngoId: app.ngoId, state: 'ACTIVE' },
+    ];
     return {
       application: copy(app),
       credentials: { contributorId, signInCode: SAMPLE_CONTRIBUTOR_CODE },
@@ -101,7 +105,14 @@ export async function decideContributorApplication(
   app.status = decision === 'REJECT' ? 'REJECTED' : 'REVOKED';
   app.decisionReason = reason?.trim();
   if (decision === 'REVOKE') {
-    accounts = accounts.map((a) => (a.applicationId === app.id ? { ...a, state: 'REVOKED' } : a));
+    store.contributors = store.contributors.map((a) => (a.applicationId === app.id ? { ...a, state: 'REVOKED' } : a));
+    // Simulated cascade: a revoked contributor's resources leave every plan
+    const revoked = store.contributors.find((c) => c.applicationId === app.id);
+    for (const r of store.resources.filter((x) => x.contributorId === revoked?.contributorId)) {
+      r.eligibleForAllocation = false;
+      r.statusReason = 'Simulated: contributor access revoked by the NGO.';
+      onResourceChanged(r.id);
+    }
   }
   return { application: copy(app) };
 }
@@ -109,7 +120,7 @@ export async function decideContributorApplication(
 // ── Sign-in ─────────────────────────────────────────────────────────────────
 
 export async function contributorLogin(input: ContributorLoginInput): Promise<Contributor> {
-  const account = accounts.find((a) => a.contributorId === input.contributorId.trim().toUpperCase());
+  const account = store.contributors.find((a) => a.contributorId === input.contributorId.trim().toUpperCase());
   if (!account || input.signInCode.trim().toUpperCase() !== SAMPLE_CONTRIBUTOR_CODE) {
     throw new ApiError('INVALID_CREDENTIALS', 'Contributor ID or sign-in code is not correct.');
   }
@@ -119,33 +130,24 @@ export async function contributorLogin(input: ContributorLoginInput): Promise<Co
   if (account.state === 'REVOKED') {
     throw new ApiError('REVOKED', 'Your NGO has revoked this contributor access.');
   }
-  current = {
-    contributorId: account.contributorId,
-    name: account.name,
-    ngoId: 'ngo-drn-india',
-    ngoName: 'Disaster Relief Network India',
-  };
-  return copy(current);
+  currentId = account.contributorId;
+  return toContributor(account);
 }
 
 /** Dev switcher: act as the first sample contributor. */
 export function selectSampleContributor(): Contributor {
-  const account = accounts[0];
-  current = {
-    contributorId: account.contributorId,
-    name: account.name,
-    ngoId: 'ngo-drn-india',
-    ngoName: 'Disaster Relief Network India',
-  };
-  return copy(current);
+  const account = store.contributors[0];
+  currentId = account.contributorId;
+  return toContributor(account);
 }
 
 export function getCurrentContributor(): Contributor | null {
-  return current ? copy(current) : null;
+  const c = store.contributors.find((x) => x.contributorId === currentId);
+  return c ? toContributor(c) : null;
 }
 
 export function signOutContributor() {
-  current = null;
+  currentId = null;
 }
 
 // ── Resources and check-ins ─────────────────────────────────────────────────
@@ -158,20 +160,13 @@ function hoursFromNow(h: number) {
   return new Date(Date.now() + h * HOUR).toISOString();
 }
 
-let resources: ContributorResource[] = SAMPLE_RESOURCES.map(
-  ({ lastCheckInHoursAgo, dueInHours, ...r }) => ({
-    ...r,
-    lastCheckInAt: lastCheckInHoursAgo != null ? hoursFromNow(-lastCheckInHoursAgo) : undefined,
-    checkInDueAt: dueInHours != null ? hoursFromNow(dueInHours) : undefined,
-    evidence: r.evidence
-      ? { ...r.evidence, capturedAt: hoursFromNow(-(lastCheckInHoursAgo ?? 0)) }
-      : undefined,
-  })
-);
 
+/** Re-checked on every call: an NGO revoke takes effect immediately. */
 function requireContributor(): Contributor {
-  if (!current) throw new ApiError('UNAUTHORIZED', 'Sign in as a contributor.');
-  return current;
+  const c = store.contributors.find((x) => x.contributorId === currentId);
+  if (!c) throw new ApiError('UNAUTHORIZED', 'Sign in as a contributor.');
+  if (c.state === 'REVOKED') throw new ApiError('REVOKED', 'Your NGO has revoked this contributor access.');
+  return toContributor(c);
 }
 
 export async function getResourceTypePolicies(): Promise<ResourceTypePolicy[]> {
@@ -180,7 +175,8 @@ export async function getResourceTypePolicies(): Promise<ResourceTypePolicy[]> {
 
 export async function getMyResources(): Promise<ContributorResource[]> {
   const c = requireContributor();
-  return copy(resources.filter((r) => r.contributorId === c.contributorId));
+  sweepMissedCheckIns();
+  return copy(store.resources.filter((r) => r.contributorId === c.contributorId));
 }
 
 /** Mock upload: nothing leaves the device; returns a labelled placeholder URL. */
@@ -188,6 +184,18 @@ export async function uploadEvidencePhoto(localUri: string): Promise<{ photoUrl:
   requireContributor();
   if (!localUri) throw new ApiError('UPLOAD_FAILED', 'No photo to upload.');
   return { photoUrl: `simulated-upload://${localUri.split('/').pop()}` };
+}
+
+function recordEvidence(resourceId: string, e: RegisterResourceInput['evidence']) {
+  return addEvidence({
+    subjectType: 'RESOURCE',
+    subjectId: resourceId,
+    gps: e.gps,
+    photoUrl: e.photoUrl,
+    note: e.note,
+    capturedAt: e.capturedAt,
+    unverified: !(e.gps && e.photoUrl),
+  });
 }
 
 /** Simulated backend verdict on submitted evidence. */
@@ -229,13 +237,14 @@ export async function registerResource(input: RegisterResourceInput): Promise<Co
     checkInIntervalHours: policy.checkInIntervalHours,
     evidence: { ...evidence, unverified: !(evidence.gps && evidence.photoUrl) },
   };
-  resources = [resource, ...resources];
+  store.resources = [resource, ...store.resources];
+  resource.evidenceIds = [recordEvidence(resource.id, evidence)];
   return copy(resource);
 }
 
 export async function checkInResource(id: string, input: CheckInInput): Promise<ContributorResource> {
   const c = requireContributor();
-  const r = resources.find((x) => x.id === id && x.contributorId === c.contributorId);
+  const r = store.resources.find((x) => x.id === id && x.contributorId === c.contributorId);
   if (!r) throw new ApiError('NOT_FOUND', 'Resource not found.');
   const now = new Date().toISOString();
   r.lastCheckInAt = now;
@@ -251,6 +260,7 @@ export async function checkInResource(id: string, input: CheckInInput): Promise<
     const { note: _note, ...evidence } = input.evidence;
     Object.assign(r, { availability: 'AVAILABLE', ...verdict(evidence) });
     r.evidence = { ...evidence, unverified: !(evidence.gps && evidence.photoUrl) };
+    r.evidenceIds = [...(r.evidenceIds ?? []), recordEvidence(r.id, input.evidence)];
   } else {
     Object.assign(r, {
       availability: 'AVAILABLE',
@@ -259,22 +269,22 @@ export async function checkInResource(id: string, input: CheckInInput): Promise<
       statusReason: 'Simulated: availability confirmed without new evidence.',
     });
   }
+  onResourceChanged(r.id);
   return copy(r);
 }
 
 /** Pool the plan mock allocates from (all contributors of the NGO). */
 export function allResourcesForNgo(ngoId: string): ContributorResource[] {
-  return copy(resources.filter((r) => r.ngoId === ngoId));
+  return copy(store.resources.filter((r) => r.ngoId === ngoId));
 }
 
-// ── Plans ───────────────────────────────────────────────────────────────────
-// Simulated allocation service. Replan rule (documented in the API proposal):
-// AUTO allocations whose resource is no longer eligible are dropped; MANUAL
-// allocations are carried forward only if their resource is still eligible,
-// otherwise dropped with a note. Every change bumps the version.
 
-let plan: ResourcePlan = { ...copy(SAMPLE_PLAN), generatedAt: new Date().toISOString() };
-const planHistory: ResourcePlan[] = [];
+// ── Plans ───────────────────────────────────────────────────────────────────
+// One plan per incident (Incident -> Plan -> Allocation -> Task). Simulated
+// rules, documented in the API proposal: replan drops allocations whose
+// resource is no longer eligible (manual ones too, with a note); any change
+// bumps the version and returns the plan to PROPOSED until the NGO approves;
+// approval publishes tasks and contributor instructions (see cascades.ts).
 
 function requireNgo() {
   const ngo = getCurrentNgoSession();
@@ -282,63 +292,96 @@ function requireNgo() {
   return ngo;
 }
 
+function ngoActor(): PlanActor {
+  const ngo = requireNgo();
+  return { name: `${ngo.authorizedOfficerName}, ${ngo.ngoName}`, kind: 'NGO' };
+}
+
+function findPlan(planId: string, expectedVersion: number): ResourcePlan {
+  const ngo = requireNgo();
+  const plan = store.plans.find((p) => p.id === planId && p.ngoId === ngo.ngoId);
+  if (!plan) throw new ApiError('NOT_FOUND', 'Plan not found.');
+  if (expectedVersion !== plan.version) {
+    throw new ApiError('VERSION_CONFLICT', `The plan changed (now version ${plan.version}). Reload and try again.`);
+  }
+  return plan;
+}
+
+/** Saves the current version to history and applies a change as the next version. */
+function nextVersion(plan: ResourcePlan, change: Partial<ResourcePlan>) {
+  store.planHistory.push(copy(plan));
+  Object.assign(plan, change, {
+    version: plan.version + 1,
+    status: 'PROPOSED',
+    approvedAt: undefined,
+    approvedBy: undefined,
+  });
+}
+
 function resourceLabel(r: ContributorResource) {
-  const owner = SAMPLE_CONTRIBUTOR_ACCOUNTS.find((a) => a.contributorId === r.contributorId)?.name;
+  const owner = store.contributors.find((a) => a.contributorId === r.contributorId)?.name;
   return `${r.typeLabel} × ${r.quantity}${owner ? ` (${owner})` : ''}`;
 }
 
-export async function getResourcePlan(): Promise<ResourcePlan> {
+/** NGO's plans (one per incident in its area). */
+export async function getResourcePlans(): Promise<ResourcePlan[]> {
   const ngo = requireNgo();
-  if (plan.ngoId !== ngo.ngoId) throw new ApiError('NOT_FOUND', 'No plan for this NGO yet.');
-  return copy(plan);
+  sweepMissedCheckIns();
+  return copy(store.plans.filter((p) => p.ngoId === ngo.ngoId));
+}
+
+export async function getResourcePlan(incidentId?: string): Promise<ResourcePlan> {
+  const plans = await getResourcePlans();
+  const plan = incidentId ? plans.find((p) => p.incidentId === incidentId) : plans[0];
+  if (!plan) throw new ApiError('NOT_FOUND', 'No resource plan for this incident yet.');
+  return plan;
 }
 
 /** Eligible and ineligible resources the NGO may see when allocating manually. */
 export async function getAllocatableResources(): Promise<ContributorResource[]> {
   const ngo = requireNgo();
+  sweepMissedCheckIns();
   return allResourcesForNgo(ngo.ngoId);
 }
 
 export async function requestReplan(planId: string, expectedVersion: number): Promise<ResourcePlan> {
-  const ngo = requireNgo();
-  if (planId !== plan.id) throw new ApiError('NOT_FOUND', 'Plan not found.');
-  if (expectedVersion !== plan.version) {
-    throw new ApiError('VERSION_CONFLICT', `The plan changed (now version ${plan.version}). Reload and try again.`);
-  }
-  const pool = allResourcesForNgo(ngo.ngoId);
-  const eligible = (id: string) => pool.find((r) => r.id === id)?.eligibleForAllocation === true;
+  const plan = findPlan(planId, expectedVersion);
+  sweepMissedCheckIns();
+  const eligible = (id: string) => store.resources.find((r) => r.id === id)?.eligibleForAllocation === true;
   const notes: string[] = [];
   const kept = plan.allocations.filter((a) => {
     if (eligible(a.resourceId)) return true;
     notes.push(
-      `${a.source === 'MANUAL' ? 'Manual' : 'Automatic'} allocation of ${a.resourceLabel} to ${a.workOrderId} dropped: resource not eligible.`
+      `Simulated: ${a.source === 'MANUAL' ? 'manual' : 'automatic'} allocation of ${a.resourceLabel} to ${a.workOrderId} dropped (resource not eligible).`
     );
     return false;
   });
-  planHistory.push(copy(plan));
-  plan = {
-    ...plan,
-    version: plan.version + 1,
-    generatedAt: new Date().toISOString(),
+  const at = new Date().toISOString();
+  nextVersion(plan, {
+    generatedAt: at,
     lastChangedBy: { name: 'Allocation service (Simulated)', kind: 'SYSTEM' },
-    lastChangedAt: new Date().toISOString(),
+    lastChangedAt: at,
     allocations: kept,
     notes: notes.length ? notes : ['Simulated: recomputed; no changes needed.'],
-  };
+    replanSuggested: false,
+    replanReasons: undefined,
+  });
   return copy(plan);
 }
 
 export async function allocateManually(input: ManualAllocationInput): Promise<ResourcePlan> {
+  const plan = findPlan(input.planId, input.expectedVersion);
   const ngo = requireNgo();
-  if (input.planId !== plan.id) throw new ApiError('NOT_FOUND', 'Plan not found.');
-  if (input.expectedVersion !== plan.version) {
-    throw new ApiError('VERSION_CONFLICT', `The plan changed (now version ${plan.version}). Reload and try again.`);
-  }
   if (input.reason.trim().length < 10) {
     throw new ApiError('REASON_REQUIRED', 'Give a reason of at least 10 characters for the manual allocation.');
   }
-  const r = allResourcesForNgo(ngo.ngoId).find((x) => x.id === input.resourceId);
-  if (!r) throw new ApiError('UNAUTHORIZED', 'This resource does not belong to your NGO.');
+  sweepMissedCheckIns();
+  const r = store.resources.find((x) => x.id === input.resourceId);
+  if (!r || r.ngoId !== ngo.ngoId) throw new ApiError('UNAUTHORIZED', 'This resource does not belong to your NGO.');
+  const task = store.tasks.find((t) => t.id === input.workOrderId);
+  if (!task || (plan.incidentId && task.incidentId !== plan.incidentId)) {
+    throw new ApiError('INVALID_TASK', `${input.workOrderId} is not part of this incident.`);
+  }
   if (r.availability === 'UNAVAILABLE') {
     throw new ApiError('RESOURCE_UNAVAILABLE', `${resourceLabel(r)} is reported unavailable.`);
   }
@@ -351,31 +394,52 @@ export async function allocateManually(input: ManualAllocationInput): Promise<Re
   if (!Number.isInteger(input.quantity) || input.quantity < 1 || input.quantity > r.quantity) {
     throw new ApiError('INVALID_QUANTITY', `Quantity must be between 1 and ${r.quantity}.`);
   }
-  const actor = { name: `${ngo.authorizedOfficerName}, ${ngo.ngoName}`, kind: 'NGO' as const };
-  const now = new Date().toISOString();
-  planHistory.push(copy(plan));
-  plan = {
-    ...plan,
-    version: plan.version + 1,
+  const actor = ngoActor();
+  const at = new Date().toISOString();
+  nextVersion(plan, {
     lastChangedBy: actor,
-    lastChangedAt: now,
+    lastChangedAt: at,
     notes: undefined,
     allocations: [
-      // A manual allocation replaces any allocation of the same resource to the same work order
+      // A manual allocation replaces any allocation of the same resource to the same task
       ...plan.allocations.filter((a) => !(a.resourceId === r.id && a.workOrderId === input.workOrderId)),
       {
         id: `alloc-${Date.now()}`,
-        workOrderId: input.workOrderId,
-        workOrderLabel: input.workOrderId,
+        workOrderId: task.id,
+        workOrderLabel: `${task.id} · ${task.type.replace(/_/g, ' ').toLowerCase()}`,
         resourceId: r.id,
         resourceLabel: resourceLabel(r),
         quantity: input.quantity,
         source: 'MANUAL',
         reason: input.reason.trim(),
         changedBy: actor,
-        changedAt: now,
+        changedAt: at,
       },
     ],
-  };
+  });
   return copy(plan);
+}
+
+/** NGO approves the current version: publishes tasks and contributor instructions. */
+export async function approvePlan(planId: string, expectedVersion: number): Promise<ResourcePlan> {
+  const plan = findPlan(planId, expectedVersion);
+  if (plan.status !== 'PROPOSED') throw new ApiError('INVALID_STATE', 'This version is already approved.');
+  sweepMissedCheckIns();
+  const stale = plan.allocations.filter(
+    (a) => !store.resources.find((r) => r.id === a.resourceId)?.eligibleForAllocation
+  );
+  if (stale.length) {
+    throw new ApiError(
+      'RESOURCE_INELIGIBLE',
+      `Replan first: ${stale.map((a) => a.resourceLabel).join(', ')} ${stale.length === 1 ? 'is' : 'are'} no longer eligible.`
+    );
+  }
+  publishPlan(plan, ngoActor());
+  return copy(plan);
+}
+
+/** Signed-in contributor's instructions from approved plans. */
+export async function getMyInstructions(): Promise<ContributorInstruction[]> {
+  const c = requireContributor();
+  return copy(store.instructions.filter((i) => i.contributorId === c.contributorId));
 }

@@ -7,6 +7,7 @@ import * as accounts from '@/services/accounts-api';
 import * as offers from '@/services/offers-api';
 import * as volunteers from '@/services/volunteers-api';
 import * as contributors from '@/services/contributors-api';
+import { onTaskChanged } from '@/services/mock/cascades';
 import { createNgo, decideNgo, fetchNgoApplications } from '@/services/ngo-approval-api';
 import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
@@ -68,6 +69,13 @@ async function scopedStats(): Promise<OperationalOverviewStats> {
     blockedOrFailedInterventions: count((i) => i.status === 'BLOCKED' || i.status === 'FAILED'),
     awaitingVerification: count((i) => i.status === 'AWAITING_VERIFICATION'),
   };
+}
+
+/** Runs the simulated cascades after a task mutation (plan status, replan flag). */
+async function withTaskCascade(run: () => Promise<InterventionRecord>): Promise<InterventionRecord> {
+  const task = await run();
+  onTaskChanged(task.id);
+  return task;
 }
 
 /** The signed-in sample worker; the real backend takes this from the token. */
@@ -183,11 +191,11 @@ export const mockApi: ApiClient = {
       if (!member) throw new Error('Worker not found in your team.');
       if (member.status === 'DISABLED') throw new Error('This worker is disabled.');
       const ngo = getCurrentNgoSession();
-      return ops.assignTaskToWorker(
+      return withTaskCascade(() => ops.assignTaskToWorker(
         workOrderId,
         { id: member.id, name: member.name, ngoName: member.ngoName, isVolunteer: member.kind === 'VOLUNTEER' },
         { name: ngo?.authorizedOfficerName ?? 'NGO', ngoName: ngo?.ngoName }
-      );
+      ));
     }),
   requestOtp: (contact) => simulate(() => accounts.requestOtp(contact)),
   verifyOtp: (challengeId, code) => simulate(() => accounts.verifyOtp(challengeId, code)),
@@ -206,7 +214,10 @@ export const mockApi: ApiClient = {
   uploadEvidencePhoto: (uri) => simulate(() => contributors.uploadEvidencePhoto(uri)),
   registerResource: (input) => simulate(() => contributors.registerResource(input)),
   checkInResource: (id, input) => simulate(() => contributors.checkInResource(id, input)),
-  getResourcePlan: () => simulate(contributors.getResourcePlan),
+  getResourcePlan: (incidentId) => simulate(() => contributors.getResourcePlan(incidentId)),
+  getResourcePlans: () => simulate(contributors.getResourcePlans),
+  approvePlan: (id, version) => simulate(() => contributors.approvePlan(id, version)),
+  getMyInstructions: () => simulate(contributors.getMyInstructions),
   getAllocatableResources: () => simulate(contributors.getAllocatableResources),
   requestReplan: (id, version) => simulate(() => contributors.requestReplan(id, version)),
   allocateManually: (input) => simulate(() => contributors.allocateManually(input)),
@@ -229,22 +240,28 @@ export const mockApi: ApiClient = {
   getRecommendation: (id) => simulate(() => ops.fetchAllocationRecommendation(id)),
   assign: (id, input) =>
     simulate(() =>
-      ops.assignIntervention(id, input.teamId, input.equipment, input.deadlineMinutes, input.overrideReason)
+      withTaskCascade(() =>
+        ops.assignIntervention(id, input.teamId, input.equipment, input.deadlineMinutes, input.overrideReason)
+      )
     ),
-  acknowledge: (id) => simulate(() => ops.acknowledgeTask(id, workerActor())),
-  start: (id) => simulate(() => ops.startTask(id, workerActor())),
+  acknowledge: (id) => simulate(() => withTaskCascade(() => ops.acknowledgeTask(id, workerActor()))),
+  start: (id) => simulate(() => withTaskCascade(() => ops.startTask(id, workerActor()))),
   reportProblem: (id, reason, isCritical, kind) =>
-    simulate(() => ops.reportTaskBlocker(id, reason, isCritical, kind, workerActor())),
+    simulate(() => withTaskCascade(() => ops.reportTaskBlocker(id, reason, isCritical, kind, workerActor()))),
   submitCompletion: (id, input) =>
-    simulate(() => ops.submitTaskCompletion(id, input.note, input.photoUris, workerActor())),
+    simulate(() =>
+      withTaskCascade(() => ops.submitTaskCompletion(id, input.note, input.photoUris, workerActor()))
+    ),
   // NGO users verify step 1; the authority's final step is backend-only for now
   verify: (id, approved) =>
-    simulate(() => {
-      const ngo = getCurrentNgoSession();
-      return ngo
-        ? ops.ngoVerifyIntervention(id, approved, { name: ngo.authorizedOfficerName, ngoName: ngo.ngoName })
-        : ops.verifyIntervention(id, approved);
-    }),
+    simulate(() =>
+      withTaskCascade(() => {
+        const ngo = getCurrentNgoSession();
+        return ngo
+          ? ops.ngoVerifyIntervention(id, approved, { name: ngo.authorizedOfficerName, ngoName: ngo.ngoName })
+          : ops.verifyIntervention(id, approved);
+      })
+    ),
   getReassignments: () =>
     simulate(async () => {
       const records = await ops.fetchReplanningRecords();

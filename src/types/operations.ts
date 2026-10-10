@@ -94,6 +94,12 @@ export interface InterventionRecord {
   overrideReason?: string;
   /** Append-only action history. */
   history?: TaskEvent[];
+  /** Resource plan this task belongs to (Plan -> Allocation -> Task). */
+  planId?: string;
+  /** When an approved plan published this task to its worker. */
+  publishedAt?: string;
+  /** Evidence records for this task (Task -> Evidence). */
+  evidenceIds?: string[];
   /** Step 1: the NGO checks its field worker's evidence. */
   ngoVerification?: VerificationStep;
   /** Step 2: the authority gives final verification (backend-recorded). */

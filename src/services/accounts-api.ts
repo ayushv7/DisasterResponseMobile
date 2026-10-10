@@ -7,12 +7,12 @@
  * never checked here.
  */
 import {
-  SAMPLE_FIELD_TEAM,
   SAMPLE_NGO_CODE,
   SAMPLE_OTP_CODE,
   SAMPLE_STAFF_ACCOUNTS,
   SAMPLE_TEMP_PASSWORD,
 } from '@/fixtures/sample-accounts';
+import { store } from '@/services/mock/store';
 import {
   Citizen,
   CreateWorkerInput,
@@ -25,9 +25,11 @@ import {
   WorkerLoginResult,
 } from '@/types/accounts';
 
-let team: NgoMember[] = JSON.parse(JSON.stringify(SAMPLE_FIELD_TEAM));
-let currentWorker: NgoMember | null = null;
-let nextSampleNumber = team.length + 1;
+// Workers live in the shared mock store (src/services/mock/store.ts).
+let currentWorkerId: string | null = null;
+/** Always read the live record, so NGO changes (disable, reset) apply at once. */
+const currentWorkerRecord = () => store.workers.find((m) => m.id === currentWorkerId) ?? null;
+let nextSampleNumber = store.workers.length + 1;
 
 const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 
@@ -45,31 +47,33 @@ export async function workerLogin(input: WorkerLoginInput): Promise<WorkerLoginR
   if (input.ngoCode.trim().toUpperCase() !== SAMPLE_NGO_CODE) {
     throw new Error(`Unknown NGO code. The sample NGO code is ${SAMPLE_NGO_CODE}.`);
   }
-  const member = team.find((m) => m.workerId === input.workerId.trim().toUpperCase());
+  const member = store.workers.find((m) => m.workerId === input.workerId.trim().toUpperCase());
   if (!member) throw new Error('Unknown worker ID for this NGO.');
   if (member.status === 'DISABLED') throw new Error('This worker account is disabled by the NGO.');
-  currentWorker = member;
+  currentWorkerId = member.id;
   return { member: copy(member) };
 }
 
 /** Dev switcher: act as the first sample worker without the sign-in form. */
 export function selectSampleWorker(): NgoMember {
-  currentWorker = team[0];
-  return copy(currentWorker);
+  currentWorkerId = store.workers[0].id;
+  return copy(store.workers[0]);
 }
 
 export async function changeWorkerPassword(_newPassword: string): Promise<NgoMember> {
-  if (!currentWorker) throw new Error('Not signed in as a field worker.');
-  currentWorker.mustChangePassword = false;
-  return copy(currentWorker);
+  const worker = currentWorkerRecord();
+  if (!worker) throw new Error('Not signed in as a field worker.');
+  worker.mustChangePassword = false;
+  return copy(worker);
 }
 
 export function getCurrentWorker(): NgoMember | null {
-  return currentWorker ? copy(currentWorker) : null;
+  const worker = currentWorkerRecord();
+  return worker ? copy(worker) : null;
 }
 
 export function signOutAccounts() {
-  currentWorker = null;
+  currentWorkerId = null;
 }
 
 export function getSampleNgoCode() {
@@ -77,7 +81,7 @@ export function getSampleNgoCode() {
 }
 
 export async function listWorkers(): Promise<NgoMember[]> {
-  return copy(team);
+  return copy(store.workers);
 }
 
 export async function createWorker(
@@ -96,19 +100,19 @@ export async function createWorker(
     mustChangePassword: true,
     createdAt: new Date().toISOString(),
   };
-  team = [...team, member];
+  store.workers = [...store.workers, member];
   return { member: copy(member), credentials: { workerId, temporaryPassword: SAMPLE_TEMP_PASSWORD } };
 }
 
 export async function disableWorker(memberId: string, disabled: boolean): Promise<NgoMember> {
-  const member = team.find((m) => m.id === memberId);
+  const member = store.workers.find((m) => m.id === memberId);
   if (!member) throw new Error('Worker not found.');
   member.status = disabled ? 'DISABLED' : 'ACTIVE';
   return copy(member);
 }
 
 export async function resetWorkerPassword(memberId: string): Promise<WorkerCredentials> {
-  const member = team.find((m) => m.id === memberId);
+  const member = store.workers.find((m) => m.id === memberId);
   if (!member) throw new Error('Worker not found.');
   member.mustChangePassword = true;
   return { workerId: member.workerId, temporaryPassword: SAMPLE_TEMP_PASSWORD };
@@ -179,12 +183,12 @@ export async function setNotificationAreas(input: NotificationAreasInput): Promi
 
 /** Mock: an approved volunteer joins the NGO team (the backend would issue their credentials). */
 export function addVolunteerMember(app: { id: string; name: string; contact: string; skills: string[] }) {
-  if (team.some((m) => m.id === `mem-${app.id}`)) {
-    team = team.map((m) => (m.id === `mem-${app.id}` ? { ...m, status: 'ACTIVE' } : m));
+  if (store.workers.some((m) => m.id === `mem-${app.id}`)) {
+    store.workers = store.workers.map((m) => (m.id === `mem-${app.id}` ? { ...m, status: 'ACTIVE' } : m));
     return;
   }
-  team = [
-    ...team,
+  store.workers = [
+    ...store.workers,
     {
       id: `mem-${app.id}`,
       workerId: `SAMPLE-V-${String(nextSampleNumber++).padStart(4, '0')}`,
@@ -203,5 +207,5 @@ export function addVolunteerMember(app: { id: string; name: string; contact: str
 
 /** Mock: revoking a volunteer disables their team membership. */
 export function disableVolunteerMember(applicationId: string) {
-  team = team.map((m) => (m.id === `mem-${applicationId}` ? { ...m, status: 'DISABLED' } : m));
+  store.workers = store.workers.map((m) => (m.id === `mem-${applicationId}` ? { ...m, status: 'DISABLED' } : m));
 }

@@ -108,6 +108,39 @@ export interface ContributorResource {
   checkInDueAt?: string;
   checkInIntervalHours?: number;
   evidence?: ResourceEvidence;
+  /** Evidence records for this resource (Resource -> Evidence), newest last. */
+  evidenceIds?: string[];
+}
+
+/** Shared evidence record for a task or a resource (Task/Resource -> Evidence). */
+export interface EvidenceRecord {
+  id: string;
+  subjectType: 'TASK' | 'RESOURCE';
+  subjectId: string;
+  gps?: GpsReading;
+  photoUrl?: string;
+  note?: string;
+  capturedAt: string;
+  unverified: boolean;
+}
+
+/**
+ * What a contributor must do for an approved plan: where to bring which
+ * resource, by when, for which NGO. Issued by the backend.
+ */
+export interface ContributorInstruction {
+  id: string;
+  contributorId: string;
+  resourceId: string;
+  resourceLabel: string;
+  taskId: string;
+  planId: string;
+  planVersion: number;
+  where: string;
+  what: string;
+  deadline?: string;
+  ngoName: string;
+  issuedAt: string;
 }
 
 /** Evidence as captured on the device, before upload. */
@@ -153,9 +186,21 @@ export interface PlanAllocation {
   changedAt?: string;
 }
 
+export type PlanStatus = 'PROPOSED' | 'APPROVED' | 'IN_PROGRESS' | 'COMPLETED';
+
 export interface ResourcePlan {
   id: string;
   ngoId: string;
+  /** Incident this plan responds to (Incident -> Plan). */
+  incidentId?: string;
+  incidentTitle?: string;
+  /** PROPOSED until the NGO approves; approval publishes tasks and instructions. */
+  status?: PlanStatus;
+  /** Backend flag: something changed (task problem, missed check-in) and a replan is advised. */
+  replanSuggested?: boolean;
+  replanReasons?: string[];
+  approvedAt?: string;
+  approvedBy?: PlanActor;
   version: number;
   generatedAt: string;
   lastChangedBy?: PlanActor;

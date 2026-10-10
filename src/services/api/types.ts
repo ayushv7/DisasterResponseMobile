@@ -26,6 +26,7 @@ import {
   ContributorApplication,
   ContributorCredentials,
   ContributorLoginInput,
+  ContributorInstruction,
   ContributorResource,
   CheckInInput,
   ManualAllocationInput,
@@ -147,7 +148,14 @@ export interface ApiClient {
   checkInResource(id: string, input: CheckInInput): Promise<ApiResult<ContributorResource>>;
 
   // Resource plans (PROPOSED). The backend computes, validates and versions them.
-  getResourcePlan(): Promise<ApiResult<ResourcePlan>>;
+  /** The NGO's plan for an incident (or its first plan when no incident is given). */
+  getResourcePlan(incidentId?: string): Promise<ApiResult<ResourcePlan>>;
+  /** All of the NGO's plans, one per incident in its area. */
+  getResourcePlans(): Promise<ApiResult<ResourcePlan[]>>;
+  /** NGO approves a version; the backend publishes tasks and contributor instructions. */
+  approvePlan(planId: string, expectedVersion: number): Promise<ApiResult<ResourcePlan>>;
+  /** Contributor: where to bring which resource, by when, for which NGO. */
+  getMyInstructions(): Promise<ApiResult<ContributorInstruction[]>>;
   /** NGO's contributor resources with backend eligibility, for manual allocation. */
   getAllocatableResources(): Promise<ApiResult<ContributorResource[]>>;
   /** Asks the backend to recompute; returns the new plan. Throws VERSION_CONFLICT. */

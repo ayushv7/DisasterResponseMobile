@@ -190,6 +190,9 @@ export const SAMPLE_RESOURCES: (Omit<ContributorResource, 'lastCheckInAt' | 'che
 export const SAMPLE_PLAN: Omit<ResourcePlan, 'generatedAt'> = {
   id: 'plan-ngo-drn-india',
   ngoId: 'ngo-drn-india',
+  incidentId: 'INC-2026-081',
+  incidentTitle: 'Majuli Island, Assam',
+  status: 'PROPOSED',
   version: 1,
   lastChangedBy: { name: 'Allocation service (Simulated)', kind: 'SYSTEM' },
   allocations: [
@@ -204,8 +207,17 @@ export const SAMPLE_PLAN: Omit<ResourcePlan, 'generatedAt'> = {
     },
     {
       id: 'alloc-2',
-      workOrderId: 'INT-105',
-      workOrderLabel: 'INT-105 · Drinking water logistics',
+      workOrderId: 'INT-101',
+      workOrderLabel: 'INT-101 · Dewatering',
+      resourceId: 'res-c1-gen',
+      resourceLabel: 'Generator × 1 (S. Borah)',
+      quantity: 1,
+      source: 'AUTO',
+    },
+    {
+      id: 'alloc-3',
+      workOrderId: 'INT-102',
+      workOrderLabel: 'INT-102 · Boat evacuation',
       resourceId: 'res-c1-food',
       resourceLabel: 'Food stock × 100 (S. Borah)',
       quantity: 50,
