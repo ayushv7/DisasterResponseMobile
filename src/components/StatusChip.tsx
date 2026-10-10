@@ -7,12 +7,34 @@ import { radii } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { EventStatus } from '@/types/disaster';
 
-interface StatusChipProps {
-  status: EventStatus;
-}
+/** critical/warning (red/amber) are reserved for operational status. */
+export type ChipTone = 'critical' | 'warning' | 'success' | 'info' | 'neutral';
 
-export function StatusChip({ status }: StatusChipProps) {
+type StatusChipProps =
+  | { status: EventStatus; label?: never; tone?: never }
+  | { status?: never; label: string; tone: ChipTone };
+
+export function StatusChip(props: StatusChipProps) {
   const { colors } = useTheme();
+
+  if (props.label !== undefined) {
+    const tones: Record<ChipTone, { color: string; bg: string }> = {
+      critical: { color: colors.statusActive, bg: colors.statusActiveBg },
+      warning: { color: colors.statusWatch, bg: colors.statusWatchBg },
+      success: { color: colors.statusResolved, bg: colors.statusResolvedBg },
+      info: { color: colors.actionPrimary, bg: colors.brandTealBg },
+      neutral: { color: colors.textSecondary, bg: colors.surfaceMuted },
+    };
+    const tone = tones[props.tone];
+    return (
+      <View style={[styles.chip, { backgroundColor: tone.bg }]} accessibilityLabel={`Status: ${props.label}`}>
+        <View style={[styles.dot, { backgroundColor: tone.color }]} />
+        <Text style={[styles.label, { color: tone.color }]}>{props.label}</Text>
+      </View>
+    );
+  }
+
+  const { status } = props;
 
   const config: Record<
     EventStatus,
@@ -70,6 +92,12 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginRight: 4,
+  },
+  dot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 5,
   },
   label: {
     ...typography.caption,
