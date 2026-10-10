@@ -21,7 +21,6 @@ export default function OpsLayout() {
       <Stack.Screen name="replanning" options={{ animation: 'fade' }} />
       <Stack.Screen name="more" options={{ animation: 'fade' }} />
       <Stack.Screen name="incident/[id]" />
-      <Stack.Screen name="approve-ngos" />
       <Stack.Screen name="plan" />
     </Stack>
   );

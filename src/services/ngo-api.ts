@@ -36,15 +36,6 @@ let currentSession: NgoSession | null = null;
 // Inbox messages and updates live in the shared mock store (src/services/mock/store.ts).
 
 
-export async function loginNgo(
-  _email: string,
-  _password: string
-): Promise<NgoSession> {
-  await new Promise((res) => setTimeout(res, 400));
-  throw new Error(
-    'FastAPI backend authentication endpoint is not yet connected. Real credentials cannot be authenticated.'
-  );
-}
 
 /**
  * Creates a clearly marked mock session for UI testing of responder views.
