@@ -9,25 +9,33 @@ import { typography } from '@/theme/typography';
 interface InfoBarProps {
   isSampleData?: boolean;
   persistent?: boolean;
+  customMessage?: string;
 }
 
-export function InfoBar({ isSampleData = true, persistent = true }: InfoBarProps) {
+export function InfoBar({
+  isSampleData = true,
+  persistent = true,
+  customMessage,
+}: InfoBarProps) {
   const { colors } = useTheme();
   const [isDismissed, setIsDismissed] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   if (!isSampleData || (!persistent && isDismissed)) return null;
 
+  const displayMessage =
+    customMessage || 'SAMPLE DATA — NOT LIVE FLOOD INFORMATION';
+
   return (
     <>
       <View
         style={[styles.container, { backgroundColor: colors.infoBg }]}
         accessibilityRole="summary"
-        accessibilityLabel="Notice: SAMPLE DATA — NOT LIVE FLOOD INFORMATION.">
+        accessibilityLabel={`Notice: ${displayMessage}`}>
         <View style={styles.contentRow}>
           <Feather name="info" size={15} color={colors.info} style={styles.icon} />
           <Text style={[styles.text, { color: colors.textSecondary }]} numberOfLines={1}>
-            SAMPLE DATA — NOT LIVE FLOOD INFORMATION
+            {displayMessage}
           </Text>
           <Pressable
             onPress={() => setIsModalVisible(true)}

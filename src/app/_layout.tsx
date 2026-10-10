@@ -35,6 +35,11 @@ function RootLayoutContent() {
         <Stack.Screen name="ngo/organization" options={{ animation: 'fade' }} />
         <Stack.Screen name="ngo/review/[id]" />
         <Stack.Screen name="orchestration/[id]" />
+        <Stack.Screen name="ops/home" options={{ animation: 'fade' }} />
+        <Stack.Screen name="ops/incidents" options={{ animation: 'fade' }} />
+        <Stack.Screen name="ops/tasks" options={{ animation: 'fade' }} />
+        <Stack.Screen name="ops/replanning" options={{ animation: 'fade' }} />
+        <Stack.Screen name="ops/incident/[id]" />
         <Stack.Screen name="dev/index" />
       </Stack>
     </>

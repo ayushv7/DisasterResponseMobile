@@ -233,6 +233,39 @@ export default function LoginScreen() {
                   )}
                 </Pressable>
               </View>
+
+              <View
+                style={[
+                  styles.card,
+                  { backgroundColor: colors.surface, gap: spacing.sm, marginTop: spacing.sm },
+                ]}>
+                <Text style={[styles.devDesc, { color: colors.textSecondary }]}>
+                  Disaster Response Coordinator Console: Access operational readiness,
+                  incident telemetry, field task tracking and supervisory replanning in simulation mode.
+                </Text>
+
+                <Pressable
+                  onPress={() => router.replace('/ops/home')}
+                  style={[
+                    styles.demoButton,
+                    {
+                      backgroundColor: colors.surfaceMuted,
+                    },
+                  ]}>
+                  <Feather
+                    name="activity"
+                    size={16}
+                    color={colors.brandTeal}
+                  />
+                  <Text
+                    style={[
+                      styles.demoButtonText,
+                      { color: colors.brandTeal },
+                    ]}>
+                    Launch Operations Console
+                  </Text>
+                </Pressable>
+              </View>
             </View>
           )}
         </ScrollView>

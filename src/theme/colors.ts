@@ -42,6 +42,11 @@ export interface ThemeColors {
   chipActiveBg: string;
   chipActiveText: string;
 
+  // Operational accents (calm navy & clinical teal)
+  brandTeal: string;
+  brandTealBg: string;
+  brandNavy: string;
+
   // Elevation / Shadow
   shadowColor: string;
 }
@@ -73,6 +78,10 @@ export const lightColors: ThemeColors = {
   chipActiveBg: '#0F0F0F',
   chipActiveText: '#FFFFFF',
 
+  brandTeal: '#0D9488',
+  brandTealBg: '#CCFBF1',
+  brandNavy: '#0F172A',
+
   shadowColor: 'transparent',
 };
 
@@ -102,6 +111,10 @@ export const darkColors: ThemeColors = {
 
   chipActiveBg: '#F1F1F1', // YouTube active pill (white pill with dark text)
   chipActiveText: '#0F0F0F',
+
+  brandTeal: '#14B8A6', // Operational teal accent
+  brandTealBg: '#042F2E',
+  brandNavy: '#0F172A',
 
   shadowColor: 'transparent',
 };
