@@ -26,8 +26,6 @@ npm test              # unit tests (jest-expo): sample store and simulated casca
   Switch between visitor, citizen, NGO, field worker, contributor and authority, and use
   **Reset sample data** to restore the seed (also shows the start screen again).
 
-Do not run `npm run reset-project`; it is the Expo starter script and would move the app away.
-
 ## Sample sign-ins (sample mode only)
 
 | Role | Where | Credentials |
