@@ -624,15 +624,15 @@ implement them.
 3. **Contributor revoked:** their resources become ineligible and plans using them are flagged.
 4. **Plan change** (replan or manual allocation): new `version`, status back to `PROPOSED`;
    the previous version is kept for audit.
+5. **NGO approval:** status `APPROVED`; each allocated task gets `planId` + `publishedAt` and a
+   history entry; each allocated resource's contributor gets an `Instruction`. A new approved
+   version replaces that plan's earlier instructions.
 6. **Volunteer / contributor approval:** creates the worker (`kind: VOLUNTEER`) or contributor
    account in the approving NGO; revoke disables it and removes the contributor's resources from
    plans.
 7. **NGO approval by the authority** (or `createNgo`): the NGO becomes `ACTIVE`, appears in the
    public verified list, and gets a plan for each incident in its area. Reject/suspend: `SUSPENDED`,
    removed from the public list, its plans flagged.
-5. **NGO approval:** status `APPROVED`; each allocated task gets `planId` + `publishedAt` and a
-   history entry; each allocated resource's contributor gets an `Instruction`. A new approved
-   version replaces that plan's earlier instructions.
 
 ## Open questions for the backend
 
