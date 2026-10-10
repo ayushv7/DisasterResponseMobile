@@ -20,7 +20,6 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { SHOW_LEGACY_ORCHESTRATION } from '@/constants/features';
-
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';

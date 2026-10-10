@@ -593,6 +593,24 @@ interface Instruction {          // what a contributor must do for an approved p
 | `getMyInstructions` | GET `/contributors/me/instructions` | contributor | Instructions from approved plans |
 | `allocateManually` | (above) | ngo | Also 422 `OVER_ALLOCATED` when the resource's quantity is already used elsewhere in the plan; 400 `INVALID_TASK` when the task is not in the plan's incident |
 
+### Second linking pass (PROPOSED)
+
+```
+Ngo ─< NgoMessage(id, ngoId, eventId, incidentId?)
+Ngo ─< NgoUpdate(id, ngoId, eventId, incidentId?, status)      public when PUBLISHED
+PublicAlert(eventId) ─> Incident(incidentId)                    0..1, backend-maintained link
+NgoApplication(id, area, status) ─> Ngo(id, status: ACTIVE | SUSPENDED) on approval
+VolunteerApplication(id, ngoId) ─> NgoMember(id = mem-{applicationId}, kind: VOLUNTEER) on approval
+ContributorApplication(id, ngoId) ─> Contributor(contributorId, ngoId) on approval
+```
+
+- `NgoUpdate.incidentId` is set by the backend from the alert the update is about, so the public
+  alert page and the ops incident show the same updates.
+- `GET /alerts/{eventId}/updates` (public) → published `NgoUpdate[]` for that alert or its linked
+  incident. `GET /alerts/{eventId}/incident` (staff) → `{ incidentId } | null`. Both PROPOSED.
+- `GET /ngos?status=APPROVED` (public verified list) includes NGOs as soon as the authority
+  approves them and drops suspended ones.
+
 ### Expected backend side effects (simulated in mock mode)
 
 Mock mode imitates these in `src/services/mock/` only, labelled "Simulated". Screens never
@@ -606,6 +624,12 @@ implement them.
 3. **Contributor revoked:** their resources become ineligible and plans using them are flagged.
 4. **Plan change** (replan or manual allocation): new `version`, status back to `PROPOSED`;
    the previous version is kept for audit.
+6. **Volunteer / contributor approval:** creates the worker (`kind: VOLUNTEER`) or contributor
+   account in the approving NGO; revoke disables it and removes the contributor's resources from
+   plans.
+7. **NGO approval by the authority** (or `createNgo`): the NGO becomes `ACTIVE`, appears in the
+   public verified list, and gets a plan for each incident in its area. Reject/suspend: `SUSPENDED`,
+   removed from the public list, its plans flagged.
 5. **NGO approval:** status `APPROVED`; each allocated task gets `planId` + `publishedAt` and a
    history entry; each allocated resource's contributor gets an `Instruction`. A new approved
    version replaces that plan's earlier instructions.
