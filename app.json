@@ -36,9 +36,15 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Attach photos of completed field work as evidence.",
-          "cameraPermission": "Take photos of completed field work as evidence.",
+          "photosPermission": "Attach photos as evidence to reports and field tasks.",
+          "cameraPermission": "Take photos as evidence for reports and field tasks.",
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Share your location with an NGO only when you choose to attach it to a message."
         }
       ]
     ],
