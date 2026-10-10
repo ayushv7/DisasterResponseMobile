@@ -20,6 +20,13 @@ import {
   WorkerLoginInput,
   WorkerLoginResult,
 } from '@/types/accounts';
+import {
+  ApplyToContributeInput,
+  Contributor,
+  ContributorApplication,
+  ContributorCredentials,
+  ContributorLoginInput,
+} from '@/types/contributors';
 import { SentMessage } from '@/types/message-thread';
 import { HelpOffer, NgoNeed, OfferHelpInput } from '@/types/offers';
 import {
@@ -111,6 +118,19 @@ export interface ApiClient {
   /** Saves alert areas and the push preference. Does not mean push is delivered. */
   setNotificationAreas(input: NotificationAreasInput): Promise<ApiResult<Citizen>>;
 
+  // Contributors (PROPOSED). Credentials are issued by the backend on approval.
+  applyToContribute(input: ApplyToContributeInput): Promise<ApiResult<ContributorApplication>>;
+  getMyContributorApplication(): Promise<ApiResult<ContributorApplication | null>>;
+  listContributorApplications(): Promise<ApiResult<ContributorApplication[]>>;
+  /** `credentials` is present only on approval and is shown once. */
+  decideContributorApplication(
+    id: string,
+    decision: VolunteerDecision,
+    reason?: string
+  ): Promise<ApiResult<{ application: ContributorApplication; credentials?: ContributorCredentials }>>;
+  /** Throws ApiError INVALID_CREDENTIALS | CODE_EXPIRED | REVOKED | UNAUTHORIZED. */
+  contributorLogin(input: ContributorLoginInput): Promise<ApiResult<Contributor>>;
+
   // Volunteers (PROPOSED). Eligibility comes from the backend, never the app.
   applyToVolunteer(input: ApplyToVolunteerInput): Promise<ApiResult<VolunteerApplication>>;
   /** The signed-in citizen's application, or null if none. */
@@ -171,6 +191,22 @@ export interface ApiClient {
   /** Published NGO updates, for authority review and takedown. */
   getPublishedUpdates(): Promise<ApiResult<NgoContributionItem[]>>;
   takedownUpdate(updateId: string, reason: string): Promise<ApiResult<NgoContributionItem>>;
+}
+
+/**
+ * A rejected request with a machine-readable code from the backend, e.g.
+ * INVALID_CREDENTIALS, CODE_EXPIRED, REVOKED, UNAUTHORIZED, RESOURCE_STALE,
+ * RESOURCE_UNAVAILABLE, RESOURCE_INELIGIBLE, VERSION_CONFLICT, REASON_REQUIRED.
+ * Screens show `message`; they may branch on `code` but never bypass it.
+ */
+export class ApiError extends Error {
+  constructor(
+    public code: string,
+    message: string
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
 }
 
 export class NotImplementedError extends Error {

@@ -38,6 +38,9 @@ function RootLayoutContent() {
         <Stack.Screen name="my-offers" />
         <Stack.Screen name="notification-areas" />
         <Stack.Screen name="volunteer" />
+        <Stack.Screen name="contribute" />
+        <Stack.Screen name="contributor-login" />
+        <Stack.Screen name="contributor" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="event/[id]" />
         <Stack.Screen name="message/compose" />
         <Stack.Screen name="settings" />

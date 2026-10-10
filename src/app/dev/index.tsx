@@ -35,6 +35,7 @@ const ROLE_LAUNCHERS: { role: Role; icon: keyof typeof Feather.glyphMap; tabs: s
   { role: 'field_worker', icon: 'tool', tabs: 'Tasks · Profile' },
   { role: 'ngo', icon: 'shield', tabs: 'Inbox · Publish · Evidence · Organization' },
   { role: 'admin', icon: 'key', tabs: 'Same authority console as coordinator' },
+  { role: 'contributor', icon: 'package', tabs: 'My resources · Account' },
 ];
 
 /** Development builds only; production builds redirect away. */

@@ -191,6 +191,14 @@ export default function LoginScreen() {
               Field worker sign-in
             </Text>
           </Pressable>
+          <Pressable
+            onPress={() => router.push('/contributor-login')}
+            style={styles.devLink}
+            accessibilityRole="link">
+            <Text style={[styles.workerLink, { color: colors.brandPrimary }]}>
+              Contributor sign-in
+            </Text>
+          </Pressable>
 
           {/* DEV-ONLY: role switching lives in the developer switcher */}
           {__DEV__ && (

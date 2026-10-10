@@ -63,6 +63,12 @@ export default function ProfileScreen() {
             onPress: () => router.push('/volunteer'),
           },
           {
+            label: 'Contribute resources',
+            desc: 'Offer boats, food or equipment to an NGO',
+            icon: 'package' as const,
+            onPress: () => router.push('/contribute'),
+          },
+          {
             label: 'Alert areas',
             desc: 'Areas to get alerts for',
             icon: 'bell' as const,

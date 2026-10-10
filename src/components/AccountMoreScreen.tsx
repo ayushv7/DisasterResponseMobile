@@ -39,7 +39,7 @@ export function AccountMoreScreen({ tabBar }: { tabBar: React.ReactNode }) {
     <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, { color: colors.textPrimary }]}>
-          {role === 'field_worker' ? 'Profile' : 'More'}
+          {role === 'field_worker' || role === 'contributor' ? 'Profile' : 'More'}
         </Text>
 
         <View style={[styles.card, { backgroundColor: colors.surface }]}>

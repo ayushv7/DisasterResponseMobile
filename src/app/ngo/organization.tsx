@@ -256,6 +256,16 @@ export default function NgoOrganizationScreen() {
             <Feather name="chevron-right" size={18} color={colors.textTertiary} />
           </Pressable>
 
+          <Pressable
+            onPress={() => router.push('/ngo/contributors')}
+            style={[styles.card, styles.teamRow, { backgroundColor: colors.surface }]}
+            android_ripple={{ color: colors.surfaceMuted }}
+            accessibilityRole="button">
+            <Feather name="package" size={18} color={colors.textSecondary} />
+            <Text style={[styles.teamLabel, { color: colors.textPrimary }]}>Contributor applications</Text>
+            <Feather name="chevron-right" size={18} color={colors.textTertiary} />
+          </Pressable>
+
           {/* Session Management / Sign Out */}
           <View style={styles.section}>
             <Pressable

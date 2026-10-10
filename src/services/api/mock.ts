@@ -6,6 +6,7 @@
 import * as accounts from '@/services/accounts-api';
 import * as offers from '@/services/offers-api';
 import * as volunteers from '@/services/volunteers-api';
+import * as contributors from '@/services/contributors-api';
 import { createNgo, decideNgo, fetchNgoApplications } from '@/services/ngo-approval-api';
 import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
@@ -194,6 +195,12 @@ export const mockApi: ApiClient = {
   offerHelp: (input) => simulate(() => offers.offerHelp(input)),
   getMyOffers: () => simulate(offers.fetchMyOffers),
   setNotificationAreas: (input) => simulate(() => accounts.setNotificationAreas(input)),
+  applyToContribute: (input) => simulate(() => contributors.applyToContribute(input)),
+  getMyContributorApplication: () => simulate(contributors.getMyContributorApplication),
+  listContributorApplications: () => simulate(contributors.listContributorApplications),
+  decideContributorApplication: (id, decision, reason) =>
+    simulate(() => contributors.decideContributorApplication(id, decision, reason)),
+  contributorLogin: (input) => simulate(() => contributors.contributorLogin(input)),
   applyToVolunteer: (input) => simulate(() => volunteers.applyToVolunteer(input)),
   getMyVolunteerApplication: () => simulate(volunteers.getMyVolunteerApplication),
   listVolunteerApplications: () => simulate(volunteers.listVolunteerApplications),

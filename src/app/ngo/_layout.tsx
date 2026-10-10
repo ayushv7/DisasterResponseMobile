@@ -19,6 +19,7 @@ export default function NgoLayout() {
       <Stack.Screen name="contributions/compose" />
       <Stack.Screen name="review/[id]" />
       <Stack.Screen name="team" />
+      <Stack.Screen name="contributors" />
     </Stack>
   );
 }

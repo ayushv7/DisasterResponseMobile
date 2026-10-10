@@ -10,6 +10,7 @@ import React, { createContext, useCallback, useContext, useMemo, useState } from
 import { Href, router, useNavigationContainerRef } from 'expo-router';
 
 import { selectSampleWorker, signOutAccounts, signOutCitizen } from '@/services/accounts-api';
+import { selectSampleContributor, signOutContributor } from '@/services/contributors-api';
 import { loginDemoSession, logoutNgo } from '@/services/ngo-api';
 import { Citizen, SessionUser } from '@/types/accounts';
 import { Role } from '@/types/roles';
@@ -57,6 +58,8 @@ export function homeRouteFor(role: Role): Href {
       return '/authority/ngos';
     case 'field_worker':
       return '/ops/tasks';
+    case 'contributor':
+      return '/contributor/more';
     case 'ngo':
       return '/ngo/inbox';
     default:
@@ -102,6 +105,10 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       const ngo = await loginDemoSession();
       user = user ?? { name: ngo.authorizedOfficerName, ngoName: ngo.ngoName };
     }
+    if (!user && role === 'contributor') {
+      const c = selectSampleContributor();
+      user = { name: c.name, ngoName: c.ngoName, workerId: c.contributorId };
+    }
     if (!user && role === 'field_worker') {
       const member = selectSampleWorker();
       user = { name: member.name, ngoName: member.ngoName, workerId: member.workerId };
@@ -115,6 +122,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const signOut = useCallback(async () => {
     await logoutNgo();
     signOutAccounts();
+    signOutContributor();
     setSession(null);
     resetToRoleHome('public');
   }, [resetToRoleHome]);
