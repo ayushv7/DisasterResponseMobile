@@ -3,6 +3,7 @@
  * Adds simulated latency and an occasional simulated failure so loading and
  * error states get exercised. Every result is tagged `source: 'sample'`.
  */
+import * as accounts from '@/services/accounts-api';
 import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
 import { fetchNgoInbox, publishContribution } from '@/services/ngo-api';
@@ -100,6 +101,10 @@ function rebaseReportTimes(resources: OperationalResource[]): OperationalResourc
 
 export const mockApi: ApiClient = {
   mode: 'mock',
+
+  staffLogin: (email, password) => simulate(() => accounts.staffLogin(email, password)),
+  workerLogin: (input) => simulate(() => accounts.workerLogin(input)),
+  changeWorkerPassword: (pw) => simulate(() => accounts.changeWorkerPassword(pw)),
 
   getOpsSummary: () => simulate(ops.fetchOperationalStats),
   getActionQueue: () =>

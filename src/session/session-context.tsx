@@ -9,19 +9,32 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { Href, router, useNavigationContainerRef } from 'expo-router';
 
+import { selectSampleWorker, signOutAccounts } from '@/services/accounts-api';
 import { loginDemoSession, logoutNgo } from '@/services/ngo-api';
+import { SessionUser } from '@/types/accounts';
 import { Role } from '@/types/roles';
 
 export interface Session {
   role: Role;
+  /** True for dev-switcher and mock-mode (simulated) sign-ins. */
   isDemo: boolean;
+  /** Who is signed in, as returned by sign-in. Display only. */
+  user?: SessionUser;
+}
+
+interface SignInOptions {
+  user?: SessionUser;
+  isDemo?: boolean;
 }
 
 interface SessionContextValue {
   role: Role;
   session: Session | null;
-  /** Start a demo session for `role` and reset navigation to its home. */
-  signInAs: (role: Exclude<Role, 'public'>) => Promise<void>;
+  /**
+   * Start a session for `role` and reset navigation to its home. Without
+   * `user` this is a dev-switcher demo session using sample identities.
+   */
+  signInAs: (role: Exclude<Role, 'public'>, options?: SignInOptions) => Promise<void>;
   /** End the session and reset navigation to the public alerts. */
   signOut: () => Promise<void>;
 }
@@ -73,16 +86,22 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const resetToRoleHome = useResetToRoleHome();
 
-  const signInAs = useCallback(async (role: Exclude<Role, 'public'>) => {
+  const signInAs = useCallback(async (role: Exclude<Role, 'public'>, options?: SignInOptions) => {
     if (role === 'ngo' || role === 'admin') await loginDemoSession();
+    let user = options?.user;
+    if (!user && role === 'field_worker') {
+      const member = selectSampleWorker();
+      user = { name: member.name, ngoName: member.ngoName, workerId: member.workerId };
+    }
     // Same tick: the session update and the reset render together, so the
     // index redirect sees the new role.
-    setSession({ role, isDemo: true });
+    setSession({ role, isDemo: options?.isDemo ?? true, user });
     resetToRoleHome(role);
   }, [resetToRoleHome]);
 
   const signOut = useCallback(async () => {
     await logoutNgo();
+    signOutAccounts();
     setSession(null);
     resetToRoleHome('public');
   }, [resetToRoleHome]);

@@ -9,6 +9,12 @@
  *
  * Screens should migrate to `api` one at a time as they are touched.
  */
+import {
+  NgoMember,
+  StaffLoginResult,
+  WorkerLoginInput,
+  WorkerLoginResult,
+} from '@/types/accounts';
 import { SentMessage } from '@/types/message-thread';
 import { MessageDraft, MessageReceipt, VerifiedNgo } from '@/types/messaging';
 import { NgoContributionItem, NgoInboxFilter, NgoInboxMessage } from '@/types/ngo-workspace';
@@ -55,6 +61,14 @@ export type PublishUpdateInput = Parameters<
 
 export interface ApiClient {
   mode: ApiMode;
+
+  // Accounts (PROPOSED; the backend issues codes, IDs, passwords and tokens)
+  /** Email + password for ngo, coordinator and admin staff. */
+  staffLogin(email: string, password: string): Promise<ApiResult<StaffLoginResult>>;
+  /** NGO code + worker ID + password for field workers. */
+  workerLogin(input: WorkerLoginInput): Promise<ApiResult<WorkerLoginResult>>;
+  /** Replaces the temporary password on first sign-in. */
+  changeWorkerPassword(newPassword: string): Promise<ApiResult<NgoMember>>;
 
   // Operations
   getOpsSummary(): Promise<ApiResult<OperationalOverviewStats>>;

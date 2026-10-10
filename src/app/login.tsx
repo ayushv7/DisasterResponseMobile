@@ -1,7 +1,6 @@
 /**
- * LoginScreen — Authorized Responder Sign-In
- *
- * Provides credential entry for accredited NGO and agency personnel.
+ * LoginScreen — Staff sign-in (NGO, coordinator, admin): email + password.
+ * Field workers sign in separately with an NGO code (/worker-login).
  *
  * DEVELOPMENT ACCESS:
  * When backend authentication is pending, an explicitly labelled
@@ -25,7 +24,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-import { loginNgo } from '@/services/ngo-api';
+import { SimulatedSignInNotice } from '@/components/AuthForm';
+import { api, IS_MOCK_API } from '@/services/api';
 import { useSession } from '@/session/session-context';
 import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
@@ -49,8 +49,8 @@ export default function LoginScreen() {
 
     try {
       setSubmitting(true);
-      await loginNgo(email.trim(), password.trim());
-      await signInAs('ngo');
+      const { role, user } = (await api.staffLogin(email.trim(), password)).data;
+      await signInAs(role, { user, isDemo: IS_MOCK_API });
     } catch (err: any) {
       Alert.alert(
         'Authentication Unavailable',
@@ -99,9 +99,13 @@ export default function LoginScreen() {
               Responder Access
             </Text>
             <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              Enter credentials issued by your verified humanitarian organization.
+              For NGO staff, coordinators and admins.
             </Text>
           </View>
+
+          <SimulatedSignInNotice
+            hint="Use ngo@sample.org, coordinator@sample.org or admin@sample.org with any password."
+          />
 
           {/* Form Card */}
           <View style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -168,14 +172,25 @@ export default function LoginScreen() {
             </Pressable>
 
             {/* Real Auth Contract Notice */}
-            <View style={styles.contractNotice}>
-              <Feather name="info" size={13} color={colors.textTertiary} />
-              <Text style={[styles.contractText, { color: colors.textTertiary }]}>
-                FastAPI OAuth 2.0 / JWT backend authentication is in development.
-                Live verification requires server integration.
-              </Text>
-            </View>
+            {!IS_MOCK_API && (
+              <View style={styles.contractNotice}>
+                <Feather name="info" size={13} color={colors.textTertiary} />
+                <Text style={[styles.contractText, { color: colors.textTertiary }]}>
+                  FastAPI OAuth 2.0 / JWT backend authentication is in development.
+                  Live verification requires server integration.
+                </Text>
+              </View>
+            )}
           </View>
+
+          <Pressable
+            onPress={() => router.push('/worker-login')}
+            style={styles.devLink}
+            accessibilityRole="link">
+            <Text style={[styles.workerLink, { color: colors.brandPrimary }]}>
+              Field worker sign-in
+            </Text>
+          </Pressable>
 
           {/* DEV-ONLY: role switching lives in the developer switcher */}
           {__DEV__ && (
@@ -302,6 +317,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginTop: spacing.lg,
+  },
+  workerLink: {
+    ...typography.bodyMedium,
+    fontWeight: '600',
+    fontSize: 14,
   },
   devSection: {
     gap: spacing.xs,

@@ -32,6 +32,7 @@ function RootLayoutContent() {
         <Stack.Screen name="messages" options={{ animation: 'fade' }} />
         <Stack.Screen name="profile" options={{ animation: 'fade' }} />
         <Stack.Screen name="login" />
+        <Stack.Screen name="worker-login" />
         <Stack.Screen name="event/[id]" />
         <Stack.Screen name="message/compose" />
         <Stack.Screen name="settings" />
