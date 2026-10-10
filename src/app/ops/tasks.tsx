@@ -28,6 +28,7 @@ import { Feather } from '@expo/vector-icons';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { AssignmentSummary } from '@/components/AssignmentSummary';
+import { LocationBlock } from '@/components/LocationBlock';
 import { InfoBar } from '@/components/InfoBar';
 import { TaskHistory } from '@/components/TaskHistory';
 import { VerificationStatus } from '@/components/VerificationStatus';
@@ -343,6 +344,7 @@ export default function FieldWorkerTasksScreen() {
                   deadline={item.deadlineTimestamp}
                   ngoName={item.assignedNgoName ?? (role === 'field_worker' ? session?.user?.ngoName : undefined)}
                 />
+                <LocationBlock place={item.targetLocality} compact />
                 {item.deadlineTimestamp && item.status === 'AWAITING_ACK' && (
                   <Text style={[styles.crewText, { color: colors.statusWatch }]}>
                     Acknowledge by{' '}

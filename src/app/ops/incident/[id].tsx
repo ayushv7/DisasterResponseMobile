@@ -27,6 +27,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
+import { LocationBlock } from '@/components/LocationBlock';
 import { PickerSheet } from '@/components/PickerSheet';
 import { useSession } from '@/session/session-context';
 import { NgoMember } from '@/types/accounts';
@@ -270,12 +271,7 @@ export default function IncidentWorkspaceScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 1. Situation Assessment Card */}
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <View style={styles.locationRow}>
-            <Feather name="map-pin" size={13} color={colors.textTertiary} />
-            <Text style={[styles.locationText, { color: colors.textSecondary }]}>
-              {incident.location}
-            </Text>
-          </View>
+          <LocationBlock place={incident.location} compact />
 
           <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
             {incident.affectedAreaDescription}

@@ -10,6 +10,7 @@ import { Feather } from '@expo/vector-icons';
 import { router, useFocusEffect } from 'expo-router';
 
 import { AssignmentSummary } from '@/components/AssignmentSummary';
+import { LocationBlock } from '@/components/LocationBlock';
 import { CheckInDueBanner, relativeTime } from '@/components/CheckInDue';
 import { ContributorTabBar } from '@/components/ContributorTabBar';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
@@ -89,6 +90,15 @@ export default function MyResourcesScreen() {
           {r.checkInDueAt ? ` · Next due ${relativeTime(r.checkInDueAt)}` : ''}
           {r.checkInIntervalHours ? ` · every ${r.checkInIntervalHours} h` : ''}
         </Text>
+        {/* The contributor's own GPS evidence (never shown on public screens) */}
+        {r.evidence?.gps && (
+          <LocationBlock
+            place="Location when last confirmed"
+            coords={r.evidence.gps}
+            capturedAt={r.evidence.capturedAt}
+            compact
+          />
+        )}
         {!r.eligibleForAllocation && (
           <Text style={[styles.caption, { color: colors.statusWatch }]}>Not eligible for allocation right now.</Text>
         )}
@@ -147,6 +157,7 @@ export default function MyResourcesScreen() {
                 <View key={ins.id} style={[styles.card, { backgroundColor: colors.surface }]}>
                   <Text style={[styles.body, styles.bold, { color: colors.textPrimary }]}>{ins.resourceLabel}</Text>
                   <AssignmentSummary where={ins.where} what={ins.what} deadline={ins.deadline} ngoName={ins.ngoName} />
+                  <LocationBlock place={ins.where} compact />
                   <Text style={[styles.caption, { color: colors.textTertiary }]}>
                     Plan v{ins.planVersion} · issued {formatTime(ins.issuedAt)}
                   </Text>

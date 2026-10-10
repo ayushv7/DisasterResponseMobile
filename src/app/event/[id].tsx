@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { InfoBar } from '@/components/InfoBar';
+import { LocationBlock } from '@/components/LocationBlock';
 import { SHOW_LEGACY_ORCHESTRATION } from '@/constants/features';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { api } from '@/services/api';
@@ -161,12 +162,8 @@ export default function EventDetailScreen() {
 
           <Text style={[styles.eventTitle, { color: colors.textPrimary }]}>{event.title}</Text>
 
-          <View style={styles.metaRow}>
-            <Feather name="map-pin" size={14} color={colors.textTertiary} style={styles.metaIcon} />
-            <Text style={[styles.metaValue, { color: colors.textSecondary }]}>
-              {event.location}
-            </Text>
-          </View>
+          {/* Public place name only; never contributor or citizen GPS here */}
+          <LocationBlock place={event.location} compact />
 
           <Text style={[styles.summaryText, { color: colors.textSecondary }]}>
             {event.summary}
