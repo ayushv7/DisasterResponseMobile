@@ -529,6 +529,87 @@ exists, `httpApi.uploadEvidencePhoto` is not implemented and mock mode returns a
 6. **Credential delivery:** credentials go to the NGO once, which passes them on. Direct delivery
    to the contributor (SMS/email) is an open question.
 
+## Relations and IDs (PROPOSED)
+
+All items in this section are **PROPOSED**. One data model links every role's view; the app
+refers to records only by these IDs and re-reads after every action.
+
+```
+Ngo(id, ngoCode, serviceArea)
+ ├─< Incident(id)                     incidents are scoped to NGOs by area (backend-side)
+ │    └─< ResourcePlan(id, incidentId, version, status)
+ │         └─< Allocation(id, workOrderId, resourceId, quantity, source)
+ │                └─> WorkOrder/Task(id, incidentId, planId, assignedWorkerId)
+ │                        └─> NgoMember/FieldWorker(id, ngoId, kind)
+ ├─< Contributor(contributorId, ngoId)
+ │    └─< Resource(id, contributorId, ngoId)
+ └─< NgoMember(id, ngoId)
+Task ─< Evidence(id, subjectType: 'TASK', subjectId)
+Resource ─< Evidence(id, subjectType: 'RESOURCE', subjectId)
+Contributor ─< Instruction(id, contributorId, resourceId, taskId, planId, planVersion)
+```
+
+| Entity | ID example | Key foreign keys |
+|---|---|---|
+| Ngo | `ngo-drn-india` | — |
+| Incident | `INC-2026-081` | (scoped to NGO by area) |
+| ResourcePlan | `plan-…` | `ngoId`, `incidentId` |
+| Allocation | `alloc-…` | `workOrderId`, `resourceId` |
+| WorkOrder | `INT-101` | `incidentId`, `planId?`, `assignedWorkerId?` |
+| NgoMember | `mem-001` (sign-in `workerId`) | `ngoId`, `teamId?` |
+| Contributor | `SAMPLE-C-0001` | `ngoId` |
+| Resource | `res-…` | `contributorId`, `ngoId`, `evidenceIds[]` |
+| Evidence | `ev-…` | `subjectType`, `subjectId` |
+| Instruction | `ins-…` | `contributorId`, `resourceId`, `taskId`, `planId` |
+
+Additions:
+
+```ts
+interface ResourcePlan {
+  incidentId: string;
+  status: 'PROPOSED' | 'APPROVED' | 'IN_PROGRESS' | 'COMPLETED';
+  replanSuggested?: boolean;     // backend flag
+  replanReasons?: string[];      // e.g. task problem, missed check-in
+  approvedAt?: string;
+  approvedBy?: { name: string; kind: 'SYSTEM' | 'NGO' };
+}
+interface WorkOrder { planId?: string; publishedAt?: string; evidenceIds?: string[] }
+interface EvidenceRecord {
+  id: string; subjectType: 'TASK' | 'RESOURCE'; subjectId: string;
+  gps?: GpsReading; photoUrl?: string; note?: string; capturedAt: string; unverified: boolean;
+}
+interface Instruction {          // what a contributor must do for an approved plan
+  id: string; contributorId: string; resourceId: string; resourceLabel: string;
+  taskId: string; planId: string; planVersion: number;
+  where: string; what: string; deadline?: string; ngoName: string; issuedAt: string;
+}
+```
+
+| Operation | Method / path | Who | Notes |
+|---|---|---|---|
+| `getResourcePlans` | GET `/ngo/resource-plans` | ngo | One plan per incident in the NGO's area |
+| `getResourcePlan` | GET `/ngo/resource-plans?incidentId=` | ngo | |
+| `approvePlan` | POST `/ngo/resource-plans/{id}/approve` | ngo | `{ expectedVersion }`; 409 `VERSION_CONFLICT`, 422 `RESOURCE_INELIGIBLE` if an allocated resource is no longer eligible. Publishes tasks and instructions |
+| `getMyInstructions` | GET `/contributors/me/instructions` | contributor | Instructions from approved plans |
+| `allocateManually` | (above) | ngo | Also 422 `OVER_ALLOCATED` when the resource's quantity is already used elsewhere in the plan; 400 `INVALID_TASK` when the task is not in the plan's incident |
+
+### Expected backend side effects (simulated in mock mode)
+
+Mock mode imitates these in `src/services/mock/` only, labelled "Simulated". Screens never
+implement them.
+
+1. **Task change** (assign, acknowledge, start, problem, complete, verify): the plan status
+   follows its tasks (`IN_PROGRESS`, `COMPLETED`); a problem or failure sets `replanSuggested`
+   with a reason.
+2. **Missed check-in:** when `checkInDueAt` passes without a check-in, the resource becomes
+   `STALE` and ineligible, and every plan allocating it gets `replanSuggested`.
+3. **Contributor revoked:** their resources become ineligible and plans using them are flagged.
+4. **Plan change** (replan or manual allocation): new `version`, status back to `PROPOSED`;
+   the previous version is kept for audit.
+5. **NGO approval:** status `APPROVED`; each allocated task gets `planId` + `publishedAt` and a
+   history entry; each allocated resource's contributor gets an `Instruction`. A new approved
+   version replaces that plan's earlier instructions.
+
 ## Open questions for the backend
 
 1. Auth mechanism and token lifetime; how roles are assigned.
