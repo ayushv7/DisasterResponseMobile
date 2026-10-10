@@ -60,6 +60,8 @@ export interface InterventionRecord {
   // Assignment state
   assignedTeamId?: string;
   assignedTeamName?: string;
+  /** NGO the assigned field workers belong to, when the team is NGO-run. */
+  assignedNgoName?: string;
   assignedEquipment?: string[];
   assignedAt?: string;
   deadlineMinutes?: number;
@@ -166,8 +168,17 @@ export type TaskEventType =
 export interface TaskEvent {
   type: TaskEventType;
   at: string; // ISO 8601
+  /** Who performed the action (worker name, team, or 'Coordinator'). */
   actor: string;
+  /** NGO of the actor, for field worker actions. */
+  actorNgo?: string;
   note?: string;
+}
+
+/** Who is performing a task action, as the backend would record it. */
+export interface TaskActor {
+  name: string;
+  ngoName?: string;
 }
 
 /** Why a work order needs coordinator action now. Ordered most urgent first. */

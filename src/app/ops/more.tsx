@@ -45,9 +45,16 @@ export default function OpsMoreScreen() {
 
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <Text style={[styles.body, { color: colors.textPrimary }]}>{ROLE_LABELS[role]}</Text>
+          {session?.user && (
+            <Text style={[styles.caption, { color: colors.textSecondary }]}>
+              {session.user.name}
+              {session.user.ngoName ? ` · ${session.user.ngoName}` : ''}
+              {session.user.workerId ? ` · ${session.user.workerId}` : ''}
+            </Text>
+          )}
           {session?.isDemo && (
             <Text style={[styles.caption, { color: colors.textTertiary }]}>
-              Demo session. Not authenticated by the backend.
+              Simulated sign-in / sample account. Not authenticated by the backend.
             </Text>
           )}
         </View>

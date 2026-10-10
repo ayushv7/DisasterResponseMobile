@@ -36,7 +36,8 @@ export function TaskHistory({ history }: { history?: TaskEvent[] }) {
         accessibilityState={{ expanded: open }}
         accessibilityLabel={`History, ${history.length} events`}>
         <Text style={[styles.text, { color: colors.textSecondary }]} numberOfLines={1}>
-          History ({history.length}) · {LABELS[last.type]} {time(last.at)}
+          History ({history.length}) · {LABELS[last.type]} by {last.actor}
+          {last.actorNgo ? ` (${last.actorNgo})` : ''} {time(last.at)}
         </Text>
         <Feather name={open ? 'chevron-up' : 'chevron-down'} size={16} color={colors.textTertiary} />
       </Pressable>
@@ -44,6 +45,7 @@ export function TaskHistory({ history }: { history?: TaskEvent[] }) {
         history.map((event, idx) => (
           <Text key={idx} style={[styles.text, styles.row, { color: colors.textSecondary }]}>
             {time(event.at)} · {LABELS[event.type]} · {event.actor}
+            {event.actorNgo ? ` (${event.actorNgo})` : ''}
             {event.note ? ` · ${event.note}` : ''}
           </Text>
         ))}

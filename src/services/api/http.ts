@@ -28,6 +28,7 @@ export const httpApi: ApiClient = {
   getIncident: notImplemented('getIncident'),
   getWorkOrders: notImplemented('getWorkOrders'),
   getWorkOrder: notImplemented('getWorkOrder'),
+  getMyTasks: notImplemented('getMyTasks'),
   getResources: notImplemented('getResources'),
   getRecommendation: notImplemented('getRecommendation'),
   assign: notImplemented('assign'),

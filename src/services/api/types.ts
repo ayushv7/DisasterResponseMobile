@@ -91,6 +91,8 @@ export interface ApiClient {
   ): Promise<ApiResult<{ incident: IncidentRecord; interventions: InterventionRecord[] } | null>>;
   getWorkOrders(status?: InterventionStatus | 'ALL'): Promise<ApiResult<InterventionRecord[]>>;
   getWorkOrder(id: string): Promise<ApiResult<InterventionRecord | null>>;
+  /** Field worker: only the signed-in worker's tasks, tagged with their NGO. */
+  getMyTasks(): Promise<ApiResult<InterventionRecord[]>>;
   getResources(): Promise<ApiResult<OperationalResource[]>>;
   getRecommendation(workOrderId: string): Promise<ApiResult<AllocationRecommendation | null>>;
   assign(workOrderId: string, input: AssignInput): Promise<ApiResult<InterventionRecord>>;

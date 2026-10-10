@@ -28,12 +28,14 @@ import { Feather } from '@expo/vector-icons';
 import { EmptyState } from '@/components/EmptyState';
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
+import { TaskHistory } from '@/components/TaskHistory';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { EvidencePhotoPicker } from '@/components/EvidencePhotoPicker';
 import { ChipTone, StatusChip } from '@/components/StatusChip';
 import { api, ApiResult } from '@/services/api';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
+import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -72,6 +74,7 @@ const PROBLEM_KINDS: { key: ReplanningReason; label: string }[] = [
 
 export default function FieldWorkerTasksScreen() {
   const { colors } = useTheme();
+  const { role, session } = useSession();
   useConfirmExitAtRoot();
 
   const [tasks, setTasks] = useState<InterventionRecord[]>([]);
@@ -101,7 +104,8 @@ export default function FieldWorkerTasksScreen() {
         setRefreshing(true);
         setErrorMsg(null);
       }
-      const all = (await api.getWorkOrders()).data;
+      // Field workers get only their own tasks; coordinators see every dispatched order
+      const all = (role === 'field_worker' ? await api.getMyTasks() : await api.getWorkOrders()).data;
       // Filter to tasks that have been assigned or are actionable
       const fieldTasks = all.filter(
         (i) => i.status !== 'AWAITING_ASSIGNMENT'
@@ -113,7 +117,7 @@ export default function FieldWorkerTasksScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -212,6 +216,12 @@ export default function FieldWorkerTasksScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.textPrimary }]}>Tasks</Text>
+        {role === 'field_worker' && session?.user && (
+          <Text style={[styles.crewText, { color: colors.textSecondary }]}>
+            {session.user.name}
+            {session.user.ngoName ? ` · ${session.user.ngoName}` : ''}
+          </Text>
+        )}
       </View>
 
       {/* Simulation Banner */}
@@ -346,9 +356,11 @@ export default function FieldWorkerTasksScreen() {
                     <Feather name="users" size={13} color={colors.textTertiary} />
                     <Text style={[styles.crewText, { color: colors.textSecondary }]}>
                       Assigned: {item.assignedTeamName}
+                      {item.assignedNgoName ? ` · ${item.assignedNgoName}` : ''}
                     </Text>
                   </View>
                 )}
+                <TaskHistory history={item.history} />
 
                 {/* Blocker details if blocked */}
                 {item.blockerReport && (

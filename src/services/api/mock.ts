@@ -15,9 +15,26 @@ import {
   ActionQueueReason,
   InterventionRecord,
   OperationalResource,
+  TaskActor,
 } from '@/types/operations';
 
 import { ApiClient, ApiResult } from './types';
+
+/** The signed-in sample worker; the real backend takes this from the token. */
+function workerActor(): TaskActor | undefined {
+  const worker = accounts.getCurrentWorker();
+  return worker ? { name: worker.name, ngoName: worker.ngoName } : undefined;
+}
+
+/** Stand-in for GET /work-orders?assignee=me. */
+async function fetchMyTasks(): Promise<InterventionRecord[]> {
+  const worker = accounts.getCurrentWorker();
+  if (!worker?.teamId) return [];
+  const all = await ops.fetchInterventions();
+  return all
+    .filter((item) => item.assignedTeamId === worker.teamId)
+    .map((item) => ({ ...item, assignedNgoName: worker.ngoName }));
+}
 
 const MIN_DELAY_MS = 300;
 const MAX_DELAY_MS = 800;
@@ -117,6 +134,7 @@ export const mockApi: ApiClient = {
   getIncident: (id) => simulate(() => ops.fetchIncidentDetail(id)),
   getWorkOrders: (status) => simulate(() => ops.fetchInterventions(status)),
   getWorkOrder: (id) => simulate(() => ops.fetchInterventionDetail(id)),
+  getMyTasks: () => simulate(fetchMyTasks),
   getResources: () =>
     simulate(async () => rebaseReportTimes(await ops.fetchOperationalResources())),
   getRecommendation: (id) => simulate(() => ops.fetchAllocationRecommendation(id)),
@@ -124,12 +142,12 @@ export const mockApi: ApiClient = {
     simulate(() =>
       ops.assignIntervention(id, input.teamId, input.equipment, input.deadlineMinutes, input.overrideReason)
     ),
-  acknowledge: (id) => simulate(() => ops.acknowledgeTask(id)),
-  start: (id) => simulate(() => ops.startTask(id)),
+  acknowledge: (id) => simulate(() => ops.acknowledgeTask(id, workerActor())),
+  start: (id) => simulate(() => ops.startTask(id, workerActor())),
   reportProblem: (id, reason, isCritical, kind) =>
-    simulate(() => ops.reportTaskBlocker(id, reason, isCritical, kind)),
+    simulate(() => ops.reportTaskBlocker(id, reason, isCritical, kind, workerActor())),
   submitCompletion: (id, input) =>
-    simulate(() => ops.submitTaskCompletion(id, input.note, input.photoUris)),
+    simulate(() => ops.submitTaskCompletion(id, input.note, input.photoUris, workerActor())),
   verify: (id, approved) => simulate(() => ops.verifyIntervention(id, approved)),
   getReassignments: () => simulate(ops.fetchReplanningRecords),
   reassign: (id, notes) => simulate(() => ops.executeReplanningDecision(id, notes)),

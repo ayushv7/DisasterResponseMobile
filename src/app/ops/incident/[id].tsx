@@ -27,6 +27,7 @@ import { useLocalSearchParams } from 'expo-router';
 
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
+import { TaskHistory } from '@/components/TaskHistory';
 import { FreshnessDot, freshnessOf } from '@/components/FreshnessDot';
 import { api } from '@/services/api';
 import { useGoBack } from '@/navigation/use-go-back';
@@ -352,9 +353,11 @@ export default function IncidentWorkspaceScreen() {
                     <Feather name="user-check" size={12} color={colors.brandTeal} />
                     <Text style={[styles.currentTeamText, { color: colors.textSecondary }]}>
                       Assigned to: {item.assignedTeamName}
+                      {item.assignedNgoName ? ` · ${item.assignedNgoName}` : ''}
                     </Text>
                   </View>
                 )}
+                <TaskHistory history={item.history} />
               </Pressable>
             );
           })}

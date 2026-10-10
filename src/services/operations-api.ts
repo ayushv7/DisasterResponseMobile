@@ -37,6 +37,7 @@ import {
   OperationalResource,
   ReplanningReason,
   ReplanningRecord,
+  TaskActor,
   TaskEventType,
 } from '@/types/operations';
 
@@ -130,8 +131,22 @@ export async function fetchAllocationRecommendation(
 }
 
 /** Append to a work order's history (sample mode keeps it in memory). */
-function logEvent(target: InterventionRecord, type: TaskEventType, actor: string, note?: string) {
-  target.history = [...(target.history ?? []), { type, at: new Date().toISOString(), actor, note }];
+function logEvent(
+  target: InterventionRecord,
+  type: TaskEventType,
+  actor: TaskActor | string,
+  note?: string
+) {
+  const who = typeof actor === 'string' ? { name: actor } : actor;
+  target.history = [
+    ...(target.history ?? []),
+    { type, at: new Date().toISOString(), actor: who.name, actorNgo: who.ngoName, note },
+  ];
+}
+
+/** Fallback when no signed-in worker is known: the assigned team. */
+function teamActor(target: InterventionRecord, actor?: TaskActor): TaskActor {
+  return actor ?? { name: target.assignedTeamName || 'Field team', ngoName: target.assignedNgoName };
 }
 
 export async function assignIntervention(
@@ -167,7 +182,8 @@ export async function assignIntervention(
 }
 
 export async function acknowledgeTask(
-  interventionId: string
+  interventionId: string,
+  actor?: TaskActor
 ): Promise<InterventionRecord> {
   await new Promise((res) => setTimeout(res, 200));
   const target = inMemoryInterventions.find((i) => i.id === interventionId);
@@ -175,12 +191,13 @@ export async function acknowledgeTask(
 
   target.status = 'EN_ROUTE';
   target.acknowledgedAt = new Date().toISOString();
-  logEvent(target, 'ACKNOWLEDGED', target.assignedTeamName || 'Field team');
+  logEvent(target, 'ACKNOWLEDGED', teamActor(target, actor));
   return JSON.parse(JSON.stringify(target));
 }
 
 export async function startTask(
-  interventionId: string
+  interventionId: string,
+  actor?: TaskActor
 ): Promise<InterventionRecord> {
   await new Promise((res) => setTimeout(res, 200));
   const target = inMemoryInterventions.find((i) => i.id === interventionId);
@@ -188,7 +205,7 @@ export async function startTask(
 
   target.status = 'IN_PROGRESS';
   target.startedAt = new Date().toISOString();
-  logEvent(target, 'STARTED', target.assignedTeamName || 'Field team');
+  logEvent(target, 'STARTED', teamActor(target, actor));
   return JSON.parse(JSON.stringify(target));
 }
 
@@ -196,7 +213,8 @@ export async function reportTaskBlocker(
   interventionId: string,
   reason: string,
   isCritical: boolean,
-  trigger: ReplanningReason = 'ROUTE_BLOCKED'
+  trigger: ReplanningReason = 'ROUTE_BLOCKED',
+  actor?: TaskActor
 ): Promise<InterventionRecord> {
   await new Promise((res) => setTimeout(res, 250));
   const target = inMemoryInterventions.find((i) => i.id === interventionId);
@@ -208,7 +226,7 @@ export async function reportTaskBlocker(
     reason,
     isCritical,
   };
-  logEvent(target, 'PROBLEM_REPORTED', target.assignedTeamName || 'Field team', reason);
+  logEvent(target, 'PROBLEM_REPORTED', teamActor(target, actor), reason);
 
   // Create replanning entry
   const newReplan: ReplanningRecord = {
@@ -232,7 +250,8 @@ export async function reportTaskBlocker(
 export async function submitTaskCompletion(
   interventionId: string,
   evidence: string,
-  photoUris: string[] = []
+  photoUris: string[] = [],
+  actor?: TaskActor
 ): Promise<InterventionRecord> {
   await new Promise((res) => setTimeout(res, 250));
   const target = inMemoryInterventions.find((i) => i.id === interventionId);
@@ -245,7 +264,7 @@ export async function submitTaskCompletion(
   logEvent(
     target,
     'COMPLETED',
-    target.assignedTeamName || 'Field team',
+    teamActor(target, actor),
     photoUris.length ? `${photoUris.length} photo(s) attached` : undefined
   );
 
