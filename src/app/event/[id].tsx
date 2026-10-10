@@ -13,6 +13,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { InfoBar } from '@/components/InfoBar';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
+import { useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -21,6 +22,7 @@ import { FloodEvent, SourceObservation } from '@/types/disaster';
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const { role } = useSession();
 
   const event = SAMPLE_FLOOD_EVENTS.find((e) => e.id === id);
 
@@ -181,35 +183,35 @@ export default function EventDetailScreen() {
             </View>
           </View>
 
-          {/* Public NGO Communication Info */}
-          <View style={[styles.ngoNotice, { backgroundColor: colors.surfaceMuted }]}>
-            <View style={styles.ngoNoticeHeader}>
-              <Feather name="message-square" size={15} color={colors.brandPrimary} />
-              <Text style={[styles.ngoNoticeTitle, { color: colors.textPrimary }]}>
-                Verified NGO Direct Messaging
+          {/* Primary action for the public: message a verified NGO privately */}
+          {role === 'public' && (
+            <>
+              <Pressable
+                onPress={() =>
+                  router.push({ pathname: '/message/compose', params: { eventId: event.id } })
+                }
+                style={({ pressed }) => [
+                  styles.ngoActionBtn,
+                  {
+                    backgroundColor: pressed ? colors.actionPrimaryPressed : colors.actionPrimary,
+                  },
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Message a verified NGO privately about this alert">
+                <Feather name="message-square" size={18} color={colors.onActionPrimary} />
+                <Text style={[styles.ngoActionBtnText, { color: colors.onActionPrimary }]}>
+                  Message an NGO
+                </Text>
+              </Pressable>
+              <Text style={[styles.ngoNoticeDesc, { color: colors.textTertiary }]}>
+                Private. Only the verified NGO you choose can read it.
               </Text>
-            </View>
-            <Text style={[styles.ngoNoticeDesc, { color: colors.textSecondary }]}>
-              Public users can privately contact accredited response teams. Official event data is compiled strictly from verified authority sources.
-            </Text>
-            <Pressable
-              onPress={() => {
-                router.push({
-                  pathname: '/message/compose',
-                  params: { eventId: event.id },
-                });
-              }}
-              style={[styles.ngoActionBtn, { backgroundColor: colors.brandPrimary }]}
-              accessibilityRole="button"
-              accessibilityLabel="Contact verified NGO privately">
-              <Text style={[styles.ngoActionBtnText, { color: colors.onPrimary }]}>
-                Contact Verified NGO Privately
-              </Text>
-            </Pressable>
-          </View>
+            </>
+          )}
         </View>
 
-        {/* 2b. Decision Support & Response Orchestration Action Card */}
+        {/* 2b. Decision support: staff only (backend enforces access) */}
+        {role !== 'public' && (
         <View style={[styles.orchestrationBanner, { backgroundColor: colors.surface }]}>
           <View style={styles.orchestrationHeader}>
             <View style={[styles.orchestrationIcon, { backgroundColor: colors.surfaceMuted }]}>
@@ -241,6 +243,7 @@ export default function EventDetailScreen() {
             <Feather name="arrow-right" size={15} color={colors.brandPrimary} />
           </Pressable>
         </View>
+        )}
 
         {/* 3. Section: Source Observations */}
         <View style={styles.sectionHeader}>
@@ -541,18 +544,22 @@ const styles = StyleSheet.create({
     ...typography.caption,
     fontSize: 12,
     lineHeight: 17,
+    marginTop: spacing.xs,
+    textAlign: 'center',
   },
   ngoActionBtn: {
-    height: 40,
+    minHeight: touchTargets.min,
+    flexDirection: 'row',
+    gap: spacing.sm,
     borderRadius: radii.button,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.xs,
+    marginTop: spacing.md,
   },
   ngoActionBtnText: {
     ...typography.bodyMedium,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '700',
   },
   sectionHeader: {
     marginHorizontal: spacing.screenPadding,
