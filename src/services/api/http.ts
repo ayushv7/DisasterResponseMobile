@@ -1,11 +1,22 @@
 /**
- * httpApi — real backend client. Not implemented yet.
+ * httpApi — real backend client (FastAPI, disaster-response-backend).
  *
- * Implement each method against the agreed FastAPI contract
- * (draft: docs/api-contract-proposal.md) using API_BASE_URL. Return
- * `source: 'live'` so sample-data labels disappear.
+ * Implemented: health, flood events (incidents) and their observations.
+ * Everything else throws NotImplementedError until its endpoints exist; the
+ * per-slice switch in ./index.ts keeps those slices on the mock adapter.
+ * Wire shapes are mapped in ./http-mapping.ts, never in screens.
  */
-import { ApiClient, HealthStatus, NotImplementedError } from './types';
+import { IncidentRecord } from '@/types/operations';
+
+import {
+  FloodEventDto,
+  FloodObservationDto,
+  mapFloodEvent,
+  mapObservation,
+  toApiError,
+  wrapList,
+} from './http-mapping';
+import { ApiClient, ApiError, ApiResult, HealthStatus, NotImplementedError } from './types';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
 
@@ -26,6 +37,63 @@ async function getHealth() {
   } finally {
     clearTimeout(timer);
   }
+}
+
+const REQUEST_TIMEOUT_MS = 10000;
+
+/** GET JSON; network failures and non-2xx `{detail}` bodies become ApiError. */
+async function getJson<T>(path: string): Promise<{ body: T; dateHeader: string | null }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}${path}`, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+  } catch {
+    throw new ApiError('NETWORK', `Could not reach the backend at ${API_BASE_URL}.`);
+  } finally {
+    clearTimeout(timer);
+  }
+  const body: unknown = await res.json().catch(() => null);
+  if (!res.ok) throw toApiError(res.status, body);
+  return { body: body as T, dateHeader: res.headers.get('date') };
+}
+
+const live = <T>(data: T, page?: ApiResult<T>['page']): ApiResult<T> => ({
+  data,
+  source: 'live',
+  receivedAt: new Date().toISOString(),
+  page,
+});
+
+async function getIncidents(): Promise<ApiResult<IncidentRecord[]>> {
+  const { body, dateHeader } = await getJson<FloodEventDto[]>('/api/v1/flood-events?limit=100');
+  const page = wrapList(body.map(mapFloodEvent), dateHeader);
+  return live(page.items, { nextCursor: page.nextCursor, serverTime: page.serverTime });
+}
+
+/**
+ * One flood event. The backend has no work orders yet, so interventions is
+ * empty (the tasks slice is still sample data and uses different IDs).
+ */
+async function getIncident(id: string) {
+  try {
+    const { body } = await getJson<FloodEventDto>(`/api/v1/flood-events/${encodeURIComponent(id)}`);
+    return live({ incident: mapFloodEvent(body), interventions: [] });
+  } catch (err) {
+    if (err instanceof ApiError && err.code === 'NOT_FOUND') return live(null);
+    throw err;
+  }
+}
+
+async function getIncidentObservations(incidentId: string) {
+  const { body, dateHeader } = await getJson<FloodObservationDto[]>(
+    `/api/v1/flood-events/${encodeURIComponent(incidentId)}/observations?limit=100`
+  );
+  const page = wrapList(body.map(mapObservation), dateHeader);
+  return live(page.items, { nextCursor: page.nextCursor, serverTime: page.serverTime });
 }
 
 function notImplemented(method: string): () => Promise<never> {
@@ -73,8 +141,9 @@ export const httpApi: ApiClient = {
   decideVolunteerApplication: notImplemented('decideVolunteerApplication'),
   getOpsSummary: notImplemented('getOpsSummary'),
   getActionQueue: notImplemented('getActionQueue'),
-  getIncidents: notImplemented('getIncidents'),
-  getIncident: notImplemented('getIncident'),
+  getIncidents,
+  getIncident,
+  getIncidentObservations,
   getWorkOrders: notImplemented('getWorkOrders'),
   getWorkOrder: notImplemented('getWorkOrder'),
   getMyTasks: notImplemented('getMyTasks'),

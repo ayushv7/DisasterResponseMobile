@@ -22,6 +22,8 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { EmptyState } from '@/components/EmptyState';
+import { SampleDataBadge } from '@/components/SampleDataBadge';
+import { SEVERITY_LABELS } from '@/constants/severity';
 import { ErrorState } from '@/components/ErrorState';
 import { InfoBar } from '@/components/InfoBar';
 import { NgoScopeNote } from '@/components/NgoScopeNote';
@@ -109,7 +111,7 @@ export default function IncidentsCatalogueScreen() {
                 { backgroundColor: sevColors.bg, borderColor: sevColors.border },
               ]}>
               <Text style={[styles.badgeText, { color: sevColors.text }]}>
-                {item.severity}
+                {SEVERITY_LABELS[item.severity]}
               </Text>
             </View>
             <View
@@ -129,9 +131,12 @@ export default function IncidentsCatalogueScreen() {
               </Text>
             </View>
           </View>
-          <Text style={[styles.timeText, { color: colors.textTertiary }]}>
-            {new Date(item.detectedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-          </Text>
+          <View style={styles.badgeCluster}>
+            <SampleDataBadge source={item.isSample ? 'sample' : 'live'} />
+            <Text style={[styles.timeText, { color: colors.textTertiary }]}>
+              {new Date(item.detectedAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+            </Text>
+          </View>
         </View>
 
         {/* Title & Location */}
@@ -147,48 +152,52 @@ export default function IncidentsCatalogueScreen() {
           </View>
         </View>
 
-        {/* Area Description */}
-        <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
-          {item.affectedAreaDescription}
-        </Text>
-
-        {/* Telemetry Metrics Bar */}
-        <View style={[styles.metricsRow, { backgroundColor: colors.surfaceMuted }]}>
-          <View style={styles.metricItem}>
-            <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
-              POPULATION
-            </Text>
-            <Text style={[styles.metricVal, { color: colors.textPrimary }]}>
-              ~{item.estimatedPopulationImpact.toLocaleString()}
-            </Text>
-          </View>
-          <View style={[styles.metricDivider, { backgroundColor: colors.divider }]} />
-          <View style={styles.metricItem}>
-            <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
-              AT-RISK ASSETS
-            </Text>
-            <Text style={[styles.metricVal, { color: colors.textPrimary }]}>
-              {item.criticalAssetsAtRisk.length} Sites
-            </Text>
-          </View>
-          <View style={[styles.metricDivider, { backgroundColor: colors.divider }]} />
-          <View style={styles.metricItem}>
-            <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>
-              INTERVENTIONS
-            </Text>
-            <Text style={[styles.metricVal, { color: colors.brandTeal }]}>
-              {item.requiredInterventionIds.length} Required
-            </Text>
-          </View>
-        </View>
-
-        {/* Source Provenance */}
-        <View style={styles.provenanceRow}>
-          <Feather name="shield" size={12} color={colors.brandTeal} />
-          <Text style={[styles.provenanceText, { color: colors.textTertiary }]} numberOfLines={1}>
-            Source: {item.detectionSource}
+        {/* Area description (sample) or event description (backend); hidden if neither */}
+        {(item.affectedAreaDescription ?? item.description) && (
+          <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
+            {item.affectedAreaDescription ?? item.description}
           </Text>
-        </View>
+        )}
+
+        {/* Metrics: only the ones this record actually has */}
+        {(item.estimatedPopulationImpact != null || item.criticalAssetsAtRisk || item.requiredInterventionIds) && (
+          <View style={[styles.metricsRow, { backgroundColor: colors.surfaceMuted }]}>
+            {item.estimatedPopulationImpact != null && (
+              <View style={styles.metricItem}>
+                <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>POPULATION</Text>
+                <Text style={[styles.metricVal, { color: colors.textPrimary }]}>
+                  ~{item.estimatedPopulationImpact.toLocaleString()}
+                </Text>
+              </View>
+            )}
+            {item.criticalAssetsAtRisk && (
+              <View style={styles.metricItem}>
+                <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>AT-RISK ASSETS</Text>
+                <Text style={[styles.metricVal, { color: colors.textPrimary }]}>
+                  {item.criticalAssetsAtRisk.length} Sites
+                </Text>
+              </View>
+            )}
+            {item.requiredInterventionIds && (
+              <View style={styles.metricItem}>
+                <Text style={[styles.metricLabel, { color: colors.textTertiary }]}>INTERVENTIONS</Text>
+                <Text style={[styles.metricVal, { color: colors.brandTeal }]}>
+                  {item.requiredInterventionIds.length} Required
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Source provenance (sample) or severity basis (backend) */}
+        {(item.detectionSource ?? item.severityBasis) && (
+          <View style={styles.provenanceRow}>
+            <Feather name="shield" size={12} color={colors.brandTeal} />
+            <Text style={[styles.provenanceText, { color: colors.textTertiary }]} numberOfLines={1}>
+              {item.detectionSource ? `Source: ${item.detectionSource}` : `Severity: ${item.severityBasis}`}
+            </Text>
+          </View>
+        )}
 
         {/* Workspace Link CTA */}
         <View style={styles.cardFooter}>

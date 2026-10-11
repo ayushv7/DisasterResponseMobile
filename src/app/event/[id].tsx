@@ -14,7 +14,7 @@ import { Feather } from '@expo/vector-icons';
 import { InfoBar } from '@/components/InfoBar';
 import { LocationBlock } from '@/components/LocationBlock';
 import { useApiQuery } from '@/hooks/use-api-query';
-import { api } from '@/services/api';
+import { api, IS_MOCK_SLICE } from '@/services/api';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
 import { homeRouteFor, useSession } from '@/session/session-context';
 import { useGoBack } from '@/navigation/use-go-back';
@@ -224,7 +224,8 @@ function EventDetail() {
         </View>
 
         {/* NGO: open the linked incident in the shared ops data */}
-        {role === 'ngo' && linked.data && (
+        {/* Links to a sample incident ID, so only while incidents are mock */}
+        {role === 'ngo' && IS_MOCK_SLICE.incidents && linked.data && (
           <Pressable
             onPress={() =>
               router.push({ pathname: '/ops/incident/[id]', params: { id: linked.data!.incidentId } })

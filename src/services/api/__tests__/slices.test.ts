@@ -37,12 +37,23 @@ describe('api slices', () => {
     expect(m.api.getIncidents).toBe(m.mockApi.getIncidents);
   });
 
-  it('makes only health real when a backend URL is set', () => {
+  it('makes health, incidents and observations real when a backend URL is set', () => {
     const m = load('http://localhost:8000');
-    expect(m.REAL_SLICES).toEqual(['health']);
+    expect(m.REAL_SLICES).toEqual(['health', 'incidents', 'observations']);
     expect(m.IS_MOCK_API).toBe(true);
-    expect(m.api.getHealth).toBe(m.httpApi.getHealth);
-    for (const method of ['getIncidents', 'getResources', 'getResourcePlan', 'getWorkOrders', 'staffLogin'] as const) {
+    for (const method of ['getHealth', 'getIncidents', 'getIncident', 'getIncidentObservations'] as const) {
+      expect(m.api[method]).toBe(m.httpApi[method]);
+    }
+    // Everything else, including public alerts and the ops summary, stays mock
+    for (const method of [
+      'getMyAlerts',
+      'getOpsSummary',
+      'getActionQueue',
+      'getResources',
+      'getResourcePlan',
+      'getWorkOrders',
+      'staffLogin',
+    ] as const) {
       expect(m.api[method]).toBe(m.mockApi[method]);
     }
   });

@@ -33,7 +33,13 @@ import { useSession } from '@/session/session-context';
 import { NgoMember } from '@/types/accounts';
 import { TaskHistory } from '@/components/TaskHistory';
 import { FreshnessDot, freshnessOf } from '@/components/FreshnessDot';
-import { api } from '@/services/api';
+import { api, IS_MOCK_SLICE } from '@/services/api';
+import { SampleDataBadge } from '@/components/SampleDataBadge';
+import { StateView } from '@/components/StateView';
+import { ChipTone, StatusChip } from '@/components/StatusChip';
+import { SEVERITY_LABELS } from '@/constants/severity';
+import { useApiQuery } from '@/hooks/use-api-query';
+import { ObservationFreshness } from '@/types/observations';
 import { useToast } from '@/components/Toast';
 import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
@@ -45,6 +51,13 @@ import {
   InterventionRecord,
   OperationalResource,
 } from '@/types/operations';
+
+/** Backend freshness: FRESH < 1 h, RECENT < 24 h, STALE otherwise. */
+const FRESHNESS: Record<ObservationFreshness, { label: string; tone: ChipTone }> = {
+  FRESH: { label: 'Fresh', tone: 'success' },
+  RECENT: { label: 'Recent', tone: 'neutral' },
+  STALE: { label: 'Stale', tone: 'warning' },
+};
 
 export default function IncidentWorkspaceScreen() {
   const goBack = useGoBack();
@@ -74,6 +87,8 @@ export default function IncidentWorkspaceScreen() {
   const [showAllResources, setShowAllResources] = useState(false);
 
   /** `keepId`: stay on this work order after an action instead of jumping to the first. */
+  const observations = useApiQuery(() => api.getIncidentObservations(id ?? ''), [id]);
+
   const loadAll = useCallback(async (keepId?: string) => {
     if (!id) return;
     try {
@@ -253,66 +268,130 @@ export default function IncidentWorkspaceScreen() {
           <Feather name="arrow-left" size={22} color={colors.textPrimary} />
         </Pressable>
         <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerId, typography.tabular, { color: colors.brandTeal }]}>
-            {incident.id} · {incident.severity} SEVERITY
-          </Text>
+          <View style={styles.headerIdRow}>
+            <Text
+              style={[styles.headerId, typography.tabular, { color: colors.brandTeal }]}
+              numberOfLines={1}>
+              {SEVERITY_LABELS[incident.severity]}
+              {incident.severity === 'UNKNOWN' ? '' : ' severity'} · {incident.id}
+            </Text>
+            <SampleDataBadge source={incident.isSample ? 'sample' : 'live'} />
+          </View>
           <Text style={[styles.headerTitle, { color: colors.textPrimary }]} numberOfLines={1}>
             {incident.title}
           </Text>
         </View>
       </View>
 
-      {/* Persistent Simulation Notice */}
-      <InfoBar
-        isSampleData={true}
-        persistent={true}
-        customMessage="SAMPLE DATA — OPERATIONAL SIMULATION — NOT LIVE OPERATIONS"
-      />
+      {/* Simulation notice for sample records only */}
+      {incident.isSample && (
+        <InfoBar
+          isSampleData={true}
+          persistent={true}
+          customMessage="SAMPLE DATA — OPERATIONAL SIMULATION — NOT LIVE OPERATIONS"
+        />
+      )}
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* 1. Situation Assessment Card */}
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <LocationBlock place={incident.location} compact />
+          <LocationBlock
+            place={[incident.location, incident.district, incident.state].filter(Boolean).join(', ')}
+            coords={
+              incident.latitude != null && incident.longitude != null
+                ? { latitude: incident.latitude, longitude: incident.longitude, accuracyMeters: null }
+                : undefined
+            }
+            compact
+          />
 
-          <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
-            {incident.affectedAreaDescription}
-          </Text>
+          {(incident.affectedAreaDescription ?? incident.description) && (
+            <Text style={[styles.sectionHeading, { color: colors.textPrimary }]}>
+              {incident.affectedAreaDescription ?? incident.description}
+            </Text>
+          )}
 
-          <View style={[styles.metaBox, { backgroundColor: colors.surfaceMuted }]}>
-            <View style={styles.metaCol}>
-              <Text style={[styles.metaKey, { color: colors.textTertiary }]}>
-                Estimated Population:
-              </Text>
-              <Text style={[styles.metaVal, typography.tabular, { color: colors.textPrimary }]}>
-                {incident.estimatedPopulationImpact.toLocaleString()} residents
-              </Text>
+          {/* Backend status line (real records) */}
+          {(incident.verificationStatus || incident.updatedAt) && (
+            <Text style={[styles.metaKey, { color: colors.textSecondary }]}>
+              {incident.status}
+              {incident.verificationStatus ? ` · ${incident.verificationStatus.replace(/_/g, ' ').toLowerCase()}` : ''}
+              {incident.updatedAt ? ` · updated ${new Date(incident.updatedAt).toLocaleString()}` : ''}
+              {incident.severityBasis ? ` · ${incident.severityBasis}` : ''}
+            </Text>
+          )}
+
+          {(incident.estimatedPopulationImpact != null || incident.detectionSource) && (
+            <View style={[styles.metaBox, { backgroundColor: colors.surfaceMuted }]}>
+              {incident.estimatedPopulationImpact != null && (
+                <View style={styles.metaCol}>
+                  <Text style={[styles.metaKey, { color: colors.textTertiary }]}>Estimated Population:</Text>
+                  <Text style={[styles.metaVal, typography.tabular, { color: colors.textPrimary }]}>
+                    {incident.estimatedPopulationImpact.toLocaleString()} residents
+                  </Text>
+                </View>
+              )}
+              {incident.detectionSource && (
+                <View style={styles.metaCol}>
+                  <Text style={[styles.metaKey, { color: colors.textTertiary }]}>Detection Source:</Text>
+                  <Text style={[styles.metaVal, { color: colors.textPrimary }]}>{incident.detectionSource}</Text>
+                </View>
+              )}
             </View>
-            <View style={styles.metaCol}>
-              <Text style={[styles.metaKey, { color: colors.textTertiary }]}>
-                Detection Source:
-              </Text>
-              <Text style={[styles.metaVal, { color: colors.textPrimary }]}>
-                {incident.detectionSource}
-              </Text>
-            </View>
-          </View>
+          )}
 
-          {/* Critical Assets at Risk */}
-          <Text style={[styles.subHeading, { color: colors.textTertiary }]}>
-            CRITICAL ASSETS THREATENED
+          {/* Critical Assets at Risk (sample data only so far) */}
+          {incident.criticalAssetsAtRisk && incident.criticalAssetsAtRisk.length > 0 && (
+            <>
+              <Text style={[styles.subHeading, { color: colors.textTertiary }]}>CRITICAL ASSETS THREATENED</Text>
+              <View style={styles.chipRow}>
+                {incident.criticalAssetsAtRisk.map((asset, idx) => (
+                  <View key={idx} style={[styles.assetChip, { backgroundColor: colors.surfaceMuted }]}>
+                    <Feather name="shield" size={11} color={colors.statusWatch} />
+                    <Text style={[styles.assetChipText, { color: colors.textSecondary }]}>{asset}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
+        </View>
+
+        {/* Source observations (backend: freshness decided server-side) */}
+        <View style={styles.sectionWrap}>
+          <Text style={[styles.sectionOverline, { color: colors.textTertiary }]}>
+            SOURCE OBSERVATIONS{observations.data ? ` (${observations.data.length})` : ''}
           </Text>
-          <View style={styles.chipRow}>
-            {incident.criticalAssetsAtRisk.map((asset, idx) => (
-              <View
-                key={idx}
-                style={[styles.assetChip, { backgroundColor: colors.surfaceMuted }]}>
-                <Feather name="shield" size={11} color={colors.statusWatch} />
-                <Text style={[styles.assetChipText, { color: colors.textSecondary }]}>
-                  {asset}
+          <StateView
+            state={observations.state}
+            error={observations.error}
+            onRetry={observations.refresh}
+            receivedAt={observations.receivedAt}
+            emptyTitle="No observations yet"
+            emptyDescription="Source reports linked to this incident appear here.">
+            {(observations.data ?? []).map((o) => (
+              <View key={o.id} style={[styles.card, styles.observation, { backgroundColor: colors.surface }]}>
+                <View style={styles.observationTop}>
+                  {o.freshness && <StatusChip label={FRESHNESS[o.freshness].label} tone={FRESHNESS[o.freshness].tone} />}
+                  <Text style={[styles.metaKey, styles.flexOne, { color: colors.textTertiary }]} numberOfLines={1}>
+                    {o.kind.replace(/_/g, ' ').toLowerCase()}
+                    {o.sourceName ? ` · ${o.sourceName}` : ''}
+                  </Text>
+                  <SampleDataBadge source={o.isSample ? 'sample' : 'live'} />
+                </View>
+                <Text style={[styles.metaVal, { color: colors.textPrimary }]}>{o.headline}</Text>
+                {o.description && (
+                  <Text style={[styles.metaKey, { color: colors.textSecondary }]} numberOfLines={3}>
+                    {o.description}
+                  </Text>
+                )}
+                <Text style={[styles.metaKey, { color: colors.textTertiary }]}>
+                  Observed {new Date(o.observedAt).toLocaleString()}
+                  {o.retrievedAt ? ` · retrieved ${new Date(o.retrievedAt).toLocaleString()}` : ''}
+                  {o.location ? ` · ${o.location}` : ''}
                 </Text>
               </View>
             ))}
-          </View>
+          </StateView>
         </View>
 
         {/* 2. Required Interventions Selector */}
@@ -320,6 +399,11 @@ export default function IncidentWorkspaceScreen() {
           <Text style={[styles.sectionOverline, { color: colors.textTertiary }]}>
             REQUIRED FIELD INTERVENTIONS ({interventions.length})
           </Text>
+          {interventions.length === 0 && (
+            <Text style={[styles.metaKey, { color: colors.textSecondary }]}>
+              No work orders for this incident yet.
+            </Text>
+          )}
 
           {interventions.map((item) => {
             const isSelected = selectedIntervention?.id === item.id;
@@ -408,7 +492,8 @@ export default function IncidentWorkspaceScreen() {
         </View>
 
         {/* NGO: contributor resources planned for this incident */}
-        {role === 'ngo' && (
+        {/* Plans are still sample data keyed by sample incident IDs */}
+        {role === 'ngo' && IS_MOCK_SLICE.incidents && (
           <Pressable
             onPress={() => router.push({ pathname: '/ops/plan', params: { incidentId: id } })}
             style={styles.overrideButton}
@@ -807,6 +892,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   headerId: {
+    flexShrink: 1,
     ...typography.overline,
     fontSize: 10,
     fontWeight: '800',
@@ -887,6 +973,10 @@ const styles = StyleSheet.create({
   sectionWrap: {
     gap: spacing.xs,
   },
+  headerIdRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  observation: { gap: spacing.xs },
+  observationTop: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
+  flexOne: { flex: 1 },
   sectionOverline: {
     ...typography.overline,
     fontSize: 10,

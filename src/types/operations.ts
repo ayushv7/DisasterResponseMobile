@@ -6,9 +6,11 @@
  * Field Worker Execution -> Replanning on Failure -> Verified Resolution.
  */
 
-export type SeverityLevel = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW';
+/** UNKNOWN: the backend has not assessed severity yet (shown as "Not assessed"). */
+export type SeverityLevel = 'CRITICAL' | 'HIGH' | 'MODERATE' | 'LOW' | 'UNKNOWN';
 
-export type IncidentStatus = 'ACTIVE' | 'WATCH' | 'CONTAINED' | 'RESOLVED';
+/** WATCH/CONTAINED come from sample data; CANDIDATE/DISMISSED from the backend. */
+export type IncidentStatus = 'CANDIDATE' | 'ACTIVE' | 'WATCH' | 'CONTAINED' | 'RESOLVED' | 'DISMISSED';
 
 export interface IncidentRecord {
   id: string; // e.g. INC-2026-081
@@ -16,13 +18,28 @@ export interface IncidentRecord {
   location: string;
   severity: SeverityLevel;
   status: IncidentStatus;
-  affectedAreaDescription: string;
-  estimatedPopulationImpact: number;
-  criticalAssetsAtRisk: string[];
-  detectionSource: string; // e.g. CWC Gauge Telemetry + SDRF Satellite
+  /** When the system detected / created the incident (backend created_at). */
   detectedAt: string;
-  unresolvedGaps: string[];
-  requiredInterventionIds: string[];
+  // Fields below are only in sample data so far. For real records they stay
+  // undefined and their UI sections hide; they are never filled from mocks.
+  affectedAreaDescription?: string;
+  estimatedPopulationImpact?: number;
+  criticalAssetsAtRisk?: string[];
+  detectionSource?: string; // e.g. CWC Gauge Telemetry + SDRF Satellite
+  unresolvedGaps?: string[];
+  requiredInterventionIds?: string[];
+  // Backend flood-event fields
+  description?: string;
+  state?: string;
+  district?: string;
+  latitude?: number;
+  longitude?: number;
+  verificationStatus?: 'UNVERIFIED' | 'UNDER_REVIEW' | 'VERIFIED' | 'REJECTED';
+  updatedAt?: string;
+  /** Severity rule text from the backend, e.g. how many locations were assessed. */
+  severityBasis?: string;
+  /** True when the record is backend sample data (show a sample badge). */
+  isSample?: boolean;
 }
 
 export type InterventionType =

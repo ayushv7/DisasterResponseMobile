@@ -2,10 +2,23 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api, IS_MOCK_API, IS_MOCK_SLICE, REAL_SLICES } from '@/services/api';
+import { api, ApiSlice, IS_MOCK_API, IS_MOCK_SLICE, REAL_SLICES } from '@/services/api';
 import { useTheme } from '@/theme';
 import { spacing } from '@/theme/spacing';
 import { textScale, typography } from '@/theme/typography';
+
+const SLICE_NAMES: Record<ApiSlice, string> = {
+  health: 'health',
+  incidents: 'incidents',
+  observations: 'observations',
+  resources: 'resources',
+  plans: 'plans',
+  tasks: 'tasks',
+  auth: 'sign-in',
+  publicAlerts: 'public alerts',
+  community: 'messages & NGO workspace',
+};
+const realNames = REAL_SLICES.map((s) => SLICE_NAMES[s]).join(', ');
 
 type BackendState = 'checking' | 'ready' | 'unavailable' | 'unreachable';
 
@@ -40,7 +53,7 @@ export function BackendBanner() {
   const text =
     REAL_SLICES.length === 0
       ? 'Backend not connected – sample data, actions simulated'
-      : `Real: ${REAL_SLICES.join(', ')}${backend ? ` (${STATE_TEXT[backend]})` : ''} · rest sample data, simulated`;
+      : `Real: ${realNames}${backend ? ` (${STATE_TEXT[backend]})` : ''} · rest sample data, simulated`;
 
   return (
     <View
@@ -49,7 +62,7 @@ export function BackendBanner() {
       accessibilityLabel={
         REAL_SLICES.length === 0
           ? 'Backend not connected. Showing sample data. Actions are simulated.'
-          : `Real backend for ${REAL_SLICES.join(', ')}${backend ? `, ${STATE_TEXT[backend]}` : ''}. Everything else is sample data and simulated.`
+          : `Real backend for ${realNames}${backend ? `, ${STATE_TEXT[backend]}` : ''}. Everything else is sample data and simulated.`
       }>
       <Text style={[styles.text, { color: colors.bannerText }]} numberOfLines={2}>
         {text}

@@ -9,7 +9,10 @@ import { ApiClient } from './types';
  * slice is mock.
  *
  * - health: GET /health/ready (implemented by the backend)
- * - incidents, observations, resources, plans, tasks, auth: core operations
+ * - incidents: GET /api/v1/flood-events and /{id} (implemented)
+ * - observations: GET /api/v1/flood-events/{id}/observations (implemented)
+ * - resources, plans, tasks, auth: core operations (mock until endpoints exist)
+ * - publicAlerts: area alerts for the public (stays mock + Simulated)
  * - community: messaging, NGO workspace, public accounts, offers, volunteers
  */
 export type ApiSlice =
@@ -20,6 +23,7 @@ export type ApiSlice =
   | 'plans'
   | 'tasks'
   | 'auth'
+  | 'publicAlerts'
   | 'community';
 
 export type SliceSource = 'mock' | 'http';
@@ -29,12 +33,13 @@ const HAS_BACKEND = !!API_BASE_URL;
 /** Flip a slice to 'http' only when its backend endpoints exist. */
 export const SLICE_SOURCES: Record<ApiSlice, SliceSource> = {
   health: HAS_BACKEND ? 'http' : 'mock',
-  incidents: 'mock',
-  observations: 'mock', // no ApiClient methods yet; observations are read from fixtures
+  incidents: HAS_BACKEND ? 'http' : 'mock',
+  observations: HAS_BACKEND ? 'http' : 'mock',
   resources: 'mock',
   plans: 'mock',
   tasks: 'mock',
   auth: 'mock',
+  publicAlerts: 'mock',
   community: 'mock',
 };
 
@@ -44,13 +49,18 @@ type ApiMethod = Exclude<keyof ApiClient, 'mode'>;
 const METHOD_SLICES: Record<ApiMethod, ApiSlice> = {
   getHealth: 'health',
 
-  getOpsSummary: 'incidents',
-  getActionQueue: 'incidents',
   getIncidents: 'incidents',
   getIncident: 'incidents',
-  getLinkedIncident: 'incidents',
-  getMyAlerts: 'incidents',
-  getAlertAreas: 'incidents',
+
+  getIncidentObservations: 'observations',
+
+  // No backend endpoints: derived from work orders, so they follow tasks
+  getOpsSummary: 'tasks',
+  getActionQueue: 'tasks',
+
+  getMyAlerts: 'publicAlerts',
+  getAlertAreas: 'publicAlerts',
+  getLinkedIncident: 'publicAlerts',
 
   getResources: 'resources',
   getResourceTypePolicies: 'resources',

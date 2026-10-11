@@ -35,6 +35,7 @@ import {
   ResourceTypePolicy,
 } from '@/types/contributors';
 import { SentMessage } from '@/types/message-thread';
+import { IncidentObservation } from '@/types/observations';
 import { AlertArea, MyAlertsQuery, MyAlertsResult } from '@/types/my-alert';
 import { HelpOffer, NgoNeed, OfferHelpInput } from '@/types/offers';
 import {
@@ -71,6 +72,8 @@ export interface ApiResult<T> {
   source: DataSource;
   /** When the client received the data (ISO 8601). Not a server timestamp. */
   receivedAt: string;
+  /** List paging from the backend (lists only; null cursor = no more pages). */
+  page?: { nextCursor: string | null; serverTime: string | null };
 }
 
 export type ApiMode = 'mock' | 'http';
@@ -200,6 +203,8 @@ export interface ApiClient {
   getIncident(
     id: string
   ): Promise<ApiResult<{ incident: IncidentRecord; interventions: InterventionRecord[] } | null>>;
+  /** Source observations for an incident, with backend freshness. */
+  getIncidentObservations(incidentId: string): Promise<ApiResult<IncidentObservation[]>>;
   getWorkOrders(status?: InterventionStatus | 'ALL'): Promise<ApiResult<InterventionRecord[]>>;
   getWorkOrder(id: string): Promise<ApiResult<InterventionRecord | null>>;
   /** Field worker: only the signed-in worker's tasks, tagged with their NGO. */

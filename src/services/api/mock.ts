@@ -9,7 +9,9 @@ import { fetchAlertAreas, fetchMyAlerts } from '@/services/area-alerts-api';
 import * as volunteers from '@/services/volunteers-api';
 import * as contributors from '@/services/contributors-api';
 import { onTaskChanged } from '@/services/mock/cascades';
-import { incidentForEvent } from '@/services/mock/store';
+import { EVENT_INCIDENT_LINKS, incidentForEvent } from '@/services/mock/store';
+import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
+import { IncidentObservation } from '@/types/observations';
 import { createNgo, decideNgo, fetchNgoApplications } from '@/services/ngo-approval-api';
 import { fetchSentMessages } from '@/services/messages-list-api';
 import { fetchVerifiedNgos, submitPrivateMessage } from '@/services/messaging-api';
@@ -72,6 +74,27 @@ async function scopedStats(): Promise<OperationalOverviewStats> {
     blockedOrFailedInterventions: count((i) => i.status === 'BLOCKED' || i.status === 'FAILED'),
     awaitingVerification: count((i) => i.status === 'AWAITING_VERIFICATION'),
   };
+}
+
+/**
+ * Sample observations for an ops incident: the observations of the public
+ * alert it is linked to (sample data), in the same shape the backend returns.
+ */
+function sampleObservationsFor(incidentId: string): IncidentObservation[] {
+  const eventId = Object.keys(EVENT_INCIDENT_LINKS).find((e) => EVENT_INCIDENT_LINKS[e] === incidentId);
+  const event = SAMPLE_FLOOD_EVENTS.find((e) => e.id === eventId);
+  return (event?.observations ?? []).map((o) => ({
+    id: o.id,
+    incidentId,
+    kind: o.sourceType,
+    headline: o.headline,
+    description: o.evidenceSnippet,
+    sourceName: o.sourceName,
+    observedAt: o.sourceObservedAt,
+    retrievedAt: o.systemRetrievedAt,
+    sourceUrl: o.sourceUrl,
+    isSample: true,
+  }));
 }
 
 /** Runs the simulated cascades after a task mutation (plan status, replan flag). */
@@ -236,8 +259,14 @@ export const mockApi: ApiClient = {
   getOpsSummary: () => simulate(scopedStats),
   getActionQueue: () =>
     simulate(async () => deriveActionQueue(await scopedWorkOrders(), Date.now())),
-  getIncidents: () => simulate(scopedIncidents),
-  getIncident: (id) => simulate(() => ops.fetchIncidentDetail(id)),
+  getIncidents: () =>
+    simulate(async () => (await scopedIncidents()).map((i) => ({ ...i, isSample: true }))),
+  getIncident: (id) =>
+    simulate(async () => {
+      const detail = await ops.fetchIncidentDetail(id);
+      return detail ? { ...detail, incident: { ...detail.incident, isSample: true } } : null;
+    }),
+  getIncidentObservations: (incidentId) => simulate(async () => sampleObservationsFor(incidentId)),
   getWorkOrders: (status) => simulate(() => scopedWorkOrders(status)),
   getWorkOrder: (id) => simulate(() => ops.fetchInterventionDetail(id)),
   getMyTasks: () => simulate(fetchMyTasks),
