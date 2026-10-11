@@ -20,11 +20,35 @@ npm test              # unit tests (jest-expo): sample store and simulated casca
 - **Sample mode (default):** with `EXPO_PUBLIC_API_BASE_URL` unset, the app runs on an in-memory
   sample store (`src/services/mock/`). Every sample record, sign-in, upload, plan and
   notification is labelled **Sample** or **Simulated**. Nothing is sent to a server.
-- **Live mode:** set `EXPO_PUBLIC_API_BASE_URL` in `.env`. `httpApi` methods throw
-  "not implemented" until the backend endpoints exist.
+- **Backend mode:** set `EXPO_PUBLIC_API_BASE_URL` (see below). Only some slices are real; the
+  rest stay sample data, as the banner at the top of the app says.
 - **Dev tools (development builds only):** Sign in → "Development build: open role switcher".
   Switch between visitor, citizen, NGO, field worker, contributor and authority, and use
   **Reset sample data** to restore the seed (also shows the start screen again).
+
+## Connecting to the local backend
+
+The per-slice switch is in `src/services/api/index.ts`. With `EXPO_PUBLIC_API_BASE_URL` set,
+**health, incidents and observations** come from the backend
+(`GET /health/ready`, `/api/v1/flood-events`, `/api/v1/flood-events/{id}`,
+`/api/v1/flood-events/{id}/observations`). Everything else, including public area alerts, stays
+mock and labelled Simulated. Unset = everything mock.
+
+Create `.env` in the project root with the address **as the device sees it**:
+
+```bash
+# Phone on the same Wi-Fi: your computer's LAN IP (find it with `hostname -I`)
+EXPO_PUBLIC_API_BASE_URL=http://192.168.1.20:8000
+# Android emulator: 10.0.2.2 is the host machine
+# EXPO_PUBLIC_API_BASE_URL=http://10.0.2.2:8000
+```
+
+- `localhost` does not work from a phone or emulator: it points at the device itself.
+- For a phone, the backend must listen on all interfaces (e.g. `--host 0.0.0.0`) and the port
+  must be open in the firewall.
+- `EXPO_PUBLIC_*` values are baked in when the bundle is built: after changing `.env`, restart
+  Expo with a clean cache: `npx expo start -c`. A release APK needs a rebuild.
+- Check: the banner should read "Real: health, incidents, observations (backend ready)".
 
 ## Sample sign-ins (sample mode only)
 
