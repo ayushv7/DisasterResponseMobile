@@ -17,24 +17,31 @@ npx expo lint         # lint
 npm test              # unit tests (jest-expo): sample store and simulated cascades
 ```
 
-- **Sample mode (default):** with `EXPO_PUBLIC_API_BASE_URL` unset, the app runs on an in-memory
-  sample store (`src/services/mock/`). Every sample record, sign-in, upload, plan and
-  notification is labelled **Sample** or **Simulated**. Nothing is sent to a server.
-- **Backend mode:** set `EXPO_PUBLIC_API_BASE_URL` (see below). Only some slices are real; the
-  rest stay sample data, as the banner at the top of the app says.
+- **Live (default):** slices with a real backend (health, incidents, observations) call the
+  backend; everything else still runs on the in-memory sample store (`src/services/mock/`) and
+  is labelled **Simulated**. The banner shows "Live: … · rest simulated". Without a backend URL
+  the live screens say **No backend URL set**; the app never switches to sample data by itself.
+- **Sample data:** Settings → Data source → turn on **Use sample data (simulated)**. Every screen
+  then uses the sample store at once (no restart) and nothing is sent to a server. Turn it off
+  to go back to Live. If the backend is unreachable, live screens also offer
+  **Use sample data instead**.
 - **Dev tools (development builds only):** Sign in → "Development build: open role switcher".
   Switch between visitor, citizen, NGO, field worker, contributor and authority, and use
   **Reset sample data** to restore the seed (also shows the start screen again).
 
 ## Connecting to the local backend
 
-The per-slice switch is in `src/services/api/index.ts`. With `EXPO_PUBLIC_API_BASE_URL` set,
+The per-slice switch is in `src/services/api/index.ts` (`LIVE_SLICE_SOURCES`). In Live mode
 **health, incidents and observations** come from the backend
 (`GET /health/ready`, `/api/v1/flood-events`, `/api/v1/flood-events/{id}`,
 `/api/v1/flood-events/{id}/observations`). Everything else, including public area alerts, stays
-mock and labelled Simulated. Unset = everything mock.
+mock and labelled Simulated.
 
-Create `.env.local` in the project root (git-ignored) with the address **as the device sees it**:
+**Easiest (works in a release APK too):** Settings → Data source → enter the Backend URL, tap
+**Test connection**, then **Save URL**. A saved URL overrides the build value and is kept on the
+device.
+
+**Or at build time:** create `.env.local` in the project root (git-ignored) with the address **as the device sees it**:
 
 ```bash
 # Phone on the same Wi-Fi: your computer's LAN IP (find it with `hostname -I`)
@@ -48,7 +55,7 @@ EXPO_PUBLIC_API_BASE_URL=http://192.168.1.20:8000
   must be open in the firewall.
 - `EXPO_PUBLIC_*` values are baked in when the bundle is built: after changing `.env.local`, restart
   Expo with a clean cache: `npx expo start -c`. A release APK needs a rebuild.
-- Check: the banner should read "Real: health, incidents, observations (backend ready)".
+- Check: the banner should read "Live: health, incidents, observations · rest simulated".
 
 ## Sample sign-ins (sample mode only)
 

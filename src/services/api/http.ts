@@ -8,7 +8,7 @@
  */
 import { IncidentRecord } from '@/types/operations';
 
-import { getBaseUrl } from './data-source';
+import { getBaseUrl, refreshHealth } from './data-source';
 
 import {
   FloodEventDto,
@@ -30,6 +30,7 @@ const HEALTH_TIMEOUT_MS = 5000;
  * so it is returned as data rather than thrown; other failures throw.
  */
 async function getHealth() {
+  if (!getBaseUrl()) throw new ApiError('NO_BACKEND_URL', 'No backend URL set.');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
   try {
@@ -46,6 +47,9 @@ const REQUEST_TIMEOUT_MS = 10000;
 
 /** GET JSON; network failures and non-2xx `{detail}` bodies become ApiError. */
 async function getJson<T>(path: string): Promise<{ body: T; dateHeader: string | null }> {
+  if (!getBaseUrl()) {
+    throw new ApiError('NO_BACKEND_URL', 'No backend URL set. Add one in Settings > Data source.');
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let res: Response;
@@ -55,6 +59,7 @@ async function getJson<T>(path: string): Promise<{ body: T; dateHeader: string |
       signal: controller.signal,
     });
   } catch {
+    refreshHealth(); // update the banner / unreachable state; never switches mode
     throw new ApiError('NETWORK', `Could not reach the backend at ${getBaseUrl()}.`);
   } finally {
     clearTimeout(timer);

@@ -33,7 +33,8 @@ import { useSession } from '@/session/session-context';
 import { NgoMember } from '@/types/accounts';
 import { TaskHistory } from '@/components/TaskHistory';
 import { FreshnessDot, freshnessOf } from '@/components/FreshnessDot';
-import { api, IS_MOCK_SLICE } from '@/services/api';
+import { api, IS_MOCK_SLICE, isBackendFailing, useDataSource } from '@/services/api';
+import { BackendUnavailable } from '@/components/BackendUnavailable';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
 import { StateView } from '@/components/StateView';
 import { ChipTone, StatusChip } from '@/components/StatusChip';
@@ -63,6 +64,7 @@ export default function IncidentWorkspaceScreen() {
   const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
+  const dataSource = useDataSource();
 
   const [incident, setIncident] = useState<IncidentRecord | null>(null);
   const [interventions, setInterventions] = useState<InterventionRecord[]>([]);
@@ -249,7 +251,11 @@ export default function IncidentWorkspaceScreen() {
             Incident Workspace
           </Text>
         </View>
-        <ErrorState message={errorMsg || 'Incident record unavailable.'} onRetry={loadAll} />
+        {isBackendFailing(dataSource) && !IS_MOCK_SLICE.incidents ? (
+          <BackendUnavailable onRetry={loadAll} />
+        ) : (
+          <ErrorState message={errorMsg || 'Incident record unavailable.'} onRetry={loadAll} />
+        )}
       </SafeAreaView>
     );
   }
@@ -366,6 +372,7 @@ export default function IncidentWorkspaceScreen() {
             error={observations.error}
             onRetry={observations.refresh}
             receivedAt={observations.receivedAt}
+            backend={!IS_MOCK_SLICE.observations}
             emptyTitle="No observations yet"
             emptyDescription="Source reports linked to this incident appear here.">
             {(observations.data ?? []).map((o) => (

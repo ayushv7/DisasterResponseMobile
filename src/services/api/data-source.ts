@@ -1,13 +1,16 @@
 /**
- * Runtime data source: "Live backend" or "Sample data". Chosen in Settings
- * and saved with AsyncStorage, so even a release APK can point at a backend
- * without rebuilding. A saved URL overrides EXPO_PUBLIC_API_BASE_URL.
+ * Runtime data source. Live is the default: slices with a real backend
+ * implementation call it, the rest stay mock. Settings > "Use sample data"
+ * switches every slice to mock. Saved with AsyncStorage, so even a release
+ * APK can point at a backend without rebuilding. A saved URL overrides
+ * EXPO_PUBLIC_API_BASE_URL. Never switches to sample data on its own.
  */
 import { useSyncExternalStore } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type DataMode = 'live' | 'sample';
-export type HealthState = 'unknown' | 'checking' | 'ok' | 'db-down' | 'unreachable' | 'timeout';
+/** no-url: Live, but no backend URL is set anywhere. */
+export type HealthState = 'unknown' | 'checking' | 'ok' | 'db-down' | 'unreachable' | 'timeout' | 'no-url';
 
 export interface DataSourceState {
   /** False until the saved choice has been read from storage. */
@@ -25,7 +28,7 @@ const ENV_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim();
 
 let state: DataSourceState = {
   hydrated: false,
-  mode: ENV_URL ? 'live' : 'sample',
+  mode: 'live',
   savedUrl: '',
   health: 'unknown',
 };
@@ -57,9 +60,14 @@ export function getBaseUrl(): string {
   return (state.savedUrl || ENV_URL).replace(/\/+$/, '');
 }
 
-/** Live mode is only active when there is a URL to talk to. */
+/** Live mode (the default). Without a URL, real slices fail with "No backend URL set". */
 export function isLiveActive(): boolean {
-  return state.mode === 'live' && !!getBaseUrl();
+  return state.mode === 'live';
+}
+
+/** True when the last health check failed (or no URL), so Live must not be claimed. */
+export function isBackendFailing(s: DataSourceState = state): boolean {
+  return s.mode === 'live' && ['db-down', 'unreachable', 'timeout', 'no-url'].includes(s.health);
 }
 
 /** http(s) only, trimmed. Returns the cleaned URL or null. */
@@ -69,7 +77,7 @@ export function normalizeUrl(input: string): string | null {
 }
 
 /** GET {url}/health/ready → ok, database down, unreachable or timeout. */
-export async function checkHealth(url: string): Promise<Exclude<HealthState, 'unknown' | 'checking'>> {
+export async function checkHealth(url: string): Promise<Exclude<HealthState, 'unknown' | 'checking' | 'no-url'>> {
   const controller = new AbortController();
   let timedOut = false;
   const timer = setTimeout(() => {
@@ -93,6 +101,10 @@ export async function checkHealth(url: string): Promise<Exclude<HealthState, 'un
 export async function refreshHealth() {
   if (!isLiveActive()) {
     set({ health: 'unknown' });
+    return;
+  }
+  if (!getBaseUrl()) {
+    set({ health: 'no-url' });
     return;
   }
   set({ health: 'checking' });

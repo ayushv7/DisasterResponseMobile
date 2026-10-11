@@ -33,12 +33,14 @@ afterEach(() => {
 });
 
 describe('api slices', () => {
-  it('uses mock for every slice without a backend URL', () => {
+  it('defaults to Live: real slices use http even without a URL, and fail clearly', async () => {
     const m = load();
-    expect(m.REAL_SLICES).toEqual([]);
-    expect(m.IS_MOCK_API).toBe(true);
-    expect(m.adapterFor('getHealth')).toBe(m.mockApi);
-    expect(m.adapterFor('getIncidents')).toBe(m.mockApi);
+    expect(m.getDataSource().mode).toBe('live');
+    expect(m.REAL_SLICES).toEqual(['health', 'incidents', 'observations']);
+    expect(m.adapterFor('getIncidents')).toBe(m.httpApi);
+    expect(m.adapterFor('getMyAlerts')).toBe(m.mockApi);
+    // Never silently served from sample data
+    await expect(m.api.getIncidents()).rejects.toMatchObject({ code: 'NO_BACKEND_URL' });
   });
 
   it('makes health, incidents and observations real when a backend URL is set', () => {
@@ -62,7 +64,7 @@ describe('api slices', () => {
     }
   });
 
-  it('Sample mode forces every slice to mock at runtime, and Live restores the switch', () => {
+  it('the sample data switch forces every slice to mock at runtime, and off restores Live', () => {
     const m = load('http://localhost:8000');
     m.setDataMode('sample');
     expect(m.REAL_SLICES).toEqual([]);
@@ -73,10 +75,9 @@ describe('api slices', () => {
     expect(m.adapterFor('getIncidents')).toBe(m.httpApi);
   });
 
-  it('a saved URL makes Live work without a build-time URL', () => {
-    const m = load();
+  it('a saved URL overrides the build-time URL', () => {
+    const m = load('http://localhost:8000');
     m.setSavedUrl('http://10.0.2.2:8000');
-    m.setDataMode('live');
     expect(m.getBaseUrl()).toBe('http://10.0.2.2:8000');
     expect(m.adapterFor('getIncidents')).toBe(m.httpApi);
   });

@@ -181,7 +181,9 @@ subscribeDataSource(recompute);
 export {
   checkHealth,
   getBaseUrl,
+  getDataSource,
   hydrateDataSource,
+  isBackendFailing,
   normalizeUrl,
   refreshHealth,
   setDataMode,

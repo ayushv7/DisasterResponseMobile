@@ -130,7 +130,7 @@ export default function SettingsScreen() {
 
         {/* 3. About Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>DEMO / DATA SOURCE</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>DATA SOURCE</Text>
           <DataSourceSettings />
         </View>
 

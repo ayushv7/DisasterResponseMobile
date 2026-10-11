@@ -2,7 +2,9 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ApiSlice, getBaseUrl, IS_MOCK_API, REAL_SLICES, refreshHealth, useDataSource } from '@/services/api';
+import { router } from 'expo-router';
+
+import { ApiSlice, IS_MOCK_API, REAL_SLICES, refreshHealth, useDataSource } from '@/services/api';
 import { useTheme } from '@/theme';
 import { spacing, touchTargets } from '@/theme/spacing';
 import { textScale, typography } from '@/theme/typography';
@@ -34,21 +36,22 @@ export function BackendBanner() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const { mode, health } = useDataSource();
-  const live = mode === 'live' && !!getBaseUrl();
+  const live = mode === 'live';
 
   // Everything real and healthy: nothing to say
   if (live && health === 'ok' && !IS_MOCK_API) return null;
 
   const failure = live && (health === 'db-down' || health === 'unreachable' || health === 'timeout');
+  const noUrl = live && health === 'no-url';
   const text = !live
-    ? mode === 'live'
-      ? 'No backend URL set – sample data, simulated'
-      : 'Sample data, simulated'
+    ? 'Sample data, simulated'
     : health === 'ok'
-      ? `Real: ${REAL_SLICES.map((s) => SLICE_NAMES[s]).join(', ')} · rest sample data, simulated`
+      ? `Live: ${REAL_SLICES.map((s) => SLICE_NAMES[s]).join(', ')} · rest simulated`
       : failure
         ? FAILURES[health]
-        : 'Checking backend…';
+        : noUrl
+          ? 'No backend URL set'
+          : 'Checking backend…';
 
   return (
     <View
@@ -59,6 +62,16 @@ export function BackendBanner() {
         <Text style={[styles.text, { color: colors.bannerText }]} numberOfLines={2}>
           {text}
         </Text>
+        {noUrl && (
+          <Pressable
+            onPress={() => router.push('/settings')}
+            style={styles.retry}
+            hitSlop={{ top: spacing.sm, bottom: spacing.sm }}
+            accessibilityRole="link"
+            accessibilityLabel="Set the backend URL in Settings">
+            <Text style={[styles.text, styles.retryText, { color: colors.bannerText }]}>Set URL</Text>
+          </Pressable>
+        )}
         {failure && (
           <Pressable
             onPress={refreshHealth}

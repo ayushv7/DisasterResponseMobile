@@ -1,16 +1,15 @@
 /**
- * Settings → "Demo / data source". Pick the live backend or sample data at
- * runtime, and set the backend URL (saved; overrides EXPO_PUBLIC_API_BASE_URL)
- * so a release APK can point at a backend without rebuilding. Available in
- * release builds on purpose.
+ * Settings → "Data source". Live is the default; "Use sample data" switches
+ * every slice to mock at runtime. The backend URL is saved and overrides
+ * EXPO_PUBLIC_API_BASE_URL, so a release APK can point at a backend without
+ * rebuilding. Available in release builds on purpose.
  */
 import React, { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { AuthField } from '@/components/AuthForm';
 import {
   checkHealth,
-  DataMode,
   getBaseUrl,
   HealthState,
   normalizeUrl,
@@ -22,12 +21,7 @@ import { radii, spacing, textScale, touchTargets, typography, useTheme } from '@
 
 const ENV_URL = (process.env.EXPO_PUBLIC_API_BASE_URL ?? '').trim();
 
-const MODES: { key: DataMode; label: string }[] = [
-  { key: 'live', label: 'Live backend' },
-  { key: 'sample', label: 'Sample data (simulated)' },
-];
-
-const RESULT_TEXT: Record<Exclude<HealthState, 'unknown' | 'checking'>, string> = {
+const RESULT_TEXT: Record<Exclude<HealthState, 'unknown' | 'checking' | 'no-url'>, string> = {
   ok: 'Connected: backend ready.',
   'db-down': 'Reachable, but its database is down.',
   unreachable: 'Unreachable. Check the URL and Wi-Fi, and that the backend listens on 0.0.0.0.',
@@ -69,33 +63,26 @@ export function DataSourceSettings() {
 
   const status =
     mode === 'sample'
-      ? 'Using sample data. Every action is simulated.'
+      ? 'Sample data: every screen uses simulated data and actions.'
       : !activeUrl
-        ? 'Live selected, but no backend URL is set. Using sample data.'
+        ? 'Live: no backend URL set. Add one below, or turn on sample data.'
         : health === 'ok'
-          ? `Using the live backend at ${activeUrl} (incidents and observations; the rest is still sample data).`
+          ? `Live: incidents and observations from ${activeUrl}; the rest is still simulated.`
           : health === 'checking' || health === 'unknown'
-            ? `Checking ${activeUrl}…`
-            : `Live selected, but the backend at ${activeUrl} is not available. Use Retry in the banner.`;
+            ? `Live: checking ${activeUrl}…`
+            : `Live: the backend at ${activeUrl} is not available. Retry, or turn on sample data.`;
 
   return (
     <View style={styles.wrap}>
-      <View style={[styles.segment, { backgroundColor: colors.surfaceMuted }]} accessibilityRole="radiogroup">
-        {MODES.map((m) => {
-          const active = m.key === mode;
-          return (
-            <Pressable
-              key={m.key}
-              onPress={() => !active && setDataMode(m.key)}
-              style={[styles.option, active && { backgroundColor: colors.surface }]}
-              accessibilityRole="radio"
-              accessibilityState={{ selected: active }}>
-              <Text style={[styles.optionText, { color: active ? colors.textPrimary : colors.textSecondary }]}>
-                {m.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+      <View style={[styles.switchRow, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.optionText, styles.flex, { color: colors.textPrimary }]}>
+          Use sample data (simulated)
+        </Text>
+        <Switch
+          value={mode === 'sample'}
+          onValueChange={(on) => setDataMode(on ? 'sample' : 'live')}
+          accessibilityLabel="Use sample data (simulated)"
+        />
       </View>
       <Text style={[styles.caption, { color: colors.textSecondary }]}>{status}</Text>
 
@@ -166,15 +153,15 @@ export function DataSourceSettings() {
 
 const styles = StyleSheet.create({
   wrap: { gap: spacing.sm },
-  segment: { flexDirection: 'row', borderRadius: radii.button, padding: spacing.xxs },
-  option: {
-    flex: 1,
-    minHeight: touchTargets.min,
-    borderRadius: radii.button,
+  switchRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
+    gap: spacing.md,
+    minHeight: touchTargets.min,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radii.card,
   },
+  flex: { flex: 1, textAlign: 'left' },
   optionText: { ...typography.bodyMedium, ...textScale.body, fontWeight: '600', textAlign: 'center' },
   row: { flexDirection: 'row', gap: spacing.sm },
   button: {

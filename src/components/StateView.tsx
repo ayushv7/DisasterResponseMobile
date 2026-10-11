@@ -2,7 +2,9 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
+import { BackendUnavailable } from '@/components/BackendUnavailable';
 import { EmptyState } from '@/components/EmptyState';
+import { isBackendFailing, useDataSource } from '@/services/api';
 import { ErrorState } from '@/components/ErrorState';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { QueryState } from '@/hooks/use-api-query';
@@ -18,6 +20,8 @@ interface StateViewProps {
   emptyDescription?: string;
   /** ISO time the data was received; shown in the stale note. */
   receivedAt?: string | null;
+  /** Content comes from the live backend: show the Backend unreachable state when it is down. */
+  backend?: boolean;
   children: React.ReactNode;
 }
 
@@ -48,9 +52,11 @@ export function StateView({
   emptyTitle,
   emptyDescription,
   receivedAt,
+  backend,
   children,
 }: StateViewProps) {
   const { colors } = useTheme();
+  const source = useDataSource();
 
   if (state === 'loading') {
     return (
@@ -60,7 +66,10 @@ export function StateView({
       </View>
     );
   }
-  if (state === 'error') return <ErrorState message={error ?? undefined} onRetry={onRetry} />;
+  if (state === 'error') {
+    if (backend && isBackendFailing(source)) return <BackendUnavailable onRetry={onRetry} />;
+    return <ErrorState message={error ?? undefined} onRetry={onRetry} />;
+  }
   if (state === 'empty') return <EmptyState title={emptyTitle} description={emptyDescription} />;
 
   return (

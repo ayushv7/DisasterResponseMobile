@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
+import { BackendUnavailable } from '@/components/BackendUnavailable';
 import { EmptyState } from '@/components/EmptyState';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
 import { SEVERITY_LABELS } from '@/constants/severity';
@@ -29,7 +30,7 @@ import { InfoBar } from '@/components/InfoBar';
 import { NgoScopeNote } from '@/components/NgoScopeNote';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
-import { fetchIncidents } from '@/services/operations-api';
+import { api, IS_MOCK_SLICE, isBackendFailing, useDataSource } from '@/services/api';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -40,6 +41,8 @@ type IncidentFilter = 'ALL' | 'CRITICAL' | 'ACTIVE' | 'WATCH';
 
 export default function IncidentsCatalogueScreen() {
   const { colors } = useTheme();
+  // Live backend down: offer Retry / sample data instead of a generic error
+  const backendFailing = isBackendFailing(useDataSource()) && !IS_MOCK_SLICE.incidents;
   useConfirmExitAtRoot();
 
   const [incidents, setIncidents] = useState<IncidentRecord[]>([]);
@@ -54,7 +57,8 @@ export default function IncidentsCatalogueScreen() {
         setRefreshing(true);
         setErrorMsg(null);
       }
-      const data = await fetchIncidents();
+      // Through the API layer: live backend in Live mode, sample data otherwise
+      const data = (await api.getIncidents()).data;
       setIncidents(data);
     } catch (err: any) {
       setErrorMsg(err?.message || 'Failed to sync incidents catalogue.');
@@ -277,7 +281,11 @@ export default function IncidentsCatalogueScreen() {
           <SkeletonCard />
         </View>
       ) : errorMsg ? (
-        <ErrorState message={errorMsg} onRetry={() => loadData(true)} />
+        backendFailing ? (
+          <BackendUnavailable onRetry={() => loadData(true)} />
+        ) : (
+          <ErrorState message={errorMsg} onRetry={() => loadData(true)} />
+        )
       ) : (
         <FlatList
           data={filteredIncidents}
