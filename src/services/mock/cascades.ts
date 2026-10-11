@@ -3,6 +3,8 @@
  * consistent across screens. Every message they write says "Simulated". The
  * real behaviour belongs to the backend; screens never call these directly.
  */
+import { SAMPLE_ALERT_AREAS, SAMPLE_AREA_ALERTS } from '@/fixtures/sample-area-alerts';
+import { MyAlert } from '@/types/my-alert';
 import { InterventionRecord } from '@/types/operations';
 import { ContributorApplication, PlanActor, ResourcePlan } from '@/types/contributors';
 import { NgoApplication } from '@/types/ngo-workspace';
@@ -213,4 +215,41 @@ export function suspendNgo(ngoId: string) {
   for (const plan of store.plans.filter((p) => p.ngoId === ngoId)) {
     flagPlan(plan, 'Simulated: this NGO was suspended by the authority.');
   }
+}
+
+// ── Public area alerts ──────────────────────────────────────────────────────
+
+/** Active NGO allotted to an area (its service area covers the area's district or state). */
+export function allottedNgoForArea(areaId: string) {
+  const area = SAMPLE_ALERT_AREAS.find((a) => a.id === areaId);
+  if (!area) return undefined;
+  return store.ngos.find(
+    (n) =>
+      n.status === 'ACTIVE' &&
+      !!n.serviceArea &&
+      [area.state, area.district, area.name].some((place) =>
+        place.toLowerCase().includes(n.serviceArea.toLowerCase())
+      )
+  );
+}
+
+/**
+ * Simulated publication rule: an area alert is only shown once an NGO has
+ * been allotted to that area (approving or suspending NGOs changes this).
+ */
+export function publishedAlertsForArea(areaId: string): MyAlert[] {
+  const ngo = allottedNgoForArea(areaId);
+  const area = SAMPLE_ALERT_AREAS.find((a) => a.id === areaId);
+  if (!ngo || !area) return [];
+  const hours = (h: number) => new Date(Date.now() + h * 3600_000).toISOString();
+  return SAMPLE_AREA_ALERTS.filter((t) => t.areaId === areaId).map(
+    ({ issuedHoursAgo, updatedHoursAgo, expiresInHours, authority, ...t }) => ({
+      ...t,
+      areaName: `${area.name}, ${area.state}`,
+      issuedAt: hours(-issuedHoursAgo),
+      updatedAt: hours(-updatedHoursAgo),
+      expiresAt: expiresInHours != null ? hours(expiresInHours) : undefined,
+      issuedBy: { authority, ngoName: ngo.name },
+    })
+  );
 }

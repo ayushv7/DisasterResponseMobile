@@ -68,6 +68,8 @@ export const httpApi: ApiClient = {
   verify: notImplemented('verify'),
   getReassignments: notImplemented('getReassignments'),
   reassign: notImplemented('reassign'),
+  getMyAlerts: notImplemented('getMyAlerts'),
+  getAlertAreas: notImplemented('getAlertAreas'),
   getVerifiedNgos: notImplemented('getVerifiedNgos'),
   messageNgo: notImplemented('messageNgo'),
   getSentMessages: notImplemented('getSentMessages'),

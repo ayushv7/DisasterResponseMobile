@@ -35,6 +35,7 @@ import {
   ResourceTypePolicy,
 } from '@/types/contributors';
 import { SentMessage } from '@/types/message-thread';
+import { AlertArea, MyAlertsQuery, MyAlertsResult } from '@/types/my-alert';
 import { HelpOffer, NgoNeed, OfferHelpInput } from '@/types/offers';
 import {
   ApplyToVolunteerInput,
@@ -206,6 +207,12 @@ export interface ApiClient {
   getReassignments(): Promise<ApiResult<ReplanningRecord[]>>;
   /** `actualAssignment` describes what was actually assigned (may differ from the recommendation). */
   reassign(reassignmentId: string, actualAssignment: string): Promise<ApiResult<ReplanningRecord>>;
+
+  // Public area alerts (PROPOSED): only the caller's area, never other areas
+  /** Alerts for a coarse position (rounded on the device) or a chosen area. */
+  getMyAlerts(query: MyAlertsQuery): Promise<ApiResult<MyAlertsResult>>;
+  /** Areas the public can pick when location is off. */
+  getAlertAreas(): Promise<ApiResult<AlertArea[]>>;
 
   // Public ↔ NGO
   getVerifiedNgos(): Promise<ApiResult<VerifiedNgo[]>>;

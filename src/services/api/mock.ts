@@ -5,6 +5,7 @@
  */
 import * as accounts from '@/services/accounts-api';
 import * as offers from '@/services/offers-api';
+import { fetchAlertAreas, fetchMyAlerts } from '@/services/area-alerts-api';
 import * as volunteers from '@/services/volunteers-api';
 import * as contributors from '@/services/contributors-api';
 import { onTaskChanged } from '@/services/mock/cascades';
@@ -273,6 +274,8 @@ export const mockApi: ApiClient = {
     }),
   reassign: (id, notes) => simulate(() => ops.executeReplanningDecision(id, notes)),
 
+  getMyAlerts: (query) => simulate(() => fetchMyAlerts(query)),
+  getAlertAreas: () => simulate(fetchAlertAreas),
   getVerifiedNgos: () => simulate(fetchVerifiedNgos),
   messageNgo: (draft) => simulate(() => submitPrivateMessage(draft)),
   getSentMessages: () => simulate(fetchSentMessages),

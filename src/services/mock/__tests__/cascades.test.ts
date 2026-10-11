@@ -8,7 +8,8 @@ import { setMockFailureRate, mockApi } from '@/services/api/mock';
 import { ApiError } from '@/services/api/types';
 import * as contributors from '@/services/contributors-api';
 import { fetchVerifiedNgos } from '@/services/messaging-api';
-import { decideNgo } from '@/services/ngo-approval-api';
+import { fetchMyAlerts } from '@/services/area-alerts-api';
+import { createNgo, decideNgo } from '@/services/ngo-approval-api';
 import { loginDemoSession, logoutNgo } from '@/services/ngo-api';
 import { sweepMissedCheckIns } from '@/services/mock/cascades';
 import { resetStore, store } from '@/services/mock/store';
@@ -148,5 +149,28 @@ describe('resetStore', () => {
     expect(store.plans[0].version).toBe(1);
     expect(store.ngos).toHaveLength(1);
     expect(store.planHistory).toHaveLength(0);
+  });
+});
+
+describe('public area alerts', () => {
+  it('shows an area alert only when an NGO is allotted to that area', async () => {
+    const majuli = await fetchMyAlerts({ areaId: 'area-majuli' });
+    expect(majuli.alerts).toHaveLength(1);
+    expect(majuli.alerts[0]).toMatchObject({ level: 'EVACUATE', issuedBy: { ngoName: 'Disaster Relief Network India' } });
+
+    // East Delhi has a sample alert but no NGO serving Delhi yet
+    expect((await fetchMyAlerts({ areaId: 'area-east-delhi' })).alerts).toHaveLength(0);
+    const { ngo } = await createNgo({ name: 'Sample Yamuna Relief', email: 'y@sample.org', area: 'Delhi' });
+    expect((await fetchMyAlerts({ areaId: 'area-east-delhi' })).alerts).toHaveLength(1);
+    await decideNgo(ngo.id, false);
+    expect((await fetchMyAlerts({ areaId: 'area-east-delhi' })).alerts).toHaveLength(0);
+  });
+
+  it('resolves a coarse position to the nearest area, and far positions to none', async () => {
+    const near = await fetchMyAlerts({ lat: 26.96, lng: 94.15 });
+    expect(near.area?.id).toBe('area-majuli');
+    const far = await fetchMyAlerts({ lat: 0, lng: 0 });
+    expect(far.area).toBeNull();
+    expect(far.alerts).toHaveLength(0);
   });
 });
