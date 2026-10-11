@@ -34,7 +34,7 @@ The per-slice switch is in `src/services/api/index.ts`. With `EXPO_PUBLIC_API_BA
 `/api/v1/flood-events/{id}/observations`). Everything else, including public area alerts, stays
 mock and labelled Simulated. Unset = everything mock.
 
-Create `.env` in the project root with the address **as the device sees it**:
+Create `.env.local` in the project root (git-ignored) with the address **as the device sees it**:
 
 ```bash
 # Phone on the same Wi-Fi: your computer's LAN IP (find it with `hostname -I`)
@@ -46,7 +46,7 @@ EXPO_PUBLIC_API_BASE_URL=http://192.168.1.20:8000
 - `localhost` does not work from a phone or emulator: it points at the device itself.
 - For a phone, the backend must listen on all interfaces (e.g. `--host 0.0.0.0`) and the port
   must be open in the firewall.
-- `EXPO_PUBLIC_*` values are baked in when the bundle is built: after changing `.env`, restart
+- `EXPO_PUBLIC_*` values are baked in when the bundle is built: after changing `.env.local`, restart
   Expo with a clean cache: `npx expo start -c`. A release APK needs a rebuild.
 - Check: the banner should read "Real: health, incidents, observations (backend ready)".
 
