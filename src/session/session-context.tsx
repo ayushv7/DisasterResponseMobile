@@ -69,7 +69,8 @@ export function homeRouteFor(role: Role): Href {
     case 'ngo':
       return '/ngo/inbox';
     default:
-      return '/alerts';
+      // Public home: alerts for the visitor's own area only
+      return '/my-area';
   }
 }
 

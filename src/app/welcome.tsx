@@ -30,12 +30,12 @@ export default function WelcomeScreen() {
 
   const browse = () => {
     setWelcomeSeen(true);
-    router.replace('/alerts');
+    router.replace('/my-area');
   };
 
   const messageNgo = () => {
     setWelcomeSeen(true);
-    router.replace('/alerts');
+    router.replace('/my-area');
     router.push('/message/compose');
   };
 

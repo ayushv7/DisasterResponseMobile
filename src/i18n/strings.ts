@@ -8,8 +8,8 @@ export type Language = 'en' | 'hi';
 export const STRINGS = {
   en: {
     'welcome.title': 'Flood response',
-    'welcome.tagline': 'Read flood alerts and reach verified NGOs. No account needed.',
-    'welcome.browse': 'Browse alerts',
+    'welcome.tagline': 'Flood alerts for where you are, what to do, and verified NGOs to contact. No account needed.',
+    'welcome.browse': 'Alerts for my area',
     'welcome.message': 'Message an NGO',
     'welcome.signIn': 'SIGN IN',
     'welcome.citizenNote': 'Citizens can optionally sign in later from Profile to offer help or volunteer.',
@@ -52,8 +52,8 @@ export const STRINGS = {
   },
   hi: {
     'welcome.title': 'बाढ़ सहायता',
-    'welcome.tagline': 'बाढ़ की चेतावनियाँ पढ़ें और सत्यापित एनजीओ से संपर्क करें। खाते की ज़रूरत नहीं।',
-    'welcome.browse': 'चेतावनियाँ देखें',
+    'welcome.tagline': 'आपके क्षेत्र की बाढ़ चेतावनियाँ, क्या करें, और सत्यापित एनजीओ से संपर्क। खाते की ज़रूरत नहीं।',
+    'welcome.browse': 'मेरे क्षेत्र की चेतावनियाँ',
     'welcome.message': 'एनजीओ को संदेश भेजें',
     'welcome.signIn': 'साइन इन',
     'welcome.citizenNote': 'नागरिक बाद में प्रोफ़ाइल से साइन इन करके मदद या स्वयंसेवा कर सकते हैं।',

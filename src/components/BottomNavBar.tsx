@@ -17,10 +17,10 @@ interface TabDef {
 const TABS: TabDef[] = [
   {
     key: 'feed',
-    label: 'Alerts',
+    label: 'My area',
     icon: 'shield',
-    route: '/alerts',
-    accessibilityLabel: 'Flood alerts feed',
+    route: '/my-area',
+    accessibilityLabel: 'Flood alerts for your area',
   },
   {
     key: 'map',

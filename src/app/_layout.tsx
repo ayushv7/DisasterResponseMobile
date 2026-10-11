@@ -30,6 +30,7 @@ function RootLayoutContent() {
         }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="welcome" options={{ animation: 'fade' }} />
+        <Stack.Screen name="my-area" options={{ animation: 'fade' }} />
         <Stack.Screen name="alerts" options={{ animation: 'fade' }} />
         <Stack.Screen name="map" options={{ animation: 'fade' }} />
         <Stack.Screen name="messages" options={{ animation: 'fade' }} />
