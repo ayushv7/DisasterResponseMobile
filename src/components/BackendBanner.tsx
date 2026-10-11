@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { api, ApiSlice, IS_MOCK_API, IS_MOCK_SLICE, REAL_SLICES } from '@/services/api';
+import { ApiSlice, getBaseUrl, IS_MOCK_API, REAL_SLICES, refreshHealth, useDataSource } from '@/services/api';
 import { useTheme } from '@/theme';
-import { spacing } from '@/theme/spacing';
+import { spacing, touchTargets } from '@/theme/spacing';
 import { textScale, typography } from '@/theme/typography';
 
 const SLICE_NAMES: Record<ApiSlice, string> = {
@@ -18,55 +18,58 @@ const SLICE_NAMES: Record<ApiSlice, string> = {
   publicAlerts: 'public alerts',
   community: 'messages & NGO workspace',
 };
-const realNames = REAL_SLICES.map((s) => SLICE_NAMES[s]).join(', ');
 
-type BackendState = 'checking' | 'ready' | 'unavailable' | 'unreachable';
-
-const STATE_TEXT: Record<BackendState, string> = {
-  checking: 'checking backend…',
-  ready: 'backend ready',
-  unavailable: 'backend database down',
-  unreachable: 'backend unreachable',
-};
+const FAILURES = {
+  'db-down': 'Backend database down',
+  unreachable: 'Backend unreachable',
+  timeout: 'Backend not responding (timeout)',
+} as const;
 
 /**
- * The single global notice about where data comes from. Rendered once in the
- * root layout; hidden only when every data slice is real. Says which slices
- * are real and, if health is real, whether the backend is ready right now.
- * It owns the top safe-area inset, so screens below it don't pad twice.
+ * The single global notice about where data comes from. Updates immediately
+ * when the data source changes. Never claims "Real" unless the last health
+ * check passed; failures show with a Retry. It owns the top safe-area inset.
  */
 export function BackendBanner() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
-  const [backend, setBackend] = useState<BackendState | null>(IS_MOCK_SLICE.health ? null : 'checking');
+  const { mode, health } = useDataSource();
+  const live = mode === 'live' && !!getBaseUrl();
 
-  useEffect(() => {
-    if (IS_MOCK_SLICE.health) return;
-    api
-      .getHealth()
-      .then((res) => setBackend(res.data.status === 'ok' ? 'ready' : 'unavailable'))
-      .catch(() => setBackend('unreachable'));
-  }, []);
+  // Everything real and healthy: nothing to say
+  if (live && health === 'ok' && !IS_MOCK_API) return null;
 
-  if (!IS_MOCK_API) return null;
-
-  const text =
-    REAL_SLICES.length === 0
-      ? 'Backend not connected – sample data, actions simulated'
-      : `Real: ${realNames}${backend ? ` (${STATE_TEXT[backend]})` : ''} · rest sample data, simulated`;
+  const failure = live && (health === 'db-down' || health === 'unreachable' || health === 'timeout');
+  const text = !live
+    ? mode === 'live'
+      ? 'No backend URL set – sample data, simulated'
+      : 'Sample data, simulated'
+    : health === 'ok'
+      ? `Real: ${REAL_SLICES.map((s) => SLICE_NAMES[s]).join(', ')} · rest sample data, simulated`
+      : failure
+        ? FAILURES[health]
+        : 'Checking backend…';
 
   return (
     <View
       style={[styles.bar, { backgroundColor: colors.bannerBg, paddingTop: insets.top + spacing.xs }]}
       accessibilityRole="summary"
-      accessibilityLabel={
-        REAL_SLICES.length === 0
-          ? 'Backend not connected. Showing sample data. Actions are simulated.'
-          : `Real backend for ${realNames}${backend ? `, ${STATE_TEXT[backend]}` : ''}. Everything else is sample data and simulated.`
-      }>
-      <Text style={[styles.text, { color: colors.bannerText }]} numberOfLines={2}>
-        {text}
-      </Text>
+      accessibilityLabel={text}>
+      <View style={styles.row}>
+        <Text style={[styles.text, { color: colors.bannerText }]} numberOfLines={2}>
+          {text}
+        </Text>
+        {failure && (
+          <Pressable
+            onPress={refreshHealth}
+            style={styles.retry}
+            hitSlop={{ top: spacing.sm, bottom: spacing.sm }}
+            accessibilityRole="button"
+            accessibilityLabel="Retry backend connection">
+            <Text style={[styles.text, styles.retryText, { color: colors.bannerText }]}>Retry</Text>
+          </Pressable>
+        )}
+      </View>
     </View>
   );
 }
@@ -76,10 +79,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.screenPadding,
     paddingBottom: spacing.xs,
   },
+  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.md },
   text: {
     ...typography.caption,
     ...textScale.caption,
     fontWeight: '600',
     textAlign: 'center',
+    flexShrink: 1,
   },
+  retry: { minHeight: touchTargets.min - spacing.lg, justifyContent: 'center' },
+  retryText: { textDecorationLine: 'underline' },
 });

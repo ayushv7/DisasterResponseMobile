@@ -47,6 +47,8 @@ interface SessionContextValue {
   /** Set after verifyOtp, or after the backend returns an updated Citizen. */
   setCitizen: (citizen: Citizen) => void;
   signOutCitizen: () => void;
+  /** Reset navigation to the current role's home (remounts screens, so they refetch). */
+  resetToHome: () => void;
   /** Whether the first-run start screen was seen (null while loading from storage). */
   welcomeSeen: boolean | null;
   setWelcomeSeen: (seen: boolean) => void;
@@ -149,6 +151,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [resetToRoleHome]);
 
   const setCitizen = useCallback((next: Citizen) => setCitizenState(next), []);
+  const resetToHome = useCallback(() => resetToRoleHome(session?.role ?? 'public'), [resetToRoleHome, session]);
   const endCitizenSession = useCallback(() => {
     signOutCitizen();
     setCitizenState(null);
@@ -163,10 +166,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       citizen,
       setCitizen,
       signOutCitizen: endCitizenSession,
+      resetToHome,
       welcomeSeen,
       setWelcomeSeen,
     }),
-    [session, signInAs, signOut, citizen, setCitizen, endCitizenSession, welcomeSeen, setWelcomeSeen]
+    [session, signInAs, signOut, citizen, setCitizen, endCitizenSession, resetToHome, welcomeSeen, setWelcomeSeen]
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

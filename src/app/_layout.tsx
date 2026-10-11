@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon';
 import { BackendBanner } from '@/components/BackendBanner';
+import { DataSourceWatcher } from '@/components/DataSourceWatcher';
 import { IS_MOCK_API } from '@/services/api';
 import { ToastProvider } from '@/components/Toast';
 import { LanguageProvider } from '@/i18n/language-context';
@@ -23,6 +24,7 @@ function RootLayoutContent() {
       <StatusBar style={isDark || IS_MOCK_API ? 'light' : 'dark'} />
       <AnimatedSplashOverlay />
       <BackendBanner />
+      <DataSourceWatcher />
       <Stack
         screenOptions={{
           headerShown: false,

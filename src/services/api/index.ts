@@ -1,12 +1,14 @@
-import { API_BASE_URL, httpApi } from './http';
+import { isLiveActive, subscribeDataSource } from './data-source';
+import { httpApi } from './http';
 import { mockApi } from './mock';
 import { ApiClient } from './types';
 
 /**
  * Per-slice data source. Each slice can move from the mock adapter to the
  * real backend on its own, once its endpoints exist (see
- * docs/api-contract-proposal.md). Without EXPO_PUBLIC_API_BASE_URL every
- * slice is mock.
+ * docs/api-contract-proposal.md). The Settings "Data source" switch picks
+ * Live (this per-slice layout) or Sample (every slice mock) at runtime;
+ * Live also needs a backend URL (Settings or EXPO_PUBLIC_API_BASE_URL).
  *
  * - health: GET /health/ready (implemented by the backend)
  * - incidents: GET /api/v1/flood-events and /{id} (implemented)
@@ -28,13 +30,11 @@ export type ApiSlice =
 
 export type SliceSource = 'mock' | 'http';
 
-const HAS_BACKEND = !!API_BASE_URL;
-
-/** Flip a slice to 'http' only when its backend endpoints exist. */
-export const SLICE_SOURCES: Record<ApiSlice, SliceSource> = {
-  health: HAS_BACKEND ? 'http' : 'mock',
-  incidents: HAS_BACKEND ? 'http' : 'mock',
-  observations: HAS_BACKEND ? 'http' : 'mock',
+/** Per-slice switch used in Live mode. Flip a slice to 'http' only when its endpoints exist. */
+export const LIVE_SLICE_SOURCES: Record<ApiSlice, SliceSource> = {
+  health: 'http',
+  incidents: 'http',
+  observations: 'http',
   resources: 'mock',
   plans: 'mock',
   tasks: 'mock',
@@ -43,7 +43,7 @@ export const SLICE_SOURCES: Record<ApiSlice, SliceSource> = {
   community: 'mock',
 };
 
-type ApiMethod = Exclude<keyof ApiClient, 'mode'>;
+export type ApiMethod = Exclude<keyof ApiClient, 'mode'>;
 
 /** Which slice each method belongs to. TypeScript requires every method here. */
 const METHOD_SLICES: Record<ApiMethod, ApiSlice> = {
@@ -127,28 +127,66 @@ const METHOD_SLICES: Record<ApiMethod, ApiSlice> = {
   decideVolunteerApplication: 'community',
 };
 
-const DATA_SLICES = (Object.keys(SLICE_SOURCES) as ApiSlice[]).filter((s) => s !== 'health');
+const ALL_SLICES = Object.keys(LIVE_SLICE_SOURCES) as ApiSlice[];
 
+function computeSources(): Record<ApiSlice, SliceSource> {
+  const live = isLiveActive();
+  return Object.fromEntries(ALL_SLICES.map((s) => [s, live ? LIVE_SLICE_SOURCES[s] : 'mock'])) as Record<
+    ApiSlice,
+    SliceSource
+  >;
+}
+
+// Recomputed whenever the data source changes. They are live ES module
+// bindings, so importers always read the current value.
+/** Source each slice uses right now (Sample mode: all mock). */
+export let SLICE_SOURCES = computeSources();
 /** True when the slice is served by the mock adapter (keep its Simulated labels). */
-export const IS_MOCK_SLICE = Object.fromEntries(
-  (Object.keys(SLICE_SOURCES) as ApiSlice[]).map((s) => [s, SLICE_SOURCES[s] === 'mock'])
-) as Record<ApiSlice, boolean>;
-
+export let IS_MOCK_SLICE = {} as Record<ApiSlice, boolean>;
 /** Slices served by the real backend (shown in the BackendBanner). */
-export const REAL_SLICES = (Object.keys(SLICE_SOURCES) as ApiSlice[]).filter((s) => SLICE_SOURCES[s] === 'http');
-
+export let REAL_SLICES: ApiSlice[] = [];
 /** True while any data slice is still mock, so sample/Simulated labels stay on. */
-export const IS_MOCK_API = DATA_SLICES.some((s) => IS_MOCK_SLICE[s]);
+export let IS_MOCK_API = true;
 
-/** One client; each method comes from its slice's adapter. */
+function recompute() {
+  SLICE_SOURCES = computeSources();
+  IS_MOCK_SLICE = Object.fromEntries(ALL_SLICES.map((s) => [s, SLICE_SOURCES[s] === 'mock'])) as Record<
+    ApiSlice,
+    boolean
+  >;
+  REAL_SLICES = ALL_SLICES.filter((s) => SLICE_SOURCES[s] === 'http');
+  IS_MOCK_API = ALL_SLICES.filter((s) => s !== 'health').some((s) => IS_MOCK_SLICE[s]);
+  api.mode = IS_MOCK_API ? 'mock' : 'http';
+}
+
+/** The adapter a method uses right now. */
+export function adapterFor(method: ApiMethod): ApiClient {
+  return SLICE_SOURCES[METHOD_SLICES[method]] === 'http' ? httpApi : mockApi;
+}
+
+/** One client; each call is routed to its slice's current adapter (no restart needed). */
 export const api: ApiClient = {
-  mode: IS_MOCK_API ? 'mock' : 'http',
+  mode: 'mock',
   ...(Object.fromEntries(
-    (Object.keys(METHOD_SLICES) as ApiMethod[]).map((method) => {
-      const adapter = SLICE_SOURCES[METHOD_SLICES[method]] === 'http' ? httpApi : mockApi;
-      return [method, adapter[method]];
-    })
+    (Object.keys(METHOD_SLICES) as ApiMethod[]).map((method) => [
+      method,
+      (...args: unknown[]) => (adapterFor(method)[method] as (...a: unknown[]) => unknown)(...args),
+    ])
   ) as Omit<ApiClient, 'mode'>),
 };
 
+recompute();
+subscribeDataSource(recompute);
+
+export {
+  checkHealth,
+  getBaseUrl,
+  hydrateDataSource,
+  normalizeUrl,
+  refreshHealth,
+  setDataMode,
+  setSavedUrl,
+  useDataSource,
+} from './data-source';
+export type { DataMode, DataSourceState, HealthState } from './data-source';
 export * from './types';

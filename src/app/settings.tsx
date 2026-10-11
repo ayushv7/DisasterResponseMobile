@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
 import { BottomNavBar } from '@/components/BottomNavBar';
+import { DataSourceSettings } from '@/components/DataSourceSettings';
 import { LanguageToggle } from '@/components/LanguageToggle';
 import { useSession } from '@/session/session-context';
 import { useGoBack } from '@/navigation/use-go-back';
@@ -128,6 +129,11 @@ export default function SettingsScreen() {
         </View>
 
         {/* 3. About Section */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>DEMO / DATA SOURCE</Text>
+          <DataSourceSettings />
+        </View>
+
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textTertiary }]}>ABOUT</Text>
 

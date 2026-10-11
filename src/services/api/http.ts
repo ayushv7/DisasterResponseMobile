@@ -8,6 +8,8 @@
  */
 import { IncidentRecord } from '@/types/operations';
 
+import { getBaseUrl } from './data-source';
+
 import {
   FloodEventDto,
   FloodObservationDto,
@@ -18,6 +20,7 @@ import {
 } from './http-mapping';
 import { ApiClient, ApiError, ApiResult, HealthStatus, NotImplementedError } from './types';
 
+/** Build-time value; the URL actually used is getBaseUrl() (Settings can override it). */
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
 
 const HEALTH_TIMEOUT_MS = 5000;
@@ -30,7 +33,7 @@ async function getHealth() {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
   try {
-    const res = await fetch(`${API_BASE_URL}/health/ready`, { signal: controller.signal });
+    const res = await fetch(`${getBaseUrl()}/health/ready`, { signal: controller.signal });
     if (!res.ok && res.status !== 503) throw new Error(`Health check failed: HTTP ${res.status}`);
     const data = (await res.json()) as HealthStatus;
     return { data, source: 'live' as const, receivedAt: new Date().toISOString() };
@@ -47,12 +50,12 @@ async function getJson<T>(path: string): Promise<{ body: T; dateHeader: string |
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let res: Response;
   try {
-    res = await fetch(`${API_BASE_URL}${path}`, {
+    res = await fetch(`${getBaseUrl()}${path}`, {
       headers: { Accept: 'application/json' },
       signal: controller.signal,
     });
   } catch {
-    throw new ApiError('NETWORK', `Could not reach the backend at ${API_BASE_URL}.`);
+    throw new ApiError('NETWORK', `Could not reach the backend at ${getBaseUrl()}.`);
   } finally {
     clearTimeout(timer);
   }

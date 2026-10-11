@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { DataSource, IS_MOCK_API } from '@/services/api';
+import { DataSource, IS_MOCK_API, useDataSource } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -14,6 +14,7 @@ interface SampleDataBadgeProps {
 /** Small "SAMPLE DATA" tag for cards/screens driven by fixtures. */
 export function SampleDataBadge({ source }: SampleDataBadgeProps) {
   const { colors } = useTheme();
+  useDataSource(); // re-render when the data source switches
   const isSample = source ? source === 'sample' : IS_MOCK_API;
   if (!isSample) return null;
 

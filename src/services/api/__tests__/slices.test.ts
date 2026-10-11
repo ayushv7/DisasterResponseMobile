@@ -14,11 +14,15 @@ function load(baseUrl?: string): ApiModule & Adapters {
   jest.isolateModules(() => {
     if (baseUrl) process.env.EXPO_PUBLIC_API_BASE_URL = baseUrl;
     else delete process.env.EXPO_PUBLIC_API_BASE_URL;
-    loaded = {
-      ...(require('@/services/api') as ApiModule),
+    const mod = require('@/services/api') as ApiModule;
+    const adapters: Adapters = {
       mockApi: require('@/services/api/mock').mockApi,
       httpApi: require('@/services/api/http').httpApi,
     };
+    // Read through to the module so reassigned exports (live bindings) stay current
+    loaded = new Proxy(mod, {
+      get: (target, key) => (key in adapters ? adapters[key as keyof Adapters] : target[key as keyof ApiModule]),
+    }) as ApiModule & Adapters;
   });
   /* eslint-enable @typescript-eslint/no-require-imports */
   return loaded;
@@ -33,8 +37,8 @@ describe('api slices', () => {
     const m = load();
     expect(m.REAL_SLICES).toEqual([]);
     expect(m.IS_MOCK_API).toBe(true);
-    expect(m.api.getHealth).toBe(m.mockApi.getHealth);
-    expect(m.api.getIncidents).toBe(m.mockApi.getIncidents);
+    expect(m.adapterFor('getHealth')).toBe(m.mockApi);
+    expect(m.adapterFor('getIncidents')).toBe(m.mockApi);
   });
 
   it('makes health, incidents and observations real when a backend URL is set', () => {
@@ -42,7 +46,7 @@ describe('api slices', () => {
     expect(m.REAL_SLICES).toEqual(['health', 'incidents', 'observations']);
     expect(m.IS_MOCK_API).toBe(true);
     for (const method of ['getHealth', 'getIncidents', 'getIncident', 'getIncidentObservations'] as const) {
-      expect(m.api[method]).toBe(m.httpApi[method]);
+      expect(m.adapterFor(method)).toBe(m.httpApi);
     }
     // Everything else, including public alerts and the ops summary, stays mock
     for (const method of [
@@ -54,7 +58,33 @@ describe('api slices', () => {
       'getWorkOrders',
       'staffLogin',
     ] as const) {
-      expect(m.api[method]).toBe(m.mockApi[method]);
+      expect(m.adapterFor(method)).toBe(m.mockApi);
     }
+  });
+
+  it('Sample mode forces every slice to mock at runtime, and Live restores the switch', () => {
+    const m = load('http://localhost:8000');
+    m.setDataMode('sample');
+    expect(m.REAL_SLICES).toEqual([]);
+    expect(m.adapterFor('getIncidents')).toBe(m.mockApi);
+    expect(m.adapterFor('getHealth')).toBe(m.mockApi);
+    m.setDataMode('live');
+    expect(m.REAL_SLICES).toEqual(['health', 'incidents', 'observations']);
+    expect(m.adapterFor('getIncidents')).toBe(m.httpApi);
+  });
+
+  it('a saved URL makes Live work without a build-time URL', () => {
+    const m = load();
+    m.setSavedUrl('http://10.0.2.2:8000');
+    m.setDataMode('live');
+    expect(m.getBaseUrl()).toBe('http://10.0.2.2:8000');
+    expect(m.adapterFor('getIncidents')).toBe(m.httpApi);
+  });
+
+  it('accepts only http(s) URLs, trimmed', () => {
+    const m = load();
+    expect(m.normalizeUrl('  http://192.168.1.20:8000/  ')).toBe('http://192.168.1.20:8000');
+    expect(m.normalizeUrl('ftp://x')).toBeNull();
+    expect(m.normalizeUrl('localhost:8000')).toBeNull();
   });
 });
