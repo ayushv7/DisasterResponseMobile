@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { IS_MOCK_API } from '@/services/api';
+import { IS_MOCK_SLICE } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -65,7 +65,8 @@ export function PrimaryButton({
 /** Mock mode only: makes clear nothing was authenticated by a server. */
 export function SimulatedSignInNotice({ hint }: { hint?: string }) {
   const { colors } = useTheme();
-  if (!IS_MOCK_API) return null;
+  // Sign-ins are simulated while the auth slice is mock
+  if (!IS_MOCK_SLICE.auth) return null;
   return (
     <View style={[styles.notice, { backgroundColor: colors.infoBg }]}>
       <Feather name="info" size={14} color={colors.info} />

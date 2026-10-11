@@ -5,9 +5,28 @@
  * (draft: docs/api-contract-proposal.md) using API_BASE_URL. Return
  * `source: 'live'` so sample-data labels disappear.
  */
-import { ApiClient, NotImplementedError } from './types';
+import { ApiClient, HealthStatus, NotImplementedError } from './types';
 
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
+
+const HEALTH_TIMEOUT_MS = 5000;
+
+/**
+ * GET /health/ready. A 503 still carries a HealthStatus body ("unavailable"),
+ * so it is returned as data rather than thrown; other failures throw.
+ */
+async function getHealth() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${API_BASE_URL}/health/ready`, { signal: controller.signal });
+    if (!res.ok && res.status !== 503) throw new Error(`Health check failed: HTTP ${res.status}`);
+    const data = (await res.json()) as HealthStatus;
+    return { data, source: 'live' as const, receivedAt: new Date().toISOString() };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function notImplemented(method: string): () => Promise<never> {
   return () => Promise.reject(new NotImplementedError(method));
@@ -15,6 +34,7 @@ function notImplemented(method: string): () => Promise<never> {
 
 export const httpApi: ApiClient = {
   mode: 'http',
+  getHealth,
   staffLogin: notImplemented('staffLogin'),
   workerLogin: notImplemented('workerLogin'),
   changeWorkerPassword: notImplemented('changeWorkerPassword'),

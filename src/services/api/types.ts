@@ -75,6 +75,15 @@ export interface ApiResult<T> {
 
 export type ApiMode = 'mock' | 'http';
 
+/**
+ * Backend readiness, same shape as the FastAPI health endpoints
+ * (GET /health/live and GET /health/ready in disaster-response-backend).
+ */
+export interface HealthStatus {
+  status: 'ok' | 'unavailable';
+  checks: Record<string, 'up' | 'down'>;
+}
+
 export interface AssignInput {
   teamId: string;
   equipment: string[];
@@ -94,6 +103,10 @@ export type PublishUpdateInput = Parameters<
 
 export interface ApiClient {
   mode: ApiMode;
+
+  // Health (implemented by the backend)
+  /** GET /health/ready: whether the backend and its database answer right now. */
+  getHealth(): Promise<ApiResult<HealthStatus>>;
 
   // Accounts (PROPOSED; the backend issues codes, IDs, passwords and tokens)
   /** Email + password for ngo, coordinator and admin staff. */

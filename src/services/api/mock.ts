@@ -181,6 +181,9 @@ function rebaseReportTimes(resources: OperationalResource[]): OperationalResourc
 export const mockApi: ApiClient = {
   mode: 'mock',
 
+  getHealth: () =>
+    simulate(async () => ({ status: 'ok' as const, checks: { application: 'up' as const } })),
+
   staffLogin: (email, password) => simulate(() => accounts.staffLogin(email, password)),
   workerLogin: (input) => simulate(() => accounts.workerLogin(input)),
   changeWorkerPassword: (pw) => simulate(() => accounts.changeWorkerPassword(pw)),
