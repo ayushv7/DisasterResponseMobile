@@ -126,12 +126,9 @@ export default function MessagesScreen() {
     }
   };
 
-  const handleMessagePress = (msg: SentMessage) => {
-    // Navigate to the event detail for now — message detail screen is a future task
-    router.push({
-      pathname: '/event/[id]',
-      params: { id: msg.eventId },
-    });
+  // The public never opens raw alert detail; a message leads back to My area
+  const handleMessagePress = (_msg: SentMessage) => {
+    router.push('/my-area');
   };
 
   // ─── Empty state ────────────────────────────────────────────────────────
@@ -148,7 +145,7 @@ export default function MessagesScreen() {
         Messages you send to verified NGOs, with photos or location, will appear here.
       </Text>
       <Pressable
-        onPress={() => router.replace('/alerts')}
+        onPress={() => router.replace('/my-area')}
         style={({ pressed }) => [
           styles.emptyAction,
           {
@@ -157,9 +154,9 @@ export default function MessagesScreen() {
           },
         ]}
         accessibilityRole="button"
-        accessibilityLabel="Go to flood alerts feed">
+        accessibilityLabel="See alerts for my area">
         <Text style={[styles.emptyActionText, { color: colors.brandPrimary }]}>
-          Browse Flood Alerts
+          See alerts for my area
         </Text>
       </Pressable>
     </View>

@@ -125,6 +125,11 @@ export async function submitPrivateMessage(
     return null;
   }
 
+  // Area-only messages (no active alert) need a backend endpoint that does not exist yet
+  if (!draft.eventId) {
+    throw new Error('Messages about an area without an alert are not supported by the backend yet.');
+  }
+
   // Photo upload needs the evidence upload flow (presigned URL, see the contract).
   // Fail clearly rather than silently dropping attached photos.
   if (draft.photoUris?.length) {

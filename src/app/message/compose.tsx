@@ -1,7 +1,9 @@
 /**
  * PrivateMessageComposeScreen
  *
- * Route: /message/compose?eventId=fl-2026-081 (eventId optional: the sender picks an alert)
+ * Route: /message/compose?eventId=fl-2026-081. Without eventId the sender can
+ * only choose alerts in their own area (from My area); with no alert there the
+ * message is about the area itself. Other areas' incidents are never listed.
  *
  * Allows a public user to compose and submit a private message to a
  * verified NGO in the context of a specific flood event.
@@ -34,6 +36,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { EvidencePhotoPicker } from '@/components/EvidencePhotoPicker';
 import { FormField, PrivacyNoticeBanner } from '@/components/FormField';
+import { CachedAlerts, readCachedMyAlerts } from '@/hooks/use-my-area';
 import { LocationAttach } from '@/components/LocationAttach';
 import { NgoSelector } from '@/components/NgoSelector';
 import { IS_MOCK_API } from '@/services/api';
@@ -61,6 +64,21 @@ export default function PrivateMessageComposeScreen() {
   const [selectedEventId, setSelectedEventId] = useState<string | undefined>(eventId);
   const [eventError, setEventError] = useState<string | null>(null);
   const event = SAMPLE_FLOOD_EVENTS.find((e) => e.id === selectedEventId) ?? null;
+
+  // The visitor's own area (cached by My area). Only its alerts are offered.
+  const [myArea, setMyArea] = useState<CachedAlerts | null>(null);
+  useEffect(() => {
+    readCachedMyAlerts().then((cache) => {
+      setMyArea(cache);
+      const first = cache?.result.alerts.find((a) => a.eventId)?.eventId;
+      if (!eventId && first) setSelectedEventId(first);
+    });
+  }, [eventId]);
+  const areaEventIds = new Set((myArea?.result.alerts ?? []).map((a) => a.eventId).filter(Boolean));
+  const areaEvents = SAMPLE_FLOOD_EVENTS.filter((e) => areaEventIds.has(e.id));
+  const myAreaInfo = myArea?.result.area ?? null;
+  /** No alert chosen, but the user's area is known: the message is about the area. */
+  const areaOnly = !event && !eventId && !!myAreaInfo && areaEvents.length === 0;
 
   // ── NGO list state ────────────────────────────────────────────────────────
   const [ngos, setNgos] = useState<VerifiedNgo[]>([]);
@@ -122,8 +140,8 @@ export default function PrivateMessageComposeScreen() {
   const validate = (): boolean => {
     let valid = true;
 
-    if (!event) {
-      setEventError('Choose the flood alert this message is about.');
+    if (!event && !areaOnly) {
+      setEventError('Choose your area on My area first, so the right NGOs get your message.');
       valid = false;
     } else {
       setEventError(null);
@@ -157,7 +175,7 @@ export default function PrivateMessageComposeScreen() {
   const handleSubmit = async () => {
     if (isSubmittingRef.current) return; // Guard against double-tap
     if (!validate()) return;
-    if (!selectedNgo || !event) return;
+    if (!selectedNgo || (!event && !areaOnly)) return;
 
     isSubmittingRef.current = true;
     setUiState('submitting');
@@ -165,7 +183,8 @@ export default function PrivateMessageComposeScreen() {
 
     try {
       const result = await submitPrivateMessage({
-        eventId: event.id,
+        eventId: event?.id ?? '',
+        areaId: event ? undefined : myAreaInfo?.id,
         ngoId: selectedNgo.id,
         observationText: messageText.trim(),
         photoUris,
@@ -276,7 +295,7 @@ export default function PrivateMessageComposeScreen() {
           )}
 
           <Pressable
-            onPress={() => router.replace('/alerts')}
+            onPress={() => router.replace('/my-area')}
             style={[styles.primaryBtn, { backgroundColor: colors.brandPrimary }]}
             accessibilityRole="button"
             accessibilityLabel="Return to flood alerts feed"
@@ -351,15 +370,37 @@ export default function PrivateMessageComposeScreen() {
             </View>
           )}
 
-          {/* Opened from the Messages tab: pick the alert here */}
-          {!eventId && (
+          {/* Opened from the Messages tab: the area's alert, or the area itself */}
+          {!eventId && areaOnly && myAreaInfo && (
+            <View style={[styles.eventContext, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.eventContextLabel, { color: colors.textTertiary }]}>About your area</Text>
+              <Text style={[styles.eventContextTitle, { color: colors.textPrimary }]}>
+                {myAreaInfo.name}, {myAreaInfo.state}
+              </Text>
+              <Text style={[styles.eventContextLocation, { color: colors.textSecondary }]}>
+                No active alert here. In an emergency call 112.
+              </Text>
+            </View>
+          )}
+          {!eventId && !areaOnly && areaEvents.length === 0 && (
+            <View style={[styles.eventContext, { backgroundColor: colors.surface }]}>
+              <Text style={[styles.eventContextTitle, { color: colors.textPrimary }]}>Choose your area first</Text>
+              <Pressable onPress={() => router.replace('/my-area')} accessibilityRole="link" style={styles.areaLink}>
+                <Text style={[styles.eventContextLocation, { color: colors.brandPrimary }]}>Open My area</Text>
+              </Pressable>
+              {eventError && (
+                <Text style={[styles.eventContextLocation, { color: colors.statusActive }]}>{eventError}</Text>
+              )}
+            </View>
+          )}
+          {!eventId && areaEvents.length > 0 && (
             <FormField
               label="Flood alert"
               required
               errorText={eventError ?? undefined}
               hint={IS_MOCK_API ? 'SAMPLE DATA — NOT LIVE FLOOD INFORMATION' : undefined}>
               <View style={styles.eventPicker}>
-                {SAMPLE_FLOOD_EVENTS.map((e) => {
+                {areaEvents.map((e) => {
                   const active = e.id === selectedEventId;
                   return (
                     <Pressable
@@ -602,6 +643,10 @@ const receiptStyles = StyleSheet.create({
 // ─── Main styles ──────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  areaLink: {
+    minHeight: touchTargets.min,
+    justifyContent: 'center',
+  },
   eventPicker: {
     gap: spacing.xs,
   },

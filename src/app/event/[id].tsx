@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 
@@ -16,14 +16,14 @@ import { LocationBlock } from '@/components/LocationBlock';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { api } from '@/services/api';
 import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
-import { useSession } from '@/session/session-context';
+import { homeRouteFor, useSession } from '@/session/session-context';
 import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 import { FloodEvent, SourceObservation } from '@/types/disaster';
 
-export default function EventDetailScreen() {
+function EventDetail() {
   const goBack = useGoBack();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useTheme();
@@ -760,3 +760,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
+/**
+ * Raw alert detail (source observations, severity, counts) is for NGO staff
+ * (reached from the NGO evidence feed). Public users are sent to My area.
+ */
+export default function EventDetailScreenRoute() {
+  const { role } = useSession();
+  if (role === 'public') return <Redirect href={role === 'public' ? '/my-area' : homeRouteFor(role)} />;
+  return <EventDetail />;
+}

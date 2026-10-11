@@ -10,7 +10,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { AuthField, PrimaryButton } from '@/components/AuthForm';
 import { CitizenSignInPrompt } from '@/components/CitizenSignInPrompt';
-import { SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
+import { useApiQuery } from '@/hooks/use-api-query';
 import { useGoBack } from '@/navigation/use-go-back';
 import { api, IS_MOCK_API } from '@/services/api';
 import { useSession } from '@/session/session-context';
@@ -30,9 +30,11 @@ export default function NotificationAreasScreen() {
   const [savedNote, setSavedNote] = useState<string | null>(null);
 
   /** Suggestions from regions in the current alerts, plus anything already chosen. */
+  // Suggestions are area names from the service, not other areas' incidents
+  const areaList = useApiQuery(() => api.getAlertAreas(), []);
   const suggestions = useMemo(
-    () => [...new Set([...SAMPLE_FLOOD_EVENTS.map((e) => e.stateOrRegion), ...areas])],
-    [areas]
+    () => [...new Set([...(areaList.data ?? []).map((a) => a.name), ...areas])],
+    [areas, areaList.data]
   );
 
   const toggle = (area: string) =>
@@ -82,7 +84,7 @@ export default function NotificationAreasScreen() {
         ) : (
           <>
             <Text style={[styles.overline, { color: colors.textTertiary }]}>
-              AREAS{IS_MOCK_API ? ' · FROM SAMPLE ALERTS' : ''}
+              AREAS{IS_MOCK_API ? ' · SAMPLE AREAS' : ''}
             </Text>
             <View style={styles.chips}>
               {suggestions.map((area) => {

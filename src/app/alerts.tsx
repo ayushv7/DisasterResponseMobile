@@ -6,6 +6,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Redirect } from 'expo-router';
 
 import { AlertCard } from '@/components/AlertCard';
 import { AppHeader } from '@/components/AppHeader';
@@ -17,11 +18,12 @@ import { InfoBar } from '@/components/InfoBar';
 import { SearchBar } from '@/components/SearchBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { IS_SAMPLE_DATA, SAMPLE_FLOOD_EVENTS } from '@/fixtures/sample-events';
+import { homeRouteFor, useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { spacing } from '@/theme/spacing';
 import { FeedFilterStatus, FeedUiState, FloodEvent } from '@/types/disaster';
 
-export default function FloodIntelligenceFeedScreen() {
+function FloodIntelligenceFeed() {
   const { colors } = useTheme();
 
   // Search & Filter state
@@ -186,3 +188,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xs,
   },
 });
+
+/** Hidden, not deleted: set to true to show this screen again. */
+const SHOW_ALL_AREAS_FEED = false;
+
+/**
+ * Hidden: the all-areas feed is no longer shown. The public sees only My area;
+ * no other role used this route, so everyone is sent to their home.
+ */
+export default function FloodIntelligenceFeedScreenRoute() {
+  const { role } = useSession();
+  if (!SHOW_ALL_AREAS_FEED) return <Redirect href={role === 'public' ? '/my-area' : homeRouteFor(role)} />;
+  return <FloodIntelligenceFeed />;
+}

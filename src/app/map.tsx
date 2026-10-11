@@ -11,14 +11,15 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 
 import { BottomNavBar } from '@/components/BottomNavBar';
+import { homeRouteFor, useSession } from '@/session/session-context';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
 
-export default function MapScreen() {
+function MapView_() {
   const { colors } = useTheme();
 
   return (
@@ -55,7 +56,7 @@ export default function MapScreen() {
         </View>
 
         <Pressable
-          onPress={() => router.replace('/alerts')}
+          onPress={() => router.replace('/my-area')}
           style={({ pressed }) => [
             styles.actionBtn,
             {
@@ -145,3 +146,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+/** Hidden, not deleted: set to true to show this screen again. */
+const SHOW_MAP = false;
+
+/**
+ * Hidden: the map is not used. Public users go to My area, others to their home.
+ */
+export default function MapScreenRoute() {
+  const { role } = useSession();
+  if (!SHOW_MAP) return <Redirect href={role === 'public' ? '/my-area' : homeRouteFor(role)} />;
+  return <MapView_ />;
+}

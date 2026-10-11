@@ -30,6 +30,8 @@ export interface VerifiedNgo {
 export interface MessageDraft {
   eventId: string;
   ngoId: string;
+  /** Set instead of a real eventId when the user's area has no active alert (PROPOSED). */
+  areaId?: string;
   observationText: string; // The user's private observation/need, max MESSAGE_CHAR_LIMIT chars
   /** Local photo URIs the sender chose to attach (uploaded separately once the backend supports it). */
   photoUris?: string[];
