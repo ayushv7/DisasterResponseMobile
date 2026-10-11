@@ -13,7 +13,9 @@ import { ApiClient } from './types';
  * - health: GET /health/ready (implemented by the backend)
  * - incidents: GET /api/v1/flood-events and /{id} (implemented)
  * - observations: GET /api/v1/flood-events/{id}/observations (implemented)
- * - resources, plans, tasks, auth: core operations (mock until endpoints exist)
+ * - session: staff and field worker sign-in, POST /api/v1/auth/login and /auth/worker-login (implemented)
+ * - resources, plans, tasks: core operations (mock until endpoints exist)
+ * - auth: contributor sign-in, citizen OTP and NGO team management (mock)
  * - publicAlerts: area alerts for the public (stays mock + Simulated)
  * - community: messaging, NGO workspace, public accounts, offers, volunteers
  */
@@ -24,6 +26,7 @@ export type ApiSlice =
   | 'resources'
   | 'plans'
   | 'tasks'
+  | 'session'
   | 'auth'
   | 'publicAlerts'
   | 'community';
@@ -38,6 +41,7 @@ export const LIVE_SLICE_SOURCES: Record<ApiSlice, SliceSource> = {
   resources: 'mock',
   plans: 'mock',
   tasks: 'mock',
+  session: 'http',
   auth: 'mock',
   publicAlerts: 'mock',
   community: 'mock',
@@ -91,8 +95,8 @@ const METHOD_SLICES: Record<ApiMethod, ApiSlice> = {
   submitCompletion: 'tasks',
   verify: 'tasks',
 
-  staffLogin: 'auth',
-  workerLogin: 'auth',
+  staffLogin: 'session',
+  workerLogin: 'session',
   changeWorkerPassword: 'auth',
   contributorLogin: 'auth',
   requestOtp: 'auth',
@@ -180,10 +184,12 @@ subscribeDataSource(recompute);
 
 export {
   checkHealth,
+  clearAuthToken,
   getBaseUrl,
   getDataSource,
   hydrateDataSource,
   isBackendFailing,
+  liveProblem,
   normalizeUrl,
   refreshHealth,
   setDataMode,

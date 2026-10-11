@@ -25,7 +25,7 @@ import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { SimulatedSignInNotice } from '@/components/AuthForm';
-import { api, IS_MOCK_API } from '@/services/api';
+import { api, getBaseUrl, IS_MOCK_API, IS_MOCK_SLICE } from '@/services/api';
 import { useSession } from '@/session/session-context';
 import { useGoBack } from '@/navigation/use-go-back';
 import { useTheme } from '@/theme';
@@ -104,6 +104,7 @@ export default function LoginScreen() {
           </View>
 
           <SimulatedSignInNotice
+            slice="session"
             hint="Use ngo@sample.org, coordinator@sample.org or admin@sample.org with any password."
           />
 
@@ -172,12 +173,12 @@ export default function LoginScreen() {
             </Pressable>
 
             {/* Real Auth Contract Notice */}
-            {!IS_MOCK_API && (
+            {!IS_MOCK_SLICE.session && (
               <View style={styles.contractNotice}>
                 <Feather name="info" size={13} color={colors.textTertiary} />
                 <Text style={[styles.contractText, { color: colors.textTertiary }]}>
-                  FastAPI OAuth 2.0 / JWT backend authentication is in development.
-                  Live verification requires server integration.
+                  Signs in to the live backend at {getBaseUrl() || '(no backend URL set)'}. Use an account
+                  issued by the backend.
                 </Text>
               </View>
             )}

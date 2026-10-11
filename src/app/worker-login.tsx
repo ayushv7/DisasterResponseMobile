@@ -106,6 +106,7 @@ export default function WorkerLoginScreen() {
         style={styles.flex}>
         <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
           <SimulatedSignInNotice
+            slice="session"
             hint={`NGO code ${SAMPLE_NGO_CODE}, worker ID SAMPLE-W-0001, any password.`}
           />
 

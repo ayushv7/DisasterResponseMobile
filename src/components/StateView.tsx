@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 
 import { BackendUnavailable } from '@/components/BackendUnavailable';
 import { EmptyState } from '@/components/EmptyState';
-import { isBackendFailing, useDataSource } from '@/services/api';
+import { liveProblem, useDataSource } from '@/services/api';
 import { ErrorState } from '@/components/ErrorState';
 import { SkeletonCard } from '@/components/SkeletonCard';
 import { QueryState } from '@/hooks/use-api-query';
@@ -67,7 +67,7 @@ export function StateView({
     );
   }
   if (state === 'error') {
-    if (backend && isBackendFailing(source)) return <BackendUnavailable onRetry={onRetry} />;
+    if (backend && liveProblem(source)) return <BackendUnavailable onRetry={onRetry} />;
     return <ErrorState message={error ?? undefined} onRetry={onRetry} />;
   }
   if (state === 'empty') return <EmptyState title={emptyTitle} description={emptyDescription} />;

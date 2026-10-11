@@ -36,7 +36,7 @@ describe('api slices', () => {
   it('defaults to Live: real slices use http even without a URL, and fail clearly', async () => {
     const m = load();
     expect(m.getDataSource().mode).toBe('live');
-    expect(m.REAL_SLICES).toEqual(['health', 'incidents', 'observations']);
+    expect(m.REAL_SLICES).toEqual(['health', 'incidents', 'observations', 'session']);
     expect(m.adapterFor('getIncidents')).toBe(m.httpApi);
     expect(m.adapterFor('getMyAlerts')).toBe(m.mockApi);
     // Never silently served from sample data
@@ -45,9 +45,16 @@ describe('api slices', () => {
 
   it('makes health, incidents and observations real when a backend URL is set', () => {
     const m = load('http://localhost:8000');
-    expect(m.REAL_SLICES).toEqual(['health', 'incidents', 'observations']);
+    expect(m.REAL_SLICES).toEqual(['health', 'incidents', 'observations', 'session']);
     expect(m.IS_MOCK_API).toBe(true);
-    for (const method of ['getHealth', 'getIncidents', 'getIncident', 'getIncidentObservations'] as const) {
+    for (const method of [
+      'getHealth',
+      'getIncidents',
+      'getIncident',
+      'getIncidentObservations',
+      'staffLogin',
+      'workerLogin',
+    ] as const) {
       expect(m.adapterFor(method)).toBe(m.httpApi);
     }
     // Everything else, including public alerts and the ops summary, stays mock
@@ -58,7 +65,9 @@ describe('api slices', () => {
       'getResources',
       'getResourcePlan',
       'getWorkOrders',
-      'staffLogin',
+      'contributorLogin',
+      'requestOtp',
+      'getFieldTeam',
     ] as const) {
       expect(m.adapterFor(method)).toBe(m.mockApi);
     }
@@ -71,7 +80,7 @@ describe('api slices', () => {
     expect(m.adapterFor('getIncidents')).toBe(m.mockApi);
     expect(m.adapterFor('getHealth')).toBe(m.mockApi);
     m.setDataMode('live');
-    expect(m.REAL_SLICES).toEqual(['health', 'incidents', 'observations']);
+    expect(m.REAL_SLICES).toEqual(['health', 'incidents', 'observations', 'session']);
     expect(m.adapterFor('getIncidents')).toBe(m.httpApi);
   });
 

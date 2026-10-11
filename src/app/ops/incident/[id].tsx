@@ -33,7 +33,7 @@ import { useSession } from '@/session/session-context';
 import { NgoMember } from '@/types/accounts';
 import { TaskHistory } from '@/components/TaskHistory';
 import { FreshnessDot, freshnessOf } from '@/components/FreshnessDot';
-import { api, IS_MOCK_SLICE, isBackendFailing, useDataSource } from '@/services/api';
+import { api, IS_MOCK_SLICE, liveProblem, useDataSource } from '@/services/api';
 import { BackendUnavailable } from '@/components/BackendUnavailable';
 import { SampleDataBadge } from '@/components/SampleDataBadge';
 import { StateView } from '@/components/StateView';
@@ -251,7 +251,7 @@ export default function IncidentWorkspaceScreen() {
             Incident Workspace
           </Text>
         </View>
-        {isBackendFailing(dataSource) && !IS_MOCK_SLICE.incidents ? (
+        {liveProblem(dataSource) && !IS_MOCK_SLICE.incidents ? (
           <BackendUnavailable onRetry={loadAll} />
         ) : (
           <ErrorState message={errorMsg || 'Incident record unavailable.'} onRetry={loadAll} />

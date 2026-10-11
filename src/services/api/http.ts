@@ -8,13 +8,18 @@
  */
 import { IncidentRecord } from '@/types/operations';
 
-import { getBaseUrl, refreshHealth } from './data-source';
+import { WorkerLoginInput } from '@/types/accounts';
+
+import { clearAuthToken, getAuthToken, getBaseUrl, refreshHealth, setAuthToken } from './data-source';
 
 import {
   FloodEventDto,
   FloodObservationDto,
   mapFloodEvent,
   mapObservation,
+  mapStaffRole,
+  mapWorker,
+  TokenResponseDto,
   toApiError,
   wrapList,
 } from './http-mapping';
@@ -46,16 +51,25 @@ async function getHealth() {
 const REQUEST_TIMEOUT_MS = 10000;
 
 /** GET JSON; network failures and non-2xx `{detail}` bodies become ApiError. */
-async function getJson<T>(path: string): Promise<{ body: T; dateHeader: string | null }> {
+async function request<T>(
+  path: string,
+  init: { method?: 'GET' | 'POST'; body?: unknown; auth?: boolean } = {}
+): Promise<{ body: T; dateHeader: string | null }> {
   if (!getBaseUrl()) {
     throw new ApiError('NO_BACKEND_URL', 'No backend URL set. Add one in Settings > Data source.');
   }
+  const headers: Record<string, string> = { Accept: 'application/json' };
+  if (init.body !== undefined) headers['Content-Type'] = 'application/json';
+  const token = init.auth === false ? null : getAuthToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   let res: Response;
   try {
     res = await fetch(`${getBaseUrl()}${path}`, {
-      headers: { Accept: 'application/json' },
+      method: init.method ?? 'GET',
+      headers,
+      body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
       signal: controller.signal,
     });
   } catch {
@@ -65,8 +79,43 @@ async function getJson<T>(path: string): Promise<{ body: T; dateHeader: string |
     clearTimeout(timer);
   }
   const body: unknown = await res.json().catch(() => null);
-  if (!res.ok) throw toApiError(res.status, body);
+  if (!res.ok) {
+    const error = toApiError(res.status, body);
+    // A protected call was refused: the token is missing or expired
+    if (res.status === 401 && init.auth !== false) {
+      clearAuthToken('expired');
+      throw new ApiError(error.code, 'Sign in required: sign in with your backend account.');
+    }
+    throw error;
+  }
   return { body: body as T, dateHeader: res.headers.get('date') };
+}
+
+const getJson = <T>(path: string) => request<T>(path);
+
+/** POST /api/v1/auth/login. Authority and NGO staff only. */
+async function staffLogin(email: string, password: string) {
+  const { body } = await request<TokenResponseDto>('/api/v1/auth/login', {
+    method: 'POST',
+    body: { email: email.trim(), password },
+    auth: false,
+  });
+  const role = mapStaffRole(body.user.role);
+  if (!role) throw new ApiError('USE_WORKER_LOGIN', 'This is a field worker account. Use Field worker sign-in.');
+  setAuthToken(body.access_token, body.expires_in);
+  return live({ role, user: { name: body.user.display_name, ngoName: body.user.ngo_id ?? undefined } });
+}
+
+/** POST /api/v1/auth/worker-login. */
+async function workerLogin(input: WorkerLoginInput) {
+  const ngoCode = input.ngoCode.trim();
+  const { body } = await request<TokenResponseDto>('/api/v1/auth/worker-login', {
+    method: 'POST',
+    body: { ngo_code: ngoCode, worker_id: input.workerId.trim(), password: input.password },
+    auth: false,
+  });
+  setAuthToken(body.access_token, body.expires_in);
+  return live({ member: mapWorker(body.user, ngoCode) });
 }
 
 const live = <T>(data: T, page?: ApiResult<T>['page']): ApiResult<T> => ({
@@ -111,8 +160,8 @@ function notImplemented(method: string): () => Promise<never> {
 export const httpApi: ApiClient = {
   mode: 'http',
   getHealth,
-  staffLogin: notImplemented('staffLogin'),
-  workerLogin: notImplemented('workerLogin'),
+  staffLogin,
+  workerLogin,
   changeWorkerPassword: notImplemented('changeWorkerPassword'),
   getFieldTeam: notImplemented('getFieldTeam'),
   createWorker: notImplemented('createWorker'),

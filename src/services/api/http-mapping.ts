@@ -3,6 +3,7 @@
  * screens never see wire shapes. Fields the backend does not send stay
  * undefined; nothing is filled in from sample data.
  */
+import { NgoMember, StaffRole } from '@/types/accounts';
 import { IncidentObservation, ObservationFreshness } from '@/types/observations';
 import { IncidentRecord, IncidentStatus, SeverityLevel } from '@/types/operations';
 
@@ -115,9 +116,10 @@ export function mapObservation(dto: FloodObservationDto): IncidentObservation {
   };
 }
 
-/** FastAPI errors are `{detail}`: a string, or a list of validation errors. */
+/** Backend errors are `{detail, code}`; detail is a string or a list of validation errors. */
 export function toApiError(status: number, body: unknown): ApiError {
   const detail = (body as { detail?: unknown } | null)?.detail;
+  const backendCode = (body as { code?: unknown } | null)?.code;
   const message =
     typeof detail === 'string'
       ? detail
@@ -127,6 +129,54 @@ export function toApiError(status: number, body: unknown): ApiError {
             .filter(Boolean)
             .join('; ') || `Request failed (HTTP ${status}).`
         : `Request failed (HTTP ${status}).`;
-  const code = status === 404 ? 'NOT_FOUND' : status === 422 ? 'VALIDATION_ERROR' : `HTTP_${status}`;
-  return new ApiError(code, message);
+  const code =
+    typeof backendCode === 'string'
+      ? backendCode
+      : status === 401
+        ? 'UNAUTHENTICATED'
+        : status === 403
+          ? 'FORBIDDEN'
+          : status === 404
+            ? 'NOT_FOUND'
+            : status === 422
+              ? 'VALIDATION_ERROR'
+              : `HTTP_${status}`;
+  return new ApiError(code, status === 403 ? `Not allowed: ${message}` : message);
+}
+
+/** POST /api/v1/auth/login and /auth/worker-login (TokenResponse). */
+export interface TokenResponseDto {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  user: {
+    user_id: string;
+    role: 'AUTHORITY' | 'NGO_ADMIN' | 'WORKER';
+    display_name: string;
+    ngo_id?: string | null;
+    worker_id?: string | null;
+  };
+}
+
+/** Backend role → app role. AUTHORITY uses the authority area ('admin'). */
+export function mapStaffRole(role: TokenResponseDto['user']['role']): StaffRole | null {
+  return role === 'AUTHORITY' ? 'admin' : role === 'NGO_ADMIN' ? 'ngo' : null;
+}
+
+/**
+ * Backend worker → NgoMember. The backend sends no phone, skills, NGO name or
+ * password-change flag, so those stay empty/false rather than invented.
+ */
+export function mapWorker(user: TokenResponseDto['user'], ngoCode: string): NgoMember {
+  return {
+    id: user.user_id,
+    workerId: user.worker_id ?? '',
+    ngoId: user.ngo_id ?? '',
+    ngoName: user.ngo_id ?? ngoCode,
+    name: user.display_name,
+    phone: '',
+    skills: [],
+    status: 'ACTIVE',
+    mustChangePassword: false,
+  };
 }

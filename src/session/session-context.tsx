@@ -11,6 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Href, router, useNavigationContainerRef } from 'expo-router';
 
 import { selectSampleWorker, signOutAccounts, signOutCitizen } from '@/services/accounts-api';
+import { clearAuthToken } from '@/services/api/data-source';
 import { selectSampleContributor, signOutContributor } from '@/services/contributors-api';
 import { loginDemoSession, logoutNgo } from '@/services/ngo-api';
 import { Citizen, SessionUser } from '@/types/accounts';
@@ -144,6 +145,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await logoutNgo();
+    clearAuthToken(); // drop the backend token too
     signOutAccounts();
     signOutContributor();
     setSession(null);

@@ -55,7 +55,16 @@ EXPO_PUBLIC_API_BASE_URL=http://192.168.1.20:8000
   must be open in the firewall.
 - `EXPO_PUBLIC_*` values are baked in when the bundle is built: after changing `.env.local`, restart
   Expo with a clean cache: `npx expo start -c`. A release APK needs a rebuild.
-- Check: the banner should read "Live: health, incidents, observations · rest simulated".
+- Check: the banner should read "Live: health, incidents, observations, sign-in · rest simulated".
+
+**Signing in (Live).** The backend requires a bearer token for everything except `/health/*`.
+Staff sign in on the normal Sign in screen with a backend account (`POST /api/v1/auth/login`):
+`authority@sample.local` opens the authority area, `ngo1@sample.local` / `ngo2@sample.local`
+the NGO area. Field workers use Field worker sign-in (`POST /api/v1/auth/worker-login`, e.g.
+NGO code `RIVERAID`, worker `W-001`). The backend's seed script prints new passwords on each run.
+The token is kept in memory only: sign in again after restarting the app. Without a backend
+sign-in, live screens show **Sign in required**; the dev role switcher does not sign in to the
+backend.
 
 ## Sample sign-ins (sample mode only)
 

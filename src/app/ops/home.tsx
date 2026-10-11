@@ -29,7 +29,7 @@ import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { StateView } from '@/components/StateView';
 import { useApiQuery } from '@/hooks/use-api-query';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
-import { api } from '@/services/api';
+import { api, liveProblem, useDataSource } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { textScale, typography } from '@/theme/typography';
@@ -51,20 +51,26 @@ export default function OperationsHomeScreen() {
 
   const query = useApiQuery(
     async () => {
+      // Incidents may come from the live backend; a failure there must not
+      // blank the rest of the screen, so it is caught and shown inline.
       const [summary, queue, orders, incidents] = await Promise.all([
         api.getOpsSummary(),
         api.getActionQueue(),
         api.getWorkOrders(),
-        api.getIncidents(),
+        api.getIncidents().then(
+          (r) => ({ items: r.data, error: null as string | null }),
+          (e: unknown) => ({ items: [], error: e instanceof Error ? e.message : 'Could not load incidents.' })
+        ),
       ]);
       return {
         data: {
           stats: summary.data,
           queue: queue.data,
           orders: orders.data,
-          criticalIncidents: incidents.data.filter(
+          criticalIncidents: incidents.items.filter(
             (i) => i.severity === 'CRITICAL' && i.status !== 'RESOLVED'
           ),
+          incidentsError: incidents.error,
         },
         source: summary.source,
         receivedAt: summary.receivedAt,
@@ -88,6 +94,8 @@ export default function OperationsHomeScreen() {
   const interventions = query.data?.orders ?? [];
   const actionQueue = query.data?.queue ?? [];
   const criticalIncidents = query.data?.criticalIncidents ?? [];
+  const incidentsError = query.data?.incidentsError ?? null;
+  const problem = liveProblem(useDataSource());
   const refreshing = query.refreshing;
   const onRefresh = query.refresh;
 
@@ -188,6 +196,29 @@ export default function OperationsHomeScreen() {
                     onAction={() => openQueueItem(item)}
                   />
                 ))
+              )}
+
+              {/* Live incidents could not load: compact notice, rest of the screen still works */}
+              {incidentsError && (
+                <Pressable
+                  onPress={() => (problem === 'sign-in' ? router.push('/login') : onRefresh())}
+                  style={[styles.linkRow, { backgroundColor: colors.surface }]}
+                  android_ripple={{ color: colors.surfaceMuted }}
+                  accessibilityRole="button">
+                  <Feather
+                    name={problem === 'sign-in' ? 'lock' : 'wifi-off'}
+                    size={16}
+                    color={colors.textSecondary}
+                  />
+                  <Text style={[styles.linkRowText, { color: colors.textPrimary }]} numberOfLines={2}>
+                    {problem === 'sign-in'
+                      ? 'Sign in with your backend account to see live incidents.'
+                      : `Live incidents unavailable: ${incidentsError}`}
+                  </Text>
+                  <Text style={[styles.linkRowText, { color: colors.brandPrimary }]}>
+                    {problem === 'sign-in' ? 'Sign in' : 'Retry'}
+                  </Text>
+                </Pressable>
               )}
 
               {/* 3. Critical incidents (one line) */}

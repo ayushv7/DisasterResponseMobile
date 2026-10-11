@@ -20,6 +20,11 @@ export interface DataSourceState {
   savedUrl: string;
   /** Result of the last /health/ready check (live mode). */
   health: HealthState;
+  /**
+   * Backend sign-in: 'active' while a token is held, 'expired' after the
+   * backend answered 401. The token itself is never stored in this state.
+   */
+  auth: 'none' | 'active' | 'expired';
 }
 
 const STORAGE_KEY = 'data-source-v1';
@@ -31,7 +36,11 @@ let state: DataSourceState = {
   mode: 'live',
   savedUrl: '',
   health: 'unknown',
+  auth: 'none',
 };
+
+// Backend bearer token: memory only (cleared on sign-out and app restart).
+let authToken: { token: string; expiresAt: number } | null = null;
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<DataSourceState>) {
@@ -58,6 +67,38 @@ export function useDataSource(): DataSourceState {
 /** The backend URL in use: saved override, else the env value. No trailing slash. */
 export function getBaseUrl(): string {
   return (state.savedUrl || ENV_URL).replace(/\/+$/, '');
+}
+
+export function setAuthToken(token: string, expiresInSeconds: number) {
+  authToken = { token, expiresAt: Date.now() + expiresInSeconds * 1000 };
+  set({ auth: 'active' });
+}
+
+export function clearAuthToken(reason: 'signed-out' | 'expired' = 'signed-out') {
+  authToken = null;
+  set({ auth: reason === 'expired' ? 'expired' : 'none' });
+}
+
+/** Current token, or null when missing or past its expiry. */
+export function getAuthToken(): string | null {
+  if (!authToken) return null;
+  if (Date.now() >= authToken.expiresAt) {
+    clearAuthToken('expired');
+    return null;
+  }
+  return authToken.token;
+}
+
+/**
+ * What a live screen should show instead of a plain error: the backend is
+ * down/unset ('backend'), or the user must sign in with a backend account
+ * ('sign-in'). Null when neither applies.
+ */
+export function liveProblem(s: DataSourceState = state): 'backend' | 'sign-in' | null {
+  if (s.mode !== 'live') return null;
+  if (isBackendFailing(s)) return 'backend';
+  if (s.auth !== 'active') return 'sign-in';
+  return null;
 }
 
 /** Live mode (the default). Without a URL, real slices fail with "No backend URL set". */

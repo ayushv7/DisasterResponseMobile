@@ -30,7 +30,7 @@ import { InfoBar } from '@/components/InfoBar';
 import { NgoScopeNote } from '@/components/NgoScopeNote';
 import { OpsBottomNavBar } from '@/components/OpsBottomNavBar';
 import { SkeletonCard } from '@/components/SkeletonCard';
-import { api, IS_MOCK_SLICE, isBackendFailing, useDataSource } from '@/services/api';
+import { api, IS_MOCK_SLICE, liveProblem, useDataSource } from '@/services/api';
 import { useConfirmExitAtRoot } from '@/hooks/use-confirm-exit-at-root';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
@@ -42,7 +42,7 @@ type IncidentFilter = 'ALL' | 'CRITICAL' | 'ACTIVE' | 'WATCH';
 export default function IncidentsCatalogueScreen() {
   const { colors } = useTheme();
   // Live backend down: offer Retry / sample data instead of a generic error
-  const backendFailing = isBackendFailing(useDataSource()) && !IS_MOCK_SLICE.incidents;
+  const backendFailing = liveProblem(useDataSource()) !== null && !IS_MOCK_SLICE.incidents;
   useConfirmExitAtRoot();
 
   const [incidents, setIncidents] = useState<IncidentRecord[]>([]);

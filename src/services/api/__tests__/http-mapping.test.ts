@@ -1,7 +1,16 @@
 /** Wire → app mapping for the backend's flood events and observations. */
 import { describe, expect, it } from '@jest/globals';
 
-import { mapFloodEvent, mapObservation, toApiError, wrapList, FloodEventDto, FloodObservationDto } from '../http-mapping';
+import {
+  FloodEventDto,
+  FloodObservationDto,
+  mapFloodEvent,
+  mapObservation,
+  mapStaffRole,
+  mapWorker,
+  toApiError,
+  wrapList,
+} from '../http-mapping';
 
 const event: FloodEventDto = {
   event_id: 'b3f1c2d4-0000-4000-8000-000000000001',
@@ -108,5 +117,31 @@ describe('wrapList and errors', () => {
     const invalid = toApiError(422, { detail: [{ msg: 'limit must be ≤ 100' }] });
     expect([invalid.code, invalid.message]).toEqual(['VALIDATION_ERROR', 'limit must be ≤ 100']);
     expect(toApiError(500, null).message).toBe('Request failed (HTTP 500).');
+  });
+});
+
+describe('auth mapping', () => {
+  it('uses the backend error code and marks 403 as not allowed', () => {
+    const unauth = toApiError(401, { detail: 'A bearer token is required.', code: 'UNAUTHENTICATED' });
+    expect([unauth.code, unauth.message]).toEqual(['UNAUTHENTICATED', 'A bearer token is required.']);
+    const scope = toApiError(403, { detail: 'Not your organisation.', code: 'NGO_SCOPE' });
+    expect([scope.code, scope.message]).toEqual(['NGO_SCOPE', 'Not allowed: Not your organisation.']);
+  });
+
+  it('maps backend roles to app roles', () => {
+    expect(mapStaffRole('AUTHORITY')).toBe('admin');
+    expect(mapStaffRole('NGO_ADMIN')).toBe('ngo');
+    expect(mapStaffRole('WORKER')).toBeNull();
+  });
+
+  it('maps a signed-in worker without inventing fields', () => {
+    const m = mapWorker(
+      { user_id: 'u-1', role: 'WORKER', display_name: 'Asha', ngo_id: 'sample-org-001', worker_id: 'W-001' },
+      'RIVERAID'
+    );
+    expect(m).toMatchObject({ id: 'u-1', workerId: 'W-001', ngoId: 'sample-org-001', name: 'Asha', mustChangePassword: false });
+    expect(m.phone).toBe('');
+    expect(m.skills).toEqual([]);
+    expect(m.createdAt).toBeUndefined();
   });
 });

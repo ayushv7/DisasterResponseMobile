@@ -23,7 +23,8 @@ export interface NgoMember {
   kind?: 'STAFF_WORKER' | 'VOLUNTEER';
   /** Team the worker is dispatched with (decides which tasks they see). */
   teamId?: string;
-  createdAt: string;
+  /** Not sent by the backend for signed-in workers. */
+  createdAt?: string;
 }
 
 /** Returned once by createWorker / resetWorkerPassword. Never stored by the app. */

@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 
-import { IS_MOCK_SLICE } from '@/services/api';
+import { IS_MOCK_SLICE, useDataSource } from '@/services/api';
 import { useTheme } from '@/theme';
 import { radii, spacing, touchTargets } from '@/theme/spacing';
 import { typography } from '@/theme/typography';
@@ -62,11 +62,14 @@ export function PrimaryButton({
   );
 }
 
-/** Mock mode only: makes clear nothing was authenticated by a server. */
-export function SimulatedSignInNotice({ hint }: { hint?: string }) {
+/**
+ * Shown while this sign-in is simulated, i.e. its slice is mock. Staff and
+ * field worker sign-in use the 'session' slice (real in Live mode).
+ */
+export function SimulatedSignInNotice({ hint, slice = 'auth' }: { hint?: string; slice?: 'auth' | 'session' }) {
   const { colors } = useTheme();
-  // Sign-ins are simulated while the auth slice is mock
-  if (!IS_MOCK_SLICE.auth) return null;
+  useDataSource(); // update when the data source switches
+  if (!IS_MOCK_SLICE[slice]) return null;
   return (
     <View style={[styles.notice, { backgroundColor: colors.infoBg }]}>
       <Feather name="info" size={14} color={colors.info} />

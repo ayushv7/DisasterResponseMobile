@@ -1,14 +1,15 @@
 /**
- * Section state for screens that show live backend data when the backend
- * can't be used: Retry, "Use sample data instead" (turns the switch on; the
- * app never switches by itself), and a link to set the URL when none exists.
+ * Section state for screens that show live backend data when it can't be
+ * loaded: backend down/unset (Retry or Set backend URL) or no backend sign-in
+ * (Sign in). Always offers "Use sample data instead"; the app never switches
+ * by itself.
  */
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
-import { getBaseUrl, refreshHealth, setDataMode, useDataSource } from '@/services/api';
+import { getBaseUrl, liveProblem, refreshHealth, setDataMode, useDataSource } from '@/services/api';
 import { radii, spacing, textScale, touchTargets, typography, useTheme } from '@/theme';
 
 const TITLES = {
@@ -20,9 +21,36 @@ const TITLES = {
 
 export function BackendUnavailable({ onRetry }: { onRetry: () => void }) {
   const { colors } = useTheme();
-  const { health } = useDataSource();
+  const source = useDataSource();
+  const { health } = source;
   const key = health in TITLES ? (health as keyof typeof TITLES) : 'unreachable';
   const noUrl = key === 'no-url';
+
+  if (liveProblem(source) === 'sign-in') {
+    return (
+      <View style={[styles.card, { backgroundColor: colors.surface }]} accessibilityLiveRegion="polite">
+        <Feather name="lock" size={28} color={colors.textSecondary} />
+        <Text style={[styles.title, { color: colors.textPrimary }]}>Sign in required</Text>
+        <Text style={[styles.body, { color: colors.textSecondary }]}>
+          {source.auth === 'expired'
+            ? 'Your backend session ended. Sign in again with your backend account.'
+            : 'Live data needs a backend account (NGO or authority). Sign in, or use sample data.'}
+        </Text>
+        <Pressable
+          onPress={() => router.push('/login')}
+          style={[styles.button, { backgroundColor: colors.actionPrimary }]}
+          accessibilityRole="button">
+          <Text style={[styles.buttonText, { color: colors.onActionPrimary }]}>Sign in</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setDataMode('sample')}
+          style={[styles.button, { backgroundColor: colors.surfaceMuted }]}
+          accessibilityRole="button">
+          <Text style={[styles.buttonText, { color: colors.textPrimary }]}>Use sample data instead</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.card, { backgroundColor: colors.surface }]} accessibilityLiveRegion="polite">

@@ -16,7 +16,8 @@ const SLICE_NAMES: Record<ApiSlice, string> = {
   resources: 'resources',
   plans: 'plans',
   tasks: 'tasks',
-  auth: 'sign-in',
+  session: 'sign-in',
+  auth: 'accounts',
   publicAlerts: 'public alerts',
   community: 'messages & NGO workspace',
 };
