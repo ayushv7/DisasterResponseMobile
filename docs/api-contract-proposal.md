@@ -634,6 +634,51 @@ implement them.
    public verified list, and gets a plan for each incident in its area. Reject/suspend: `SUSPENDED`,
    removed from the public list, its plans flagged.
 
+## Public area alerts (PROPOSED)
+
+All items in this section are **PROPOSED** and not implemented. The public home shows only the
+alert for the visitor's own area, with safety instructions. Public users never receive other
+areas' incidents, raw source observations, conflicting reports or counts.
+
+```ts
+type AlertLevel = 'ADVISORY' | 'WARNING' | 'EVACUATE';
+
+interface AlertArea { id: string; name: string; district: string; state: string }
+
+interface MyAlert {
+  id: string;
+  areaId: string;
+  areaName: string;
+  level: AlertLevel;
+  headline: string;            // one line
+  issuedAt: string; updatedAt: string; expiresAt?: string;
+  whatToDo: string[];          // ordered steps for right now
+  doNot: string[];
+  shelter?: { name: string; address: string; routeNote?: string };
+  helplines: { label: string; number: string }[];
+  issuedBy: { authority: string; ngoName?: string };
+  eventId?: string;            // links NGO updates and messages for the area
+}
+
+interface MyAlertsResult { area: AlertArea | null; alerts: MyAlert[] }
+```
+
+| Operation | Method / path | Who | Notes |
+|---|---|---|---|
+| `getMyAlerts` | GET `/public/my-alerts?lat=&lng=` or `?areaId=` | public (no sign-in) | Resolves one area and returns only its alerts. `area: null` when the position is outside covered areas |
+| `getAlertAreas` | GET `/public/areas` | public | Areas for the manual picker (location denied or not wanted) |
+
+- **Coarse location only.** The app rounds the position to 2 decimals (about 1 km) on the
+  device and sends it once per lookup. The backend must not store it or build a location trail;
+  only the resolved `areaId` is kept, on the device.
+- **Publication rule (mock assumption):** an area alert is shown only once an NGO serving that
+  area is allotted; approving or suspending an NGO changes this. The real rule is the backend's.
+- **Offline:** the app caches the last result and shows it with "Offline, last updated".
+- **Messages:** `MessageDraft.areaId` (PROPOSED) is used instead of `eventId` when the user's
+  area has no active alert, so messaging an NGO never depends on an alert existing.
+- **Push:** alerts are pull-only and labelled "Simulated" until expo-notifications and backend
+  push exist.
+
 ## Open questions for the backend
 
 1. Auth mechanism and token lifetime; how roles are assigned.
@@ -652,3 +697,6 @@ implement them.
 13. Contributor credential delivery (via NGO, SMS or email) and sign-in code expiry.
 14. Evidence upload: presigned URL flow, limits and retention.
 15. Resource freshness policy per type and what happens on a missed check-in.
+16. Area alerts: who writes and approves alert text and level (authority, NGO, or both), and how
+    corrections and expiry are handled.
+17. Area model: district-level areas or finer (blocks/wards), and how coarse positions map to them.

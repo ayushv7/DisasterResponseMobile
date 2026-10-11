@@ -30,7 +30,7 @@ npm test              # unit tests (jest-expo): sample store and simulated casca
 
 | Role | Where | Credentials |
 |---|---|---|
-| Visitor | Start screen → Browse alerts | none |
+| Visitor | Start screen → Alerts for my area | none (use location, or pick an area) |
 | Citizen | Profile → Sign in to offer help | any phone/email, code `123456` |
 | NGO | Sign in | `ngo@sample.org`, any password |
 | Authority | Sign in | `admin@sample.org` or `coordinator@sample.org`, any password |
@@ -62,6 +62,10 @@ Incident → plan → approve → worker acts → problem → replan → verify.
 7. **Verify.** On the **Verify** tab, **INT-102** → **Verify**. Its card shows
    *1. NGO check: Verified* and *2. Authority final: Pending* (the authority's step is shown as
    status only for now).
+
+Public side: as a visitor, open **My area** and pick *Majuli* to see an Evacuate alert with
+what to do, or *East Delhi* for the calm state. East Delhi gets its alert once the authority adds
+an NGO serving "Delhi" (Add NGO). Public users only ever see their own area.
 
 Optional: sign in as contributor `SAMPLE-C-0001` to see *Your assignments* and check-ins
 due, or open **Notifications (Simulated)** from Organization / Profile.
