@@ -11,6 +11,8 @@
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.disasterresponse.mobile",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -44,7 +46,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Share your location with an NGO only when you choose to attach it to a message."
+          "locationWhenInUsePermission": "Use your location to show flood alerts for your area, and to attach it to a message or resource evidence only when you choose."
         }
       ]
     ],
